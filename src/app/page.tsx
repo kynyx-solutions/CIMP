@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { PublicHeader, PublicFooter, SectionHeading, SampleTag, Arrow, Check } from "@/components/public/Site";
-import HeroVisual from "@/components/public/HeroVisual";
-import HeroBackground from "@/components/public/HeroBackground";
+import ParticleNetwork from "@/components/public/ParticleNetwork";
 import { prisma } from "@/lib/prisma";
 import {
-  IS_SAMPLE, SITE, STATS, OPEN_CALLS, PROGRAMS, APPLY_STEPS, ELIGIBILITY,
+  IS_SAMPLE, STATS, OPEN_CALLS, PROGRAMS, APPLY_STEPS, ELIGIBILITY,
   RESPONSE_TIME, SCHEMES, MENTORS, PARTNERS,
 } from "@/content/site";
 
@@ -39,35 +38,46 @@ export default async function HomePage() {
     <main className="min-h-screen bg-bg antialiased">
       <PublicHeader />
 
-      {/* ═══ HERO (dark "Launchpad") ═══ */}
-      <section className="relative overflow-hidden bg-[#081127]">
-        <HeroBackground />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-28 md:pt-24 md:pb-36 grid lg:grid-cols-[1.05fr_1fr] gap-12 lg:gap-8 items-center">
-          <div className="text-center lg:text-left">
-            <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-cyan-200 text-xs font-mono tracking-[0.15em] uppercase font-semibold mb-8 backdrop-blur">
-              <span className="relative flex w-2 h-2" aria-hidden="true">
-                <span className="hero-ping absolute inline-flex w-full h-full rounded-full bg-cyan-300" />
-                <span className="relative inline-flex w-2 h-2 rounded-full bg-cyan-300" />
-              </span>
-              Applications open
-            </p>
-            <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-semibold text-white leading-[1.08] max-w-3xl mx-auto lg:mx-0 mb-6 drop-shadow-[0_2px_24px_rgba(59,130,246,0.35)]">
-              Launch your startup with <span className="hero-gradient-text">CIMP-BIIF</span>
-            </h1>
-            <p className="text-blue-100/90 font-body text-lg md:text-xl max-w-2xl mx-auto lg:mx-0 mb-10 leading-relaxed">
-              {SITE.tagline} {SITE.intro}
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
-              <Link href="/register" className="group w-full sm:w-auto px-7 py-3.5 rounded-xl text-navy font-semibold font-body bg-gradient-to-r from-cyan-300 to-blue-300 hover:from-cyan-200 hover:to-blue-200 transition-colors inline-flex items-center justify-center gap-2 shadow-[0_0_32px_rgba(103,232,249,0.45)]">
-                Apply for Incubation <span className="group-hover:translate-x-0.5 transition-transform"><Arrow /></span>
-              </Link>
-              <Link href="#programs" className="w-full sm:w-auto px-7 py-3.5 rounded-xl border border-white/25 bg-white/5 text-white hover:bg-white/10 hover:border-white/40 font-body transition-colors backdrop-blur">
-                Find the right program
-              </Link>
-            </div>
+      {/* ═══ HERO (light, particle network) ═══ */}
+      <section className="relative overflow-hidden bg-white">
+        <ParticleNetwork />
+        {/* Soft white glow behind the text so it stays readable over the network */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_50%_at_50%_45%,rgba(255,255,255,0.92)_0%,rgba(255,255,255,0.6)_55%,rgba(255,255,255,0)_100%)]" aria-hidden="true" />
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 pt-20 pb-32 md:pt-28 md:pb-40 text-center">
+          <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-brand text-xs font-mono tracking-[0.15em] uppercase font-semibold mb-8">
+            <span className="relative flex w-2 h-2" aria-hidden="true">
+              <span className="hero-ping absolute inline-flex w-full h-full rounded-full bg-brand" />
+              <span className="relative inline-flex w-2 h-2 rounded-full bg-brand" />
+            </span>
+            Applications open
+          </p>
+          <p className="text-secondary font-body text-sm sm:text-base uppercase tracking-[0.35em] mb-4">
+            Chandragupt Institute of Management Patna
+          </p>
+          <h1 className="font-body font-extrabold uppercase tracking-[0.04em] leading-[1.05] text-4xl sm:text-6xl md:text-7xl">
+            <span className="hero-title-gradient">Business Incubation</span>
+            <br />
+            <span className="hero-title-gradient">&amp; Innovation Foundation</span>
+          </h1>
+          <p className="mt-6 text-navy/80 font-body text-base sm:text-lg tracking-[0.12em] uppercase">
+            Bihar&apos;s top-ranked incubation centre <span className="text-amber-600">·</span> Avinya Bihar 2025
+          </p>
+          <p className="mt-5 text-secondary font-body text-lg max-w-2xl mx-auto leading-relaxed">
+            Mentorship, seed-fund support, co-working and a transparent, fully digital incubation process for founders in Bihar.
+          </p>
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link href="/register" className="group w-full sm:w-auto px-8 py-3.5 rounded-full text-white font-semibold font-body tracking-wide bg-gradient-to-r from-brand via-sky-600 to-cyan-600 hover:brightness-110 transition inline-flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(29,78,216,0.3)]">
+              Apply for Incubation <span className="group-hover:translate-x-0.5 transition-transform"><Arrow /></span>
+            </Link>
+            <Link href="/programs" className="w-full sm:w-auto px-8 py-3.5 rounded-full border border-navy/15 bg-white/80 backdrop-blur text-navy font-body font-medium hover:border-brand hover:text-brand transition">
+              Explore programs
+            </Link>
           </div>
-
-          <HeroVisual />
+          <ul className="mt-12 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm font-body text-secondary">
+            {["Section 8 company of CIMP", "Supported by Dept. of Industries, Govt. of Bihar", "Manages B-Hub, Patna"].map((t) => (
+              <li key={t} className="inline-flex items-center gap-2"><Check />{t}</li>
+            ))}
+          </ul>
         </div>
       </section>
 
@@ -113,7 +123,7 @@ export default async function HomePage() {
       <section id="programs" className="border-t border-border bg-white scroll-mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
           <SectionHeading eyebrow="Programs" title="Pick the program that fits your stage" desc="Every program lists who it is for, what you get and the terms, before you apply." sample={IS_SAMPLE} />
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {PROGRAMS.map((p) => (
               <article key={p.name} className="flex flex-col border border-border rounded-2xl p-6 bg-surface-2 hover:shadow-card-md transition-shadow">
                 <p className="text-xs font-mono uppercase tracking-wider text-brand font-semibold">{p.stage}</p>
