@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { PublicHeader, PublicFooter, SectionHeading, SampleTag, Arrow, Check } from "@/components/public/Site";
+import HeroVisual from "@/components/public/HeroVisual";
+import HeroBackground from "@/components/public/HeroBackground";
 import { prisma } from "@/lib/prisma";
 import {
   IS_SAMPLE, SITE, STATS, OPEN_CALLS, PROGRAMS, APPLY_STEPS, ELIGIBILITY,
@@ -39,18 +41,19 @@ export default async function HomePage() {
 
       {/* ═══ HERO ═══ */}
       <section className="relative overflow-hidden">
-        <div className="dot-grid absolute inset-0" aria-hidden="true" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-20 pb-16 md:pt-28 md:pb-20 text-center">
+        <HeroBackground />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-16 md:pt-24 md:pb-20 grid lg:grid-cols-[1.05fr_1fr] gap-12 lg:gap-8 items-center">
+          <div className="text-center lg:text-left">
           <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-brand text-xs font-mono tracking-[0.15em] uppercase font-semibold mb-8">
             <span className="w-2 h-2 rounded-full bg-brand" aria-hidden="true" /> Applications open
           </p>
-          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold text-navy leading-[1.08] max-w-4xl mx-auto mb-6">
+          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-semibold text-navy leading-[1.08] max-w-3xl mx-auto lg:mx-0 mb-6">
             Build your startup with <span className="shimmer-blue">CIMP-BIIF</span>
           </h1>
-          <p className="text-secondary font-body text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+          <p className="text-secondary font-body text-lg md:text-xl max-w-2xl mx-auto lg:mx-0 mb-10 leading-relaxed">
             {SITE.tagline} {SITE.intro}
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
             <Link href="/register" className="group w-full sm:w-auto px-7 py-3.5 rounded-xl text-white font-semibold font-body bg-brand hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-2" style={{ boxShadow: "0 4px 20px rgba(29,78,216,0.3)" }}>
               Apply for Incubation <Arrow />
             </Link>
@@ -58,6 +61,9 @@ export default async function HomePage() {
               Find the right program
             </Link>
           </div>
+          </div>
+
+          <HeroVisual />
         </div>
       </section>
 
