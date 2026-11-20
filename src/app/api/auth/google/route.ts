@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB } from "@/lib/db";
-import { User } from "@/models/User";
-import { signToken } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { signToken, type Role } from "@/lib/auth";
 import { verifyFirebaseIdToken } from "@/lib/firebase-verify";
 import { isCompanyEmail, isPublicRole, isStaffRole } from "@/lib/roles";
 
@@ -35,35 +34,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: STAFF_BLOCKED }, { status: 403 });
     }
 
-    await connectDB();
 
-    let user = await User.findOne({ email: identity.email.toLowerCase() });
+    let user = await prisma.user.findUnique({ where: { email: identity.email.toLowerCase() } });
 
     if (user && isStaffRole(user.role)) {
       return NextResponse.json({ error: STAFF_BLOCKED }, { status: 403 });
     }
 
     if (!user) {
-      user = await User.create({
-        name: identity.name || identity.email.split("@")[0],
-        email: identity.email,
-        image: identity.picture,
-        role: isPublicRole(role) ? role : "incubatee",
-        isVerified: true,
+      user = await prisma.user.create({
+        data: {
+          name: identity.name || identity.email.split("@")[0],
+          email: identity.email.toLowerCase(),
+          image: identity.picture,
+          role: isPublicRole(role) ? role : "incubatee",
+          isVerified: true,
+        },
       });
     }
 
     const token = signToken({
-      userId: user._id.toString(),
+      userId: user.id,
       email: user.email,
       name: user.name,
-      role: user.role,
+      role: user.role as Role,
     });
 
     const response = NextResponse.json({
       success: true,
       user: {
-        id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,

@@ -328,7 +328,7 @@ Weekly demos on staging. Anything outside the signed SRS goes through a change r
 
 ## 11. Current state
 
-A prototype ("Launchpad") was built in April 2026 alongside the proposal. It is a Next.js monolith. Here is what can be reused:
+A prototype ("Launchpad") was built in April 2026 alongside the proposal. It is a Next.js monolith. **For the local demo its data layer runs on MySQL (Prisma)**; this is a demo-only choice. Phase 1 uses MongoDB as committed in the proposal (§9), so the demo's data layer is not reused as is. Here is what can be reused:
 
 | Prototype feature | Reuse in Phase 1 |
 |---|---|

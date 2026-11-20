@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { isValidObjectId } from "mongoose";
-import { connectDB } from "@/lib/db";
-import { User } from "@/models/User";
+import { withId, isId } from "@/lib/serialize";
+import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 import { getCompanyDomains, isCompanyEmail } from "@/lib/roles";
 import { OFFICE_ROLES, ROLE_LABELS } from "@/lib/workflow";
@@ -24,13 +23,14 @@ export async function GET(req: NextRequest) {
   if (!getCEO(req))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  await connectDB();
-  const members = await User.find({ role: { $in: ASSIGNABLE_ROLES } })
-    .select("name email role createdAt")
-    .sort({ createdAt: -1 });
+  const members = await prisma.user.findMany({
+    where: { role: { in: ASSIGNABLE_ROLES } },
+    select: { id: true, name: true, email: true, role: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  });
 
   return NextResponse.json({
-    members,
+    members: withId(members),
     domains: getCompanyDomains(),
     roles: ASSIGNABLE_ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] })),
   });
@@ -65,20 +65,21 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
 
-  await connectDB();
-  const existing = await User.findOne({ email: email.toLowerCase() });
+  const existing = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
   if (existing)
     return NextResponse.json(
       { error: "A user with this email already exists" },
       { status: 409 },
     );
 
-  const member = await User.create({
-    name: name.trim(),
-    email: email.trim(),
-    password: await bcrypt.hash(password, 12),
-    role,
-    isVerified: true,
+  const member = await prisma.user.create({
+    data: {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password: await bcrypt.hash(password, 12),
+      role,
+      isVerified: true,
+    },
   });
 
   // Best-effort onboarding email; creation succeeds even if mail fails.
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
     {
       success: true,
       member: {
-        _id: member._id,
+        _id: member.id,
         name: member.name,
         email: member.email,
         role: member.role,
@@ -109,12 +110,11 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const userId = req.nextUrl.searchParams.get("userId");
-  if (!userId || !isValidObjectId(userId))
+  if (!isId(userId))
     return NextResponse.json({ error: "Valid userId required" }, { status: 400 });
 
-  await connectDB();
-  const result = await User.deleteOne({ _id: userId, role: { $in: ASSIGNABLE_ROLES } });
-  if (result.deletedCount === 0)
+  const result = await prisma.user.deleteMany({ where: { id: userId, role: { in: ASSIGNABLE_ROLES } } });
+  if (result.count === 0)
     return NextResponse.json({ error: "Office user not found" }, { status: 404 });
 
   return NextResponse.json({ success: true });

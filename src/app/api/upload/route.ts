@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
-import { Application } from '@/models/Application';
-import { Activity } from '@/models/Activity';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { isId } from '@/lib/serialize';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
@@ -22,7 +21,7 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File;
     const applicationId = formData.get('applicationId') as string;
 
-    if (!file || !applicationId) {
+    if (!file || !isId(applicationId)) {
       return NextResponse.json({ error: 'file and applicationId required' }, { status: 400 });
     }
 
@@ -30,12 +29,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'File too large (max 5MB)' }, { status: 400 });
     }
 
-    await connectDB();
-    const app = await Application.findOne({ _id: applicationId, userId: user.userId });
+    const app = await prisma.application.findFirst({ where: { id: applicationId, userId: user.userId } });
     if (!app) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     if (!app.isEditable) return NextResponse.json({ error: 'Application is locked' }, { status: 400 });
 
-    // Save file to public/uploads
+    // Save file to public/uploads (demo only; Phase 1 uses S3 presigned uploads)
     const uploadDir = path.join(process.cwd(), 'public', 'uploads');
     await mkdir(uploadDir, { recursive: true });
 
@@ -46,19 +44,17 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(filepath, buffer);
 
-    app.pitchDeckUrl  = `/uploads/${filename}`;
-    app.pitchDeckName = file.name;
-    await app.save();
-
-    await Activity.create({
-      applicationId,
-      actorName: user.name,
-      actorRole: user.role,
-      action: 'uploaded pitch deck',
-      detail: file.name,
+    const pitchDeckUrl = `/uploads/${filename}`;
+    await prisma.application.update({
+      where: { id: app.id },
+      data: { pitchDeckUrl, pitchDeckName: file.name },
     });
 
-    return NextResponse.json({ success: true, url: app.pitchDeckUrl, name: file.name });
+    await prisma.activity.create({
+      data: { applicationId, actorName: user.name, actorRole: user.role, action: 'uploaded pitch deck', detail: file.name },
+    });
+
+    return NextResponse.json({ success: true, url: pitchDeckUrl, name: file.name });
   } catch (err) {
     console.error('Upload error:', err);
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });

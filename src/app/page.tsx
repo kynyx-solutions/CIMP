@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { connectDB } from "@/lib/db";
-import { Application } from "@/models/Application";
+import { prisma } from "@/lib/prisma";
 import {
   IS_SAMPLE, SITE, STATS, OPEN_CALLS, PROGRAMS, APPLY_STEPS, ELIGIBILITY,
   RESPONSE_TIME, SCHEMES, MENTORS, PARTNERS, CONTACTS,
@@ -13,13 +12,13 @@ export const dynamic = "force-dynamic";
 type Featured = { _id: string; startupName: string; industry: string; idea: string; isFastTracked: boolean };
 
 async function loadFeatured(): Promise<Featured[]> {
-  await connectDB();
-  const docs = await Application.find({ isPublic: true, status: "approved" })
-    .select("startupName industry idea isFastTracked")
-    .sort({ updatedAt: -1 })
-    .limit(6)
-    .lean();
-  return (docs as any[]).map((d) => ({ ...d, _id: d._id.toString() }));
+  const rows = await prisma.application.findMany({
+    where: { isPublic: true, status: "approved" },
+    select: { id: true, startupName: true, industry: true, idea: true, isFastTracked: true },
+    orderBy: { updatedAt: "desc" },
+    take: 6,
+  });
+  return rows.map((r) => ({ ...r, _id: r.id }));
 }
 
 // The homepage must render even if the database is slow or down:

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { connectDB } from "@/lib/db";
-import { User } from "@/models/User";
+import { prisma } from "@/lib/prisma";
 import { sendOTPEmail } from "@/lib/email";
 import { isCompanyEmail, isPublicRole } from "@/lib/roles";
 
@@ -32,9 +31,8 @@ export async function POST(req: NextRequest) {
       { status: 403 },
     );
 
-  await connectDB();
 
-  const existing = await User.findOne({ email: email.toLowerCase() });
+  const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (existing)
     return NextResponse.json(
       { error: "Email already registered" },
@@ -46,14 +44,16 @@ export async function POST(req: NextRequest) {
   const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
   // Create user — unverified
-  await User.create({
-    name,
-    email,
-    password: hashed,
-    role: isPublicRole(role) ? role : "incubatee",
-    isVerified: false,
-    otp,
-    otpExpiresAt,
+  await prisma.user.create({
+    data: {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password: hashed,
+      role: isPublicRole(role) ? role : "incubatee",
+      isVerified: false,
+      otp,
+      otpExpiresAt,
+    },
   });
 
   // Send OTP email

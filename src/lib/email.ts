@@ -8,10 +8,26 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Local development without Gmail credentials: log instead of sending,
+// so registration and OTP flows still work.
+const mailer = {
+  async sendMail(opts: { from: string; to: string; subject: string; html: string }) {
+    if (!process.env.GMAIL_USER && process.env.NODE_ENV !== "production") {
+      console.log(`[email:dev] to=${opts.to} subject="${opts.subject}" (not sent: GMAIL_USER not set)`);
+      return;
+    }
+    await transporter.sendMail(opts);
+  },
+};
+
 // ─── OTP Email (already working) ──────────────────────────────────────────────
 
 export async function sendOTPEmail(to: string, name: string, otp: string) {
-  await transporter.sendMail({
+  if (!process.env.GMAIL_USER && process.env.NODE_ENV !== "production") {
+    console.log(`[email:dev] OTP for ${to}: ${otp}`);
+    return;
+  }
+  await mailer.sendMail({
     from: `"CIMP-BIIF" <${process.env.GMAIL_USER}>`,
     to,
     subject: "Your CIMP-BIIF verification code",
@@ -344,7 +360,7 @@ export async function sendWelcomeEmail(
 </html>
   `;
 
-  await transporter.sendMail({
+  await mailer.sendMail({
     from: `"CIMP-BIIF" <${process.env.GMAIL_USER}>`,
     to,
     subject: `Welcome to CIMP-BIIF, ${name} — you're in. 🚀`,
