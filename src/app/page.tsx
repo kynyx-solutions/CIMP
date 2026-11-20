@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PublicHeader, PublicFooter, SectionHeading, SampleTag, Arrow, Check } from "@/components/public/Site";
-import ParticleNetwork from "@/components/public/ParticleNetwork";
+import HexHive from "@/components/public/HexHive";
 import { prisma } from "@/lib/prisma";
 import {
   IS_SAMPLE, STATS, OPEN_CALLS, PROGRAMS, APPLY_STEPS, ELIGIBILITY,
@@ -38,11 +38,11 @@ export default async function HomePage() {
     <main className="min-h-screen bg-bg antialiased">
       <PublicHeader />
 
-      {/* ═══ HERO (light, particle network) ═══ */}
+      {/* ═══ HERO (light, "incubation hive") ═══ */}
       <section className="relative overflow-hidden bg-white">
-        <ParticleNetwork />
+        <HexHive />
         {/* Soft white glow behind the text so it stays readable over the network */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_50%_at_50%_45%,rgba(255,255,255,0.92)_0%,rgba(255,255,255,0.6)_55%,rgba(255,255,255,0)_100%)]" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_50%_at_50%_45%,rgba(255,255,255,0.85)_0%,rgba(255,255,255,0.45)_55%,rgba(255,255,255,0)_100%)]" aria-hidden="true" />
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 pt-20 pb-32 md:pt-28 md:pb-40 text-center">
           <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-brand text-xs font-mono tracking-[0.15em] uppercase font-semibold mb-8">
             <span className="relative flex w-2 h-2" aria-hidden="true">
@@ -60,7 +60,7 @@ export default async function HomePage() {
             <span className="hero-title-gradient">&amp; Innovation Foundation</span>
           </h1>
           <p className="mt-6 text-navy/80 font-body text-base sm:text-lg tracking-[0.12em] uppercase">
-            Bihar&apos;s top-ranked incubation centre <span className="text-amber-600">·</span> Avinya Bihar 2025
+            Startup incubator of CIMP <span className="text-amber-600">·</span> Patna, Bihar <span className="text-amber-600">·</span> Since 2017
           </p>
           <p className="mt-5 text-secondary font-body text-lg max-w-2xl mx-auto leading-relaxed">
             Mentorship, seed-fund support, co-working and a transparent, fully digital incubation process for founders in Bihar.
