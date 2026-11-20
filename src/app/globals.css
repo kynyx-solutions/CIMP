@@ -89,3 +89,73 @@ body {
 }
 
 .timeline-line { border-left: 2px dashed #B8CDE8; }
+
+/* ─── Homepage hero animation (src/components/public/HeroVisual.tsx) ─── */
+.hero-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: heroDraw 2.2s cubic-bezier(.4,0,.2,1) .3s forwards; }
+.hero-area { opacity: 0; animation: heroFade 1.2s ease-out 1.6s forwards; }
+.hero-ms { opacity: 0; transform-box: fill-box; transform-origin: center; animation: heroPop .55s cubic-bezier(.34,1.56,.64,1) forwards; }
+.hero-mover { opacity: 0; animation: heroFade .6s ease-out 2.5s forwards; }
+.hero-pulse { transform-box: fill-box; transform-origin: center; animation: heroPulse 2s ease-out 2.6s infinite; opacity: 0; }
+.hero-ping { animation: heroPing 1.6s cubic-bezier(0,0,.2,1) infinite; }
+/* Uses `translate` (not transform) so it composes with Tailwind's -translate-x-1/2 */
+.hero-chip-in { opacity: 0; animation: heroChipIn .7s cubic-bezier(.22,1,.36,1) forwards; }
+.hero-float { animation: heroFloat 6s ease-in-out infinite; }
+
+@keyframes heroDraw { to { stroke-dashoffset: 0; } }
+@keyframes heroFade { to { opacity: 1; } }
+@keyframes heroPop { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+@keyframes heroPulse { 0% { opacity: .45; transform: scale(1); } 100% { opacity: 0; transform: scale(2.6); } }
+@keyframes heroPing { 75%, 100% { transform: scale(2.2); opacity: 0; } }
+@keyframes heroChipIn { from { opacity: 0; translate: 0 12px; } to { opacity: 1; translate: 0 0; } }
+@keyframes heroFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-draw { animation: none; stroke-dashoffset: 0; }
+  .hero-area, .hero-ms { animation: none; opacity: 1; transform: none; }
+  .hero-chip-in { animation: none; opacity: 1; translate: none; }
+  .hero-float, .hero-pulse, .hero-ping { animation: none; }
+  .hero-mover { display: none; }
+}
+
+/* ─── Homepage hero background (src/components/public/HeroBackground.tsx) ─── */
+.hero-grid {
+  background-image:
+    linear-gradient(to right, rgba(29, 78, 216, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(29, 78, 216, 0.07) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.hero-blob { animation: heroBlob 22s ease-in-out infinite alternate; will-change: transform; }
+.hero-pulse-h { opacity: 0; animation: heroPulseH 8s linear infinite; }
+.hero-pulse-v { opacity: 0; animation: heroPulseV 8s linear infinite; }
+.hero-node { animation: heroNode 3.6s ease-in-out infinite; opacity: .25; }
+.hero-spark { opacity: 0; animation: heroSpark 10s ease-out infinite; }
+
+@keyframes heroBlob {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(60px, 40px) scale(1.12); }
+  100% { transform: translate(-40px, 70px) scale(0.95); }
+}
+@keyframes heroPulseH {
+  0% { transform: translateX(-10rem); opacity: 0; }
+  10%, 85% { opacity: .9; }
+  100% { transform: translateX(110vw); opacity: 0; }
+}
+@keyframes heroPulseV {
+  0% { transform: translateY(-10rem); opacity: 0; }
+  10%, 85% { opacity: .9; }
+  100% { transform: translateY(900px); opacity: 0; }
+}
+@keyframes heroNode {
+  0%, 100% { opacity: .2; box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+  50% { opacity: .9; box-shadow: 0 0 0 6px rgba(59, 130, 246, .15); }
+}
+@keyframes heroSpark {
+  0% { transform: translateY(0) scale(.6); opacity: 0; }
+  15% { opacity: .8; }
+  100% { transform: translateY(-520px) scale(1.1); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-blob, .hero-node { animation: none; }
+  .hero-pulse-h, .hero-pulse-v, .hero-spark { display: none; }
+}
