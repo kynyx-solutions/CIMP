@@ -1,10 +1,6 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI!;
-
-if (!MONGODB_URI) {
-  throw new Error('Please define MONGODB_URI in .env.local');
-}
+const MONGODB_URI = process.env.MONGODB_URI;
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -21,6 +17,11 @@ global.mongoose = cached;
 
 export async function connectDB() {
   if (cached.conn) return cached.conn;
+  // Checked here (not at import time) so pages that only optionally use the
+  // database, like the homepage, can still render without it.
+  if (!MONGODB_URI) {
+    throw new Error('Please define MONGODB_URI in .env.local');
+  }
   if (!cached.promise) {
     cached.promise = mongoose.connect(MONGODB_URI, { bufferCommands: false });
   }
