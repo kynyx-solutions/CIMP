@@ -13,7 +13,9 @@ const STARS: [number, number, number, number][] = Array.from({ length: 34 }, (_,
   (i * 37) % 100, (i * 53) % 48, 1 + (i % 3), (i * 0.37) % 4,
 ]);
 
-export default function HeroBackground() {
+export default function HeroBackground({ compact = false }: { compact?: boolean }) {
+  // Compact (page banners): streaks only on the right, away from the left-aligned title.
+  const streaks = compact ? STREAKS.filter(([left]) => left >= 60) : STREAKS;
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none bg-[radial-gradient(ellipse_at_top,#1e3a8a_0%,#0f2144_45%,#081127_100%)]" aria-hidden="true">
       {/* 1. Neon aurora */}
@@ -36,7 +38,7 @@ export default function HeroBackground() {
       <div className="absolute inset-x-[10%] bottom-[46%] h-24 bg-cyan-400/20 blur-3xl" />
 
       {/* 3. Launch streaks rising from the horizon */}
-      {STREAKS.map(([left, delay, dur, h], i) => (
+      {streaks.map(([left, delay, dur, h], i) => (
         // On narrow screens the text spans the full width, so only edge streaks show there.
         <span key={i} className={`hero-streak absolute bottom-[52%] w-[2px] rounded-full bg-gradient-to-t from-transparent via-cyan-300 to-white ${left > 10 && left < 90 ? "hidden md:block" : ""}`}
           style={{ left: `${left}%`, height: h, animationDelay: `${delay}s`, animationDuration: `${dur}s` }}>

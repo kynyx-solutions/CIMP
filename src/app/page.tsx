@@ -128,9 +128,15 @@ export default async function HomePage() {
                 <p className="mt-5 pt-4 border-t border-border text-xs font-body text-secondary">
                   <span className="font-semibold text-navy">Terms:</span> {p.terms}
                 </p>
+                <Link href={`/programs#${p.slug}`} className="mt-4 text-sm font-body font-semibold text-brand hover:text-navy inline-flex items-center gap-1">
+                  Program details <Arrow />
+                </Link>
               </article>
             ))}
           </div>
+          <Link href="/programs" className="mt-8 inline-flex items-center gap-1 text-brand font-body font-medium text-sm hover:text-navy">
+            Compare all programs <Arrow />
+          </Link>
         </div>
       </section>
 
@@ -148,6 +154,9 @@ export default async function HomePage() {
                 </li>
               ))}
             </ol>
+            <Link href="/how-to-apply" className="mt-8 inline-flex items-center gap-1 text-brand font-body font-medium text-sm hover:text-navy">
+              Full guide: documents, tips and what happens after selection <Arrow />
+            </Link>
           </div>
           <aside className="space-y-6">
             <div className="bg-white border border-border rounded-2xl p-6 shadow-card">
@@ -174,7 +183,7 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <SectionHeading eyebrow="Portfolio" title="Startups building with us" desc="Live from the public directory. Startups appear here once approved and published." />
-            <Link href="/public-startups" className="text-brand font-body font-medium text-sm inline-flex items-center gap-1 hover:text-navy whitespace-nowrap mb-10">
+            <Link href="/startups" className="text-brand font-body font-medium text-sm inline-flex items-center gap-1 hover:text-navy whitespace-nowrap mb-10">
               View full directory <Arrow />
             </Link>
           </div>
@@ -242,6 +251,9 @@ export default async function HomePage() {
               </div>
             ))}
           </div>
+          <Link href="/schemes" className="mt-8 inline-flex items-center gap-1 text-brand font-body font-medium text-sm hover:text-navy">
+            What each scheme offers and how we help <Arrow />
+          </Link>
         </div>
       </section>
 
