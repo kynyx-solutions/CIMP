@@ -12,7 +12,9 @@ type Startup = {
   createdAt: Date;
 };
 
-export const revalidate = 60;
+// Always render on request: directory must reflect publish/unpublish immediately
+// and the build must not need a database connection.
+export const dynamic = "force-dynamic";
 
 async function getPublicStartups(): Promise<Startup[]> {
   await connectDB();
@@ -47,11 +49,11 @@ export default async function PublicStartupsPage() {
                 className="text-white font-bold text-sm"
                 style={{ fontFamily: "Lora,serif" }}
               >
-                L
+                C
               </span>
             </div>
             <span className="font-display text-lg font-semibold text-navy">
-              Launchpad
+              CIMP-BIIF
             </span>
           </Link>
           <Link

@@ -5,6 +5,7 @@ import { Notification } from '@/models/Notification';
 import { Application } from '@/models/Application';
 import { User } from '@/models/User';
 import { verifyToken } from '@/lib/auth';
+import { APPROVAL_RANK, ROLE_LABELS } from '@/lib/workflow';
 
 function getUser(req: NextRequest) {
   const token = req.cookies.get('incubator_token')?.value;
@@ -73,8 +74,8 @@ export async function POST(req: NextRequest) {
   let notifyMsg = '';
 
   if (user.role === 'incubatee') {
-    // notify all managers/ceo — find any manager
-    const managers = await User.find({ role: { $in: ['manager', 'ceo'] } }).select('_id');
+    // notify office users with approval authority
+    const managers = await User.find({ role: { $in: Object.keys(APPROVAL_RANK) } }).select('_id');
     for (const m of managers) {
       await Notification.create({
         userId: m._id,
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
     await Notification.create({
       userId: app.userId,
       title: 'New Message',
-      message: `${user.name} (${user.role}) sent you a message about "${app.startupName}"`,
+      message: `${user.name} (${ROLE_LABELS[user.role] ?? user.role}) sent you a message about "${app.startupName}"`,
       type: 'info',
       applicationId: app._id,
     });

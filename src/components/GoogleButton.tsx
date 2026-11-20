@@ -25,33 +25,33 @@ const IconGoogle = () => (
   </svg>
 );
 
+// Google sign-in is only for non-staff users (incubatees etc.).
+// Staff are rejected server-side and must use company email + password.
 export default function GoogleButton({
-  role,
+  onError,
 }: {
-  role: "incubatee" | "manager" | "ceo";
+  onError?: (message: string) => void;
 }) {
   const handleGoogleLogin = async () => {
     try {
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+      const idToken = await result.user.getIdToken();
 
       const res = await fetch("/api/auth/google", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name: user.displayName,
-          email: user.email,
-          image: user.photoURL,
-          role,
-        }),
+        body: JSON.stringify({ idToken }),
       });
 
       const data = await res.json();
 
       if (data.success) {
         window.location.href = "/dashboard";
+      } else {
+        await auth.signOut();
+        onError?.(data.error || "Google sign-in failed");
       }
     } catch (err) {
       console.error("Google login error:", err);

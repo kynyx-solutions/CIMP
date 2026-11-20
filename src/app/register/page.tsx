@@ -4,34 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import GoogleButton from "@/components/GoogleButton";
 
-const ROLES = [
-  {
-    value: "incubatee",
-    label: "Incubatee",
-    desc: "Apply with your startup idea",
-    icon: "🚀",
-  },
-  {
-    value: "manager",
-    label: "Manager",
-    desc: "Review and evaluate applications",
-    icon: "🔍",
-  },
-  {
-    value: "ceo",
-    label: "CEO",
-    desc: "Final approval & full system control",
-    icon: "👑",
-  },
-];
-
 export default function RegisterPage() {
   const router = useRouter();
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
-    role: "incubatee",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -70,11 +48,11 @@ export default function RegisterPage() {
               style={{ background: "#1D4ED8" }}
             >
               <span className="text-white font-bold font-display text-lg">
-                L
+                C
               </span>
             </div>
             <span className="font-display text-2xl font-semibold text-navy">
-              Launchpad
+              CIMP-BIIF
             </span>
           </Link>
           <p className="text-muted text-sm mt-3 font-body">
@@ -87,35 +65,13 @@ export default function RegisterPage() {
           style={{ boxShadow: "0 4px 24px rgba(15,33,68,0.08)" }}
         >
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Role selector */}
-            <div>
-              <label className="block text-sm font-body font-medium text-navy mb-2">
-                I am a...
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {ROLES.map((r) => (
-                  <button
-                    key={r.value}
-                    type="button"
-                    onClick={() => setForm((p) => ({ ...p, role: r.value }))}
-                    className={`p-3.5 rounded-xl border-2 text-center transition-all ${
-                      form.role === r.value
-                        ? "border-brand bg-blue-50"
-                        : "border-border bg-bg hover:border-border-2"
-                    }`}
-                  >
-                    <div className="text-2xl mb-1">{r.icon}</div>
-                    <div
-                      className={`text-xs font-body font-semibold ${form.role === r.value ? "text-brand" : "text-secondary"}`}
-                    >
-                      {r.label}
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-muted mt-2 font-body">
-                {ROLES.find((r) => r.value === form.role)?.desc}
-              </p>
+            <div className="px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-secondary font-body">
+              🚀 Sign up to apply with your startup. Staff accounts are created by
+              the organisation — staff should{" "}
+              <Link href="/login" className="text-brand font-medium">
+                sign in
+              </Link>{" "}
+              with their company email.
             </div>
 
             {[
@@ -165,7 +121,7 @@ export default function RegisterPage() {
               </div>
             ))}
 
-            <GoogleButton role={form.role as "incubatee" | "manager" | "ceo"} />
+            <GoogleButton onError={setError} />
 
             {error && (
               <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-body">

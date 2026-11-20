@@ -7,6 +7,7 @@ import { Activity } from '@/models/Activity';
 import Navbar from '@/components/Navbar';
 import StageBadge from '@/components/StageBadge';
 import Link from 'next/link';
+import { PIPELINE, STAGES, ROLE_ICONS, ROLE_LABELS, isOfficeRole } from '@/lib/workflow';
 
 async function getUser() {
   const cookieStore = cookies();
@@ -22,26 +23,25 @@ export default async function DashboardPage() {
   await connectDB();
 
   const isCEO = user.role === 'ceo';
-  const isManager = user.role === 'manager';
+  // Any office role gets the office dashboard (stats, activity).
+  const isManager = isOfficeRole(user.role);
 
   let applications: any[] = [];
-  let stats = { total: 0, pending: 0, managerApproved: 0, ceoApproved: 0, rejected: 0, fastTracked: 0 };
+  let stageCounts: Record<string, number> = {};
+  let fastTracked = 0;
   let recentActivity: any[] = [];
   let industryBreakdown: Record<string, number> = {};
 
   if (user.role === 'incubatee') {
     applications = await Application.find({ userId: user.userId }).sort({ createdAt: -1 }).lean();
   } else {
-    const [total, pending, managerApproved, ceoApproved, rejected, fastTracked, allApps] = await Promise.all([
-      Application.countDocuments(),
-      Application.countDocuments({ status: 'pending' }),
-      Application.countDocuments({ stage: 'manager_approved' }),
-      Application.countDocuments({ stage: 'ceo_approved' }),
-      Application.countDocuments({ status: 'rejected' }),
+    const [byStage, ft, allApps] = await Promise.all([
+      Application.aggregate([{ $group: { _id: '$stage', count: { $sum: 1 } } }]),
       Application.countDocuments({ isFastTracked: true }),
       Application.find({}).sort({ createdAt: -1 }).limit(6).lean(),
     ]);
-    stats = { total, pending, managerApproved, ceoApproved, rejected, fastTracked };
+    for (const s of byStage) stageCounts[s._id] = s.count;
+    fastTracked = ft;
     applications = allApps;
 
     // Industry breakdown for CEO chart
@@ -82,20 +82,20 @@ export default async function DashboardPage() {
           </h1>
           <p className="text-secondary font-body text-sm">
             Welcome back, <span className="font-semibold text-navy">{user.name}</span>
-            {isCEO && ' — Full system access'}
+            {isManager && ` · ${ROLE_LABELS[user.role]}`}
           </p>
         </div>
 
         {/* Stats cards */}
         {(isCEO || isManager) && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
             {[
-              { label: 'Total', value: stats.total, color: 'text-navy', bg: 'bg-bg' },
-              { label: 'Pending', value: stats.pending, color: 'text-blue-600', bg: 'bg-blue-50' },
-              { label: 'Mgr Approved', value: stats.managerApproved, color: 'text-amber-600', bg: 'bg-amber-50' },
-              { label: 'CEO Approved', value: stats.ceoApproved, color: 'text-green-600', bg: 'bg-green-50' },
-              { label: 'Rejected', value: stats.rejected, color: 'text-red-500', bg: 'bg-red-50' },
-              ...(isCEO ? [{ label: 'Fast-Tracked ⚡', value: stats.fastTracked, color: 'text-amber-600', bg: 'bg-amber-50' }] : []),
+              { label: 'Total', value: Object.values(stageCounts).reduce((a, b) => a + b, 0), color: 'text-navy', bg: 'bg-bg' },
+              ...PIPELINE.filter(s => s !== 'ceo_approved').map(s => (
+                { label: STAGES[s].label, value: stageCounts[s] ?? 0, color: 'text-blue-600', bg: 'bg-blue-50' })),
+              { label: 'Approved', value: stageCounts.ceo_approved ?? 0, color: 'text-green-600', bg: 'bg-green-50' },
+              { label: 'Rejected', value: stageCounts.rejected ?? 0, color: 'text-red-500', bg: 'bg-red-50' },
+              { label: 'Fast-Tracked ⚡', value: fastTracked, color: 'text-amber-600', bg: 'bg-amber-50' },
             ].map(s => (
               <div key={s.label} className={`${s.bg} border border-border rounded-2xl p-4 shadow-card`}>
                 <div className={`font-display text-3xl font-semibold ${s.color}`}>{s.value}</div>
@@ -190,7 +190,7 @@ export default async function DashboardPage() {
                       <div key={act._id} className="flex gap-3">
                         <div className="flex flex-col items-center">
                           <div className="w-7 h-7 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-xs flex-shrink-0">
-                            {act.actorRole === 'ceo' ? '👑' : act.actorRole === 'manager' ? '🔍' : '🚀'}
+                            {ROLE_ICONS[act.actorRole] ?? '•'}
                           </div>
                           {i < serializedActivity.length - 1 && <div className="w-px flex-1 bg-border mt-1" />}
                         </div>
