@@ -141,7 +141,7 @@ export default function Navbar({ user }: NavbarProps) {
         {/* 1. Logo Section */}
         <div className="flex items-center gap-8">
           <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-leaf-700 to-indigo-700 flex items-center justify-center shadow-sm">
               <span
                 className="text-white font-bold text-lg"
                 style={{ fontFamily: "serif" }}
@@ -165,7 +165,7 @@ export default function Navbar({ user }: NavbarProps) {
                 <span
                   className={`text-sm font-medium transition-colors ${
                     pathname === l.href
-                      ? "text-blue-600"
+                      ? "text-leaf-700"
                       : "text-slate-600 group-hover:text-slate-900"
                   }`}
                 >
@@ -173,7 +173,7 @@ export default function Navbar({ user }: NavbarProps) {
                 </span>
                 {/* Active Indicator Dot */}
                 {pathname === l.href && (
-                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-600" />
+                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-leaf-700" />
                 )}
               </Link>
             ))}
@@ -217,7 +217,7 @@ export default function Navbar({ user }: NavbarProps) {
                   {notifCount > 0 && (
                     <button
                       onClick={markAllRead}
-                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                      className="text-xs text-leaf-700 hover:text-leaf-800 font-medium"
                     >
                       Mark all read
                     </button>
@@ -232,7 +232,7 @@ export default function Navbar({ user }: NavbarProps) {
                     notifs.map((n: any) => (
                       <div
                         key={n._id}
-                        className={`px-4 py-3 border-b border-slate-50 hover:bg-slate-50 cursor-pointer ${!n.read ? "bg-blue-50/30" : ""}`}
+                        className={`px-4 py-3 border-b border-slate-50 hover:bg-slate-50 cursor-pointer ${!n.read ? "bg-leaf-50/30" : ""}`}
                       >
                         <p
                           className={`text-sm ${n.read ? "text-slate-600" : "text-slate-900 font-semibold"}`}
@@ -292,13 +292,13 @@ export default function Navbar({ user }: NavbarProps) {
                 <div className="py-1">
                   <Link
                     href="/settings"
-                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600"
+                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-leaf-700"
                   >
                     Settings
                   </Link>
                   <Link
                     href="/profile"
-                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600"
+                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-leaf-700"
                   >
                     Your Profile
                   </Link>

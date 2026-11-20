@@ -20,7 +20,7 @@ export default function FaqPage() {
         <div className="space-y-10">
           {FAQS.map((group) => (
             <section key={group.category} aria-labelledby={`faq-${group.category}`}>
-              <h2 id={`faq-${group.category}`} className="font-display text-2xl font-semibold text-navy mb-4">
+              <h2 id={`faq-${group.category}`} className="font-display text-2xl font-bold text-navy mb-4">
                 {group.category} <SampleTag />
               </h2>
               <div className="space-y-3">
@@ -40,9 +40,9 @@ export default function FaqPage() {
         </div>
 
         <div className="mt-14 bg-navy rounded-2xl p-8 text-center">
-          <h2 className="font-display text-2xl font-semibold text-white">Ready to apply?</h2>
-          <p className="text-blue-100 font-body mt-2 text-sm">It takes about 15 minutes, and you can track every step online.</p>
-          <Link href="/register" className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-navy font-semibold font-body hover:bg-blue-50">
+          <h2 className="font-display text-2xl font-bold text-white">Ready to apply?</h2>
+          <p className="text-leaf-100 font-body mt-2 text-sm">It takes about 15 minutes, and you can track every step online.</p>
+          <Link href="/register" className="mt-6 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-navy font-semibold font-body hover:bg-leaf-50">
             Apply for Incubation <Arrow />
           </Link>
         </div>

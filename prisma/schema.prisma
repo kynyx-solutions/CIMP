@@ -21,6 +21,8 @@ model User {
   isVerified   Boolean   @default(false)
   otp          String?
   otpExpiresAt DateTime?
+  // When the user accepted the Terms and Privacy Policy (DPDP Act consent, PRD WEB-10)
+  consentAt    DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -58,6 +60,9 @@ model Application {
   stage           String   @default("submitted") // see src/lib/workflow.ts
   rejectedBy      String?
   rejectionReason String?  @db.Text
+  // Send back for changes (PRD WF-3): the stage it was returned from, and what the applicant must change
+  returnedFrom    String?
+  changeRequest   String?  @db.Text
   isFastTracked   Boolean  @default(false)
   isPublic        Boolean  @default(false)
   isEditable      Boolean  @default(true)

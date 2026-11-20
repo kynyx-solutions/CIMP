@@ -29,10 +29,14 @@ const IconGoogle = () => (
 // Staff are rejected server-side and must use company email + password.
 export default function GoogleButton({
   onError,
+  disabled = false,
 }: {
   onError?: (message: string) => void;
+  /** e.g. until the user ticks the Terms/Privacy consent box on the register page */
+  disabled?: boolean;
 }) {
   const handleGoogleLogin = async () => {
+    if (disabled) return;
     try {
       const result = await signInWithPopup(auth, provider);
       const idToken = await result.user.getIdToken();
@@ -59,13 +63,21 @@ export default function GoogleButton({
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleGoogleLogin}
-      className="w-full py-3 bg-white border border-slate-200 rounded-xl text-navy font-semibold font-body text-sm flex items-center justify-center gap-2.5 hover:border-slate-300 hover:shadow-sm transition-all active:scale-[0.98]"
-    >
-      <IconGoogle />
-      Continue with Google
-    </button>
+    <div>
+      <button
+        type="button"
+        onClick={handleGoogleLogin}
+        disabled={disabled}
+        className="w-full py-3 bg-white border border-slate-200 rounded-xl text-navy font-semibold font-body text-sm flex items-center justify-center gap-2.5 hover:border-slate-300 hover:shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <IconGoogle />
+        Continue with Google
+      </button>
+      <p className="text-[11px] text-muted font-body text-center mt-2">
+        By continuing with Google you agree to the{" "}
+        <a href="/terms" className="underline hover:text-navy">Terms of Use</a> and{" "}
+        <a href="/privacy" className="underline hover:text-navy">Privacy Policy</a>.
+      </p>
+    </div>
   );
 }

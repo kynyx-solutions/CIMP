@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import StageBadge from '@/components/StageBadge';
-import { STAGES, PIPELINE, ROLE_LABELS, ROLE_ICONS, APPROVAL_RANK, canAct, isOfficeRole, stageEnteredAt, daysSince, daysLabel, type Stage } from '@/lib/workflow';
+import { STAGES, PIPELINE, ROLE_LABELS, ROLE_ICONS, APPROVAL_RANK, canAct, isOfficeRole, stageEnteredAt, daysSince, daysLabel, progressStage, type Stage } from '@/lib/workflow';
 import { APPLICATION_SECTIONS } from '@/lib/application-fields';
 
 type Step = { fromStage: string; toStage: string; action: string; actorName: string; actorRole: string; remark?: string; signature?: string; at: string; };
@@ -131,16 +131,16 @@ export default function ApprovalsPage() {
       {modal && (
         <div className="fixed inset-0 z-50 bg-navy/20 backdrop-blur-sm flex items-center justify-center px-4">
           <div className="bg-white border border-border rounded-2xl p-6 w-full max-w-md shadow-card-lg">
-            <h3 className="font-display text-xl font-semibold text-navy mb-1">
-              {modal.type === 'reject' ? 'Reject Application' : STAGES[modal.app.stage as Stage]?.actionLabel}
+            <h3 className="font-display text-xl font-bold text-navy mb-1">
+              {modal.type === 'reject' ? 'Reject Application' : modal.type === 'send_back' ? 'Send back for changes' : STAGES[modal.app.stage as Stage]?.actionLabel}
             </h3>
             <p className="text-muted text-sm font-body mb-4">
               {modal.app.startupName} · {STAGES[modal.app.stage as Stage]?.label}
             </p>
             <textarea rows={3} value={inputText} onChange={e => setInputText(e.target.value)}
-              placeholder={modal.type === 'reject' ? 'Reason for rejection (required, shown to applicant)...' : 'Remarks (recorded in the approval trail)...'}
+              placeholder={modal.type === 'reject' ? 'Reason for rejection (required, shown to applicant)...' : modal.type === 'send_back' ? 'What should the applicant change? (required, shown to applicant)...' : 'Remarks (recorded in the approval trail)...'}
               className="w-full bg-bg border border-border rounded-xl px-4 py-3 text-navy font-body text-sm focus:outline-none resize-none mb-4"
-              onFocus={e => { e.target.style.borderColor='#3B82F6'; e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,0.12)'; }}
+              onFocus={e => { e.target.style.borderColor='#6FAE2E'; e.target.style.boxShadow='0 0 0 3px rgba(111,174,46,0.12)'; }}
               onBlur={e => { e.target.style.borderColor=''; e.target.style.boxShadow=''; }} />
             {modal.type === 'advance' && STAGES[modal.app.stage as Stage]?.needsSignature && (
               <div className="mb-4">
@@ -155,11 +155,11 @@ export default function ApprovalsPage() {
               <button onClick={() => { setModal(null); setInputText(''); setSignature(''); }}
                 className="flex-1 py-2.5 border border-border text-secondary rounded-xl hover:text-navy hover:border-border-2 transition-colors font-body text-sm">Cancel</button>
               <button
-                disabled={!!actionLoading || (modal.type === 'reject' && !inputText.trim()) || (modal.type === 'advance' && !!STAGES[modal.app.stage as Stage]?.needsSignature && !signature.trim())}
+                disabled={!!actionLoading || ((modal.type === 'reject' || modal.type === 'send_back') && !inputText.trim()) || (modal.type === 'advance' && !!STAGES[modal.app.stage as Stage]?.needsSignature && !signature.trim())}
                 onClick={() => takeAction(modal.app._id, modal.type, { remark: inputText, signature })}
                 className={`flex-1 py-2.5 rounded-xl font-body text-sm font-semibold transition-colors disabled:opacity-50 ${modal.type === 'reject' ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100' : 'text-white hover:opacity-90'}`}
-                style={modal.type !== 'reject' ? { background: '#1D4ED8' } : {}}>
-                {modal.type === 'reject' ? 'Confirm Reject' : 'Confirm'}
+                style={modal.type !== 'reject' ? { background: '#3F7A16' } : {}}>
+                {modal.type === 'reject' ? 'Confirm Reject' : modal.type === 'send_back' ? 'Send back' : 'Confirm'}
               </button>
             </div>
           </div>
@@ -170,7 +170,7 @@ export default function ApprovalsPage() {
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h1 className="font-display text-3xl font-semibold text-navy mb-1">
+            <h1 className="font-display text-3xl font-bold text-navy mb-1">
               {isCEO ? <><span className="shimmer-blue">CEO</span> Command Center</> : 'Applications'}
             </h1>
             <p className="text-secondary font-body text-sm">
@@ -219,7 +219,7 @@ export default function ApprovalsPage() {
                       <StageBadge stage={app.stage} fastTracked={app.isFastTracked} />
                       {app.isPublic && <span className="text-xs font-mono text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">🌐 Public</span>}
                       {app.isFastTracked && <span className="text-xs font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">⚡ Fast-Tracked</span>}
-                      {app.pitchDeckUrl && <span className="text-xs font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">📎 Deck</span>}
+                      {app.pitchDeckUrl && <span className="text-xs font-mono text-leaf-800 bg-leaf-50 border border-leaf-200 px-2 py-0.5 rounded-full">📎 Deck</span>}
                     </div>
                     <p className="text-secondary font-body text-sm mb-2 line-clamp-2">{app.idea}</p>
                     <div className="flex items-center gap-3 text-xs font-mono text-muted">
@@ -229,7 +229,7 @@ export default function ApprovalsPage() {
                     {/* Pipeline progress */}
                     <div className="flex items-center gap-1 mt-3">
                       {PIPELINE.map((s, i) => {
-                        const cur = app.stage === 'rejected' ? -1 : PIPELINE.indexOf(app.stage as Stage);
+                        const cur = app.stage === 'rejected' ? -1 : PIPELINE.indexOf(progressStage(app) as Stage);
                         return <div key={s} title={STAGES[s].label}
                           className={`h-1.5 flex-1 rounded-full ${app.stage === 'rejected' ? 'bg-red-200' : i <= cur ? 'bg-brand' : 'bg-slate-200'}`} />;
                       })}
@@ -243,6 +243,7 @@ export default function ApprovalsPage() {
                     {(() => { const last = app.steps?.filter(s => s.remark).slice(-1)[0]; return last && app.stage !== 'rejected' ? (
                       <p className="mt-2 text-xs text-amber-700 font-body bg-amber-50 px-3 py-1.5 rounded-lg">{ROLE_LABELS[last.actorRole]}: {last.remark}</p>) : null; })()}
                     {app.rejectionReason && <p className="mt-2 text-xs text-red-600 font-body bg-red-50 px-3 py-1.5 rounded-lg">Rejected: {app.rejectionReason}</p>}
+                    {app.stage === 'returned' && app.changeRequest && <p className="mt-2 text-xs text-orange-700 font-body bg-orange-50 px-3 py-1.5 rounded-lg">Changes requested: {app.changeRequest}</p>}
                   </div>
 
                   {/* Actions (role- and stage-aware) */}
@@ -250,7 +251,7 @@ export default function ApprovalsPage() {
                     {canAct(user.role, app.stage, 'advance') && (
                       <button onClick={() => setModal({ type: 'advance', app })} disabled={!!actionLoading}
                         className="px-4 py-2 text-white text-xs font-semibold rounded-lg hover:opacity-90 transition-all font-body"
-                        style={{ background: '#1D4ED8' }}>
+                        style={{ background: '#3F7A16' }}>
                         ✓ {STAGES[app.stage as Stage].actionLabel}
                       </button>
                     )}
@@ -258,6 +259,10 @@ export default function ApprovalsPage() {
                       <button onClick={() => takeAction(app._id, 'fasttrack')} disabled={!!actionLoading}
                         className="px-4 py-2 text-amber-800 text-xs font-bold rounded-lg transition-all font-body animate-pulse-amber"
                         style={{ background: '#FEF3C7', border: '1px solid #FCD34D' }}>⚡ Fast Track</button>
+                    )}
+                    {canAct(user.role, app.stage, 'send_back') && (
+                      <button onClick={() => setModal({ type: 'send_back', app })} disabled={!!actionLoading}
+                        className="px-4 py-2 bg-orange-50 border border-orange-200 text-orange-700 text-xs rounded-lg hover:bg-orange-100 transition-colors font-body">↩ Send back for changes</button>
                     )}
                     {canAct(user.role, app.stage, 'reject') && (
                       <button onClick={() => setModal({ type: 'reject', app })} disabled={!!actionLoading}
@@ -293,7 +298,7 @@ export default function ApprovalsPage() {
               <div className="flex border-b border-border">
                 {(['details','trail','timeline','messages'] as const).map(t => (
                   <button key={t} onClick={() => setSideTab(t)}
-                    className={`flex-1 py-2.5 text-[11px] font-body font-medium capitalize transition-colors ${sideTab===t ? 'text-brand border-b-2 border-brand bg-blue-50/50' : 'text-muted hover:text-navy'}`}>
+                    className={`flex-1 py-2.5 text-[11px] font-body font-medium capitalize transition-colors ${sideTab===t ? 'text-brand border-b-2 border-brand bg-leaf-50/50' : 'text-muted hover:text-navy'}`}>
                     {t === 'details' ? '📄 Details' : t === 'trail' ? '✍️ Approvals' : t === 'timeline' ? '⏱ Activity' : '💬 Chat'}
                   </button>
                 ))}
@@ -323,7 +328,7 @@ export default function ApprovalsPage() {
                     ))}
                     {sideApp.pitchDeckUrl && (
                       <a href={sideApp.pitchDeckUrl} target="_blank" rel="noopener noreferrer"
-                        className="block text-center text-xs font-body font-semibold text-brand border border-blue-200 bg-blue-50 rounded-lg py-2">📎 Open pitch deck</a>
+                        className="block text-center text-xs font-body font-semibold text-brand border border-leaf-200 bg-leaf-50 rounded-lg py-2">📎 Open pitch deck</a>
                     )}
                   </div>
                 )}
@@ -356,7 +361,7 @@ export default function ApprovalsPage() {
                         {activities.map((act, i) => (
                           <div key={act._id} className="flex gap-3">
                             <div className="flex flex-col items-center">
-                              <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-xs flex-shrink-0">
+                              <div className="w-6 h-6 rounded-full bg-leaf-50 border border-leaf-200 flex items-center justify-center text-xs flex-shrink-0">
                                 {ROLE_ICONS[act.actorRole] ?? '•'}
                               </div>
                               {i < activities.length-1 && <div className="w-px flex-1 bg-border mt-1 min-h-[12px]" />}
@@ -381,8 +386,8 @@ export default function ApprovalsPage() {
                         <p className="text-muted text-xs font-body text-center py-8">No messages yet</p>
                       ) : messages.map(m => (
                         <div key={m._id} className={`flex flex-col ${m.senderRole==='incubatee'?'items-end':'items-start'}`}>
-                          <div className={`max-w-[85%] px-3 py-2 rounded-xl text-xs font-body ${m.senderRole==='incubatee'?'bg-blue-600 text-white':'bg-bg border border-border text-navy'}`}>
-                            <p className={`font-semibold mb-0.5 ${m.senderRole==='incubatee'?'text-blue-100':'text-muted'}`}>{m.senderName}</p>
+                          <div className={`max-w-[85%] px-3 py-2 rounded-xl text-xs font-body ${m.senderRole==='incubatee'?'bg-leaf-700 text-white':'bg-bg border border-border text-navy'}`}>
+                            <p className={`font-semibold mb-0.5 ${m.senderRole==='incubatee'?'text-leaf-100':'text-muted'}`}>{m.senderName}</p>
                             {m.content}
                           </div>
                           <p className="text-[10px] text-faint font-mono mt-0.5 px-1">{new Date(m.createdAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</p>
@@ -394,10 +399,10 @@ export default function ApprovalsPage() {
                         onKeyDown={e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }}}
                         placeholder="Type a message..." disabled={msgLoading}
                         className="flex-1 bg-bg border border-border rounded-lg px-3 py-2 text-xs font-body text-navy focus:outline-none placeholder:text-faint"
-                        onFocus={e=>{e.target.style.borderColor='#3B82F6';}} onBlur={e=>{e.target.style.borderColor='';}} />
+                        onFocus={e=>{e.target.style.borderColor='#6FAE2E';}} onBlur={e=>{e.target.style.borderColor='';}} />
                       <button onClick={sendMessage} disabled={msgLoading || !msgInput.trim()}
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-white disabled:opacity-50 transition-all hover:opacity-90"
-                        style={{ background: '#1D4ED8' }}>→</button>
+                        style={{ background: '#3F7A16' }}>→</button>
                     </div>
                   </div>
                 )}

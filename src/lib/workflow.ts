@@ -58,6 +58,7 @@ export type Stage =
   | "manager_reviewed"
   | "sr_manager_approved"
   | "ceo_approved"
+  | "returned"
   | "rejected";
 
 interface StageDef {
@@ -102,6 +103,8 @@ export const STAGES: Record<Stage, StageDef> = {
   },
   ceo_approved: { label: "Approved" },
   rejected: { label: "Rejected" },
+  // Sent back to the applicant for changes (PRD WF-3). Not an office queue stage.
+  returned: { label: "Changes requested", waitingOn: "Applicant" },
 };
 
 export const PIPELINE: Stage[] = [
@@ -116,7 +119,7 @@ export function isOpenStage(stage: string): boolean {
   return stage in STAGES && !!STAGES[stage as Stage].next;
 }
 
-export type WorkflowAction = "advance" | "reject" | "fasttrack" | "toggle_public";
+export type WorkflowAction = "advance" | "reject" | "send_back" | "fasttrack" | "toggle_public";
 
 export function canAct(role: string, stage: string, action: WorkflowAction, status?: string): boolean {
   const rank = APPROVAL_RANK[role] ?? 0;
@@ -126,7 +129,7 @@ export function canAct(role: string, stage: string, action: WorkflowAction, stat
   if (!isOpenStage(stage)) return false;
   const required = STAGES[stage as Stage].requiredRank ?? Infinity;
   if (action === "fasttrack") return role === "ceo";
-  // advance / reject: must hold authority for the current stage (or higher).
+  // advance / reject / send_back: must hold authority for the current stage (or higher).
   return rank >= required;
 }
 
@@ -142,4 +145,9 @@ export function daysSince(date: Date, now: Date = new Date()): number {
 
 export function daysLabel(days: number): string {
   return days === 0 ? "today" : days === 1 ? "1 day" : `${days} days`;
+}
+
+// Stage to use for progress displays: a returned application keeps its place in the pipeline.
+export function progressStage(app: { stage: string; returnedFrom?: string | null }): string {
+  return app.stage === "returned" ? app.returnedFrom ?? "submitted" : app.stage;
 }

@@ -15,7 +15,7 @@ export default function SchemesPage() {
         desc="Grants, fellowships and seed funds from central ministries. We help you check eligibility, prepare the application and connect with the right program.">
         <nav aria-label="Ministries on this page" className="flex flex-wrap gap-2">
           {SCHEMES.map((g) => (
-            <a key={g.ministry} href={`#${slug(g.ministry)}`} className="px-4 py-2 rounded-full bg-white/10 border border-white/20 text-white text-sm font-body hover:bg-white/20 backdrop-blur">
+            <a key={g.ministry} href={`#${slug(g.ministry)}`} className="px-4 py-2 rounded-full bg-white border border-border text-navy text-sm font-body hover:border-brand hover:text-brand">
               {g.ministry}
             </a>
           ))}
@@ -30,7 +30,7 @@ export default function SchemesPage() {
         <div className="space-y-12">
           {SCHEMES.map((g) => (
             <section key={g.ministry} id={slug(g.ministry)} className="scroll-mt-24" aria-labelledby={`${slug(g.ministry)}-h`}>
-              <h2 id={`${slug(g.ministry)}-h`} className="font-display text-2xl font-semibold text-navy mb-5">{g.ministry}</h2>
+              <h2 id={`${slug(g.ministry)}-h`} className="font-display text-2xl font-bold text-navy mb-5">{g.ministry}</h2>
               <div className="grid md:grid-cols-2 gap-5">
                 {SCHEME_DETAILS.filter((s) => s.ministry === g.ministry).map((s) => (
                   <article key={s.name} className="bg-white border border-border rounded-2xl p-6 shadow-card flex flex-col">

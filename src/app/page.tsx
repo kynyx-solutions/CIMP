@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PublicHeader, PublicFooter, SectionHeading, SampleTag, Arrow, Check } from "@/components/public/Site";
-import HexHive from "@/components/public/HexHive";
+import BodhiTree from "@/components/public/BodhiTree";
+import FireflyField from "@/components/public/FireflyField";
 import { prisma } from "@/lib/prisma";
 import {
   IS_SAMPLE, STATS, OPEN_CALLS, PROGRAMS, APPLY_STEPS, ELIGIBILITY,
@@ -38,42 +39,50 @@ export default async function HomePage() {
     <main className="min-h-screen bg-bg antialiased">
       <PublicHeader />
 
-      {/* ═══ HERO (light, "incubation hive") ═══ */}
-      <section className="relative overflow-hidden bg-white">
-        <HexHive />
-        {/* Soft white glow behind the text so it stays readable over the network */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_50%_at_50%_45%,rgba(255,255,255,0.85)_0%,rgba(255,255,255,0.45)_55%,rgba(255,255,255,0)_100%)]" aria-hidden="true" />
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 pt-20 pb-32 md:pt-28 md:pb-40 text-center">
-          <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-brand text-xs font-mono tracking-[0.15em] uppercase font-semibold mb-8">
+      {/* ═══ HERO: bodhi tree as a full background animation, content centred ═══ */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-leaf-50 via-white to-leaf-50/60">
+        {/* Bodhi tree centred in the hero background. The SVG scales to fit this box
+            (preserveAspectRatio "meet"), so on every screen size it stays whole and centred.
+            Bottom padding (56px) equals the Open calls card overlap (-mt-14), so roots are never hidden. */}
+        <div className="pointer-events-none absolute inset-0 px-2 pt-2 pb-14 sm:pt-3 sm:pb-14" aria-hidden="true">
+          <BodhiTree className="block w-full h-full" treeOpacity={0.32} />
+        </div>
+        {/* Soft white glow behind the text so it stays readable over the tree */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_44%_30%_at_50%_42%,rgba(255,255,255,0.7)_0%,rgba(255,255,255,0.35)_55%,rgba(255,255,255,0)_100%)]" aria-hidden="true" />
+        <FireflyField />
+
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 pt-20 pb-36 md:pt-24 md:pb-44 text-center">
+          <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 border border-leaf-200 text-brand text-xs font-mono tracking-[0.15em] uppercase font-semibold mb-7 backdrop-blur">
             <span className="relative flex w-2 h-2" aria-hidden="true">
               <span className="hero-ping absolute inline-flex w-full h-full rounded-full bg-brand" />
               <span className="relative inline-flex w-2 h-2 rounded-full bg-brand" />
             </span>
             Applications open
           </p>
-          <p className="text-secondary font-body text-sm sm:text-base uppercase tracking-[0.35em] mb-4">
+          <p className="text-secondary font-body text-xs sm:text-sm uppercase tracking-[0.35em] mb-4">
             Chandragupt Institute of Management Patna
           </p>
-          <h1 className="font-body font-extrabold uppercase tracking-[0.04em] leading-[1.05] text-4xl sm:text-6xl md:text-7xl">
+          <h1 className="font-body font-extrabold uppercase tracking-[0.03em] leading-[1.05] text-4xl sm:text-6xl md:text-7xl">
             <span className="hero-title-gradient">Business Incubation</span>
             <br />
             <span className="hero-title-gradient">&amp; Innovation Foundation</span>
           </h1>
-          <p className="mt-6 text-navy/80 font-body text-base sm:text-lg tracking-[0.12em] uppercase">
-            Startup incubator of CIMP <span className="text-amber-600">·</span> Patna, Bihar <span className="text-amber-600">·</span> Since 2017
+          <p className="mt-6 font-body text-2xl sm:text-4xl font-semibold text-saffron-600" lang="sa">
+            सर्व सिद्धि मूलम् उद्यमिता
           </p>
-          <p className="mt-5 text-secondary font-body text-lg max-w-2xl mx-auto leading-relaxed">
-            Mentorship, seed-fund support, co-working and a transparent, fully digital incubation process for founders in Bihar.
+          <p className="mt-1 text-sm font-body italic text-muted">Entrepreneurship is the root of all accomplishment</p>
+          <p className="mt-6 text-secondary font-body text-lg max-w-2xl mx-auto leading-relaxed">
+            The startup incubator of CIMP, Patna, since 2017: mentorship, seed-fund support, co-working and a transparent, fully digital incubation process.
           </p>
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link href="/register" className="group w-full sm:w-auto px-8 py-3.5 rounded-full text-white font-semibold font-body tracking-wide bg-gradient-to-r from-brand via-sky-600 to-cyan-600 hover:brightness-110 transition inline-flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(29,78,216,0.3)]">
+          <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link href="/register" className="group w-full sm:w-auto px-8 py-3.5 rounded-full text-white font-semibold font-body tracking-wide bg-brand hover:bg-leaf-800 transition inline-flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(63,122,22,0.3)]">
               Apply for Incubation <span className="group-hover:translate-x-0.5 transition-transform"><Arrow /></span>
             </Link>
-            <Link href="/programs" className="w-full sm:w-auto px-8 py-3.5 rounded-full border border-navy/15 bg-white/80 backdrop-blur text-navy font-body font-medium hover:border-brand hover:text-brand transition">
+            <Link href="/programs" className="w-full sm:w-auto px-8 py-3.5 rounded-full border border-border bg-white/90 text-navy font-body font-medium hover:border-brand hover:text-brand transition backdrop-blur">
               Explore programs
             </Link>
           </div>
-          <ul className="mt-12 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm font-body text-secondary">
+          <ul className="mt-10 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm font-body text-secondary">
             {["Section 8 company of CIMP", "Supported by Dept. of Industries, Govt. of Bihar", "Manages B-Hub, Patna"].map((t) => (
               <li key={t} className="inline-flex items-center gap-2"><Check />{t}</li>
             ))}
@@ -127,7 +136,7 @@ export default async function HomePage() {
             {PROGRAMS.map((p) => (
               <article key={p.name} className="flex flex-col border border-border rounded-2xl p-6 bg-surface-2 hover:shadow-card-md transition-shadow">
                 <p className="text-xs font-mono uppercase tracking-wider text-brand font-semibold">{p.stage}</p>
-                <h3 className="font-display text-2xl font-semibold text-navy mt-1">{p.name}</h3>
+                <h3 className="font-display text-2xl font-bold text-navy mt-1">{p.name}</h3>
                 <p className="text-xs font-mono text-muted mt-1">{p.duration}</p>
                 <p className="text-sm text-secondary font-body mt-4">{p.forWho}</p>
                 <ul className="mt-4 space-y-2 flex-1">
@@ -155,7 +164,7 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 grid lg:grid-cols-[1.4fr_1fr] gap-12">
           <div>
             <SectionHeading eyebrow="How to apply" title="A clear process you can track live" desc="No email chains or external forms. You apply in the portal and see each review stage, remark and decision as it happens." />
-            <ol className="relative border-l-2 border-blue-100 ml-3 space-y-8">
+            <ol className="relative border-l-2 border-leaf-100 ml-3 space-y-8">
               {APPLY_STEPS.map((s, i) => (
                 <li key={s.title} className="pl-8 relative">
                   <span className="absolute -left-[17px] top-0 w-8 h-8 rounded-full bg-brand text-white font-mono text-sm font-bold flex items-center justify-center">{i + 1}</span>
@@ -178,9 +187,9 @@ export default async function HomePage() {
               </ul>
             </div>
             <div className="rounded-2xl p-6 bg-navy text-white">
-              <p className="text-xs font-mono uppercase tracking-wider text-blue-200">Always know where you stand</p>
-              <p className="font-body mt-2 text-sm leading-relaxed text-blue-50">{RESPONSE_TIME}, with email and in-app notifications.</p>
-              <Link href="/register" className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white text-navy font-semibold text-sm font-body hover:bg-blue-50 transition-colors">
+              <p className="text-xs font-mono uppercase tracking-wider text-leaf-200">Always know where you stand</p>
+              <p className="font-body mt-2 text-sm leading-relaxed text-leaf-50">{RESPONSE_TIME}, with email and in-app notifications.</p>
+              <Link href="/register" className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white text-navy font-semibold text-sm font-body hover:bg-leaf-50 transition-colors">
                 Start your application <Arrow />
               </Link>
             </div>
@@ -207,7 +216,7 @@ export default async function HomePage() {
                 <li key={s._id} className="border border-border rounded-2xl p-5 bg-surface-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-body font-semibold text-navy">{s.startupName}</h3>
-                    <span className="text-[11px] font-mono text-brand bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">{s.industry}</span>
+                    <span className="text-[11px] font-mono text-brand bg-leaf-50 border border-leaf-100 px-2 py-0.5 rounded-full">{s.industry}</span>
                     {s.isFastTracked && <span className="text-[11px] font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">Fast-tracked</span>}
                   </div>
                   <p className="text-sm text-secondary font-body mt-2 line-clamp-3">{s.idea}</p>
@@ -225,7 +234,7 @@ export default async function HomePage() {
           <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {MENTORS.map((m, i) => (
               <li key={i} className="bg-white border border-border rounded-2xl p-5 shadow-card">
-                <div className="w-12 h-12 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center font-display text-brand text-lg" aria-hidden="true">
+                <div className="w-12 h-12 rounded-full bg-leaf-50 border border-leaf-100 flex items-center justify-center font-display text-brand text-lg" aria-hidden="true">
                   {m.name.charAt(0)}
                 </div>
                 <h3 className="font-body font-semibold text-navy mt-3">{m.name}</h3>
@@ -238,7 +247,7 @@ export default async function HomePage() {
             <p className="font-body text-sm text-secondary flex-1">
               <span className="font-semibold text-navy">Experienced founder, expert or investor?</span> Join the CIMP-BIIF mentor and investor network.
             </p>
-            <Link href="#contact" className="px-5 py-2.5 rounded-lg border border-brand text-brand font-semibold text-sm font-body hover:bg-blue-50 transition-colors">
+            <Link href="#contact" className="px-5 py-2.5 rounded-lg border border-brand text-brand font-semibold text-sm font-body hover:bg-leaf-50 transition-colors">
               Become a mentor
             </Link>
           </div>
@@ -284,13 +293,13 @@ export default async function HomePage() {
       {/* ═══ FINAL CTA ═══ */}
       <section className="bg-navy">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16 text-center">
-          <h2 className="font-display text-3xl md:text-4xl font-semibold text-white">Ready to build with CIMP-BIIF?</h2>
-          <p className="text-blue-100 font-body mt-3">Apply in minutes and track every step of your review online.</p>
+          <h2 className="font-display text-3xl md:text-4xl font-bold text-white">Ready to build with CIMP-BIIF?</h2>
+          <p className="text-leaf-100 font-body mt-3">Apply in minutes and track every step of your review online.</p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/register" className="px-7 py-3.5 rounded-xl bg-white text-navy font-semibold font-body hover:bg-blue-50 transition-colors inline-flex items-center justify-center gap-2">
+            <Link href="/register" className="px-7 py-3.5 rounded-xl bg-white text-navy font-semibold font-body hover:bg-leaf-50 transition-colors inline-flex items-center justify-center gap-2">
               Apply for Incubation <Arrow />
             </Link>
-            <Link href="/login" className="px-7 py-3.5 rounded-xl border border-blue-300/40 text-white font-body hover:bg-white/10 transition-colors">
+            <Link href="/login" className="px-7 py-3.5 rounded-xl border border-leaf-300/40 text-white font-body hover:bg-white/10 transition-colors">
               Login to your dashboard
             </Link>
           </div>
