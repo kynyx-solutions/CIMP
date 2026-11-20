@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
-import { Notification } from '@/models/Notification';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { withId } from '@/lib/serialize';
 
 function getUser(req: NextRequest) {
   const token = req.cookies.get('incubator_token')?.value;
@@ -14,14 +14,12 @@ export async function GET(req: NextRequest) {
   const user = getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  await connectDB();
-  const notifications = await Notification.find({ userId: user.userId })
-    .sort({ createdAt: -1 })
-    .limit(30);
+  const [notifications, unreadCount] = await Promise.all([
+    prisma.notification.findMany({ where: { userId: user.userId }, orderBy: { createdAt: 'desc' }, take: 30 }),
+    prisma.notification.count({ where: { userId: user.userId, read: false } }),
+  ]);
 
-  const unreadCount = await Notification.countDocuments({ userId: user.userId, read: false });
-
-  return NextResponse.json({ notifications, unreadCount });
+  return NextResponse.json({ notifications: withId(notifications), unreadCount });
 }
 
 // PATCH — mark all as read
@@ -29,8 +27,6 @@ export async function PATCH(req: NextRequest) {
   const user = getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  await connectDB();
-  await Notification.updateMany({ userId: user.userId, read: false }, { read: true });
-
+  await prisma.notification.updateMany({ where: { userId: user.userId, read: false }, data: { read: true } });
   return NextResponse.json({ success: true });
 }

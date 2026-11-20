@@ -1,0 +1,119 @@
+// Demo data layer (MySQL). Phase 1 moves to MongoDB per the proposal (PRD §9).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  password     String?
+  // incubatee | admin_it | ceo | sr_manager | manager | executive | staff (validated in app code)
+  role         String    @default("incubatee")
+  image        String?   @db.Text
+  isVerified   Boolean   @default(false)
+  otp          String?
+  otpExpiresAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  applications  Application[]
+  notifications Notification[]
+  messages      Message[]
+}
+
+model Application {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applicantName   String
+  startupName     String
+  idea            String   @db.Text
+  industry        String
+  pitchDeckUrl    String?
+  pitchDeckName   String?
+  status          String   @default("pending")   // pending | approved | rejected
+  stage           String   @default("submitted") // see src/lib/workflow.ts
+  rejectedBy      String?
+  rejectionReason String?  @db.Text
+  isFastTracked   Boolean  @default(false)
+  isPublic        Boolean  @default(false)
+  isEditable      Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  steps         ApprovalStep[]
+  activities    Activity[]
+  messages      Message[]
+  notifications Notification[]
+
+  @@index([userId])
+  @@index([stage])
+}
+
+// One row per workflow decision (PRD WF-1).
+model ApprovalStep {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fromStage     String
+  toStage       String
+  action        String
+  actorId       String
+  actorName     String
+  actorRole     String
+  remark        String?     @db.Text
+  signature     String?
+  at            DateTime    @default(now())
+
+  @@index([applicationId])
+}
+
+model Activity {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  actorName     String
+  actorRole     String
+  action        String
+  detail        String?     @db.Text
+  createdAt     DateTime    @default(now())
+
+  @@index([applicationId])
+}
+
+model Message {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  senderId      String
+  sender        User        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderName    String
+  senderRole    String
+  content       String      @db.Text
+  read          Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  @@index([applicationId])
+}
+
+model Notification {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  message       String       @db.Text
+  type          String       @default("info") // info | success | warning | error
+  read          Boolean      @default(false)
+  applicationId String?
+  application   Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+
+  @@index([userId])
+}

@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { connectDB } from "@/lib/db";
-import { Application } from "@/models/Application";
+import { prisma } from "@/lib/prisma";
 
 type Startup = {
-  _id: any; // or Types.ObjectId (better)
+  id: string;
   startupName: string;
   applicantName: string;
   idea: string;
@@ -17,18 +16,18 @@ type Startup = {
 export const dynamic = "force-dynamic";
 
 async function getPublicStartups(): Promise<Startup[]> {
-  await connectDB();
-  return Application.find({ isPublic: true, status: "approved" })
-    .select("startupName applicantName idea industry isFastTracked createdAt")
-    .sort({ createdAt: -1 })
-    .lean<Startup[]>();
+  return prisma.application.findMany({
+    where: { isPublic: true, status: "approved" },
+    select: { id: true, startupName: true, applicantName: true, idea: true, industry: true, isFastTracked: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+  });
 }
 
 export default async function PublicStartupsPage() {
   const startups = await getPublicStartups();
   const serialized = startups.map((s) => ({
     ...s,
-    _id: s._id.toString(),
+    _id: s.id,
     createdAt: (s.createdAt as Date).toISOString(),
   }));
 

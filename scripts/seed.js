@@ -1,33 +1,30 @@
 /**
  * Seed script — creates a demo incubatee account.
- * Run: npm run seed  (after setting MONGODB_URI in .env.local)
+ * Run: npm run seed  (after `npx prisma db push`)
  *
  * Staff are NOT seeded: create the CEO with `npm run create-ceo`,
- * then the CEO appoints managers from the Team page.
+ * then the CEO creates other office users from the Team page.
  */
 
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 require('dotenv').config({ path: '.env.local' });
+require('dotenv').config({ path: '.env' });
+const bcrypt = require('bcryptjs');
+const { PrismaClient } = require('@prisma/client');
 
 async function seed() {
-  await mongoose.connect(process.env.MONGODB_URI);
-  console.log('Connected to MongoDB');
-
-  const User =
-    mongoose.models.User ||
-    mongoose.model('User', new mongoose.Schema({}, { strict: false, timestamps: true }), 'users');
-
-  const password = await bcrypt.hash('demo123', 12);
-  await User.findOneAndUpdate(
-    { email: 'incubatee@demo.com' },
-    { name: 'Demo Incubatee', email: 'incubatee@demo.com', role: 'incubatee', password, isVerified: true },
-    { upsert: true, new: true }
-  );
-  console.log('✅ incubatee: incubatee@demo.com / demo123');
-
-  console.log('\n🎉 Seed complete!');
-  process.exit(0);
+  const prisma = new PrismaClient();
+  try {
+    const password = await bcrypt.hash('demo123', 12);
+    await prisma.user.upsert({
+      where: { email: 'incubatee@demo.com' },
+      update: { password, isVerified: true },
+      create: { name: 'Demo Incubatee', email: 'incubatee@demo.com', role: 'incubatee', password, isVerified: true },
+    });
+    console.log('✅ incubatee: incubatee@demo.com / demo123');
+    console.log('\n🎉 Seed complete!');
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
-seed().catch(err => { console.error(err); process.exit(1); });
+seed().catch((err) => { console.error(err); process.exit(1); });

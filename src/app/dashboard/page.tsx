@@ -1,9 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { verifyToken } from '@/lib/auth';
-import { connectDB } from '@/lib/db';
-import { Application } from '@/models/Application';
-import { Activity } from '@/models/Activity';
+import { prisma } from '@/lib/prisma';
 import Navbar from '@/components/Navbar';
 import StageBadge from '@/components/StageBadge';
 import Link from 'next/link';
@@ -20,7 +18,6 @@ export default async function DashboardPage() {
   const user = await getUser();
   
   if (!user) redirect('/login');
-  await connectDB();
 
   const isCEO = user.role === 'ceo';
   // Any office role gets the office dashboard (stats, activity).
@@ -33,39 +30,35 @@ export default async function DashboardPage() {
   let industryBreakdown: Record<string, number> = {};
 
   if (user.role === 'incubatee') {
-    applications = await Application.find({ userId: user.userId }).sort({ createdAt: -1 }).lean();
+    applications = await prisma.application.findMany({ where: { userId: user.userId }, orderBy: { createdAt: 'desc' } });
   } else {
     const [byStage, ft, allApps] = await Promise.all([
-      Application.aggregate([{ $group: { _id: '$stage', count: { $sum: 1 } } }]),
-      Application.countDocuments({ isFastTracked: true }),
-      Application.find({}).sort({ createdAt: -1 }).limit(6).lean(),
+      prisma.application.groupBy({ by: ['stage'], _count: { _all: true } }),
+      prisma.application.count({ where: { isFastTracked: true } }),
+      prisma.application.findMany({ orderBy: { createdAt: 'desc' }, take: 6 }),
     ]);
-    for (const s of byStage) stageCounts[s._id] = s.count;
+    for (const s of byStage) stageCounts[s.stage] = s._count._all;
     fastTracked = ft;
     applications = allApps;
 
     // Industry breakdown for CEO chart
     if (isCEO) {
-      const allForChart = await Application.find({}).select('industry').lean();
-      for (const a of allForChart) {
-        industryBreakdown[a.industry] = (industryBreakdown[a.industry] || 0) + 1;
-      }
+      const byIndustry = await prisma.application.groupBy({ by: ['industry'], _count: { _all: true } });
+      for (const g of byIndustry) industryBreakdown[g.industry] = g._count._all;
     }
 
     // Recent activity
-    const appIds = applications.map((a: any) => a._id);
-    recentActivity = await Activity.find({ applicationId: { $in: appIds } })
-      .sort({ createdAt: -1 }).limit(8).lean();
+    recentActivity = await prisma.activity.findMany({
+      where: { applicationId: { in: applications.map((a: any) => a.id) } },
+      orderBy: { createdAt: 'desc' }, take: 8,
+    });
   }
 
   const serialized = applications.map((a: any) => ({
-    ...a, _id: a._id.toString(), userId: a.userId?.toString(),
-    managerId: a.managerId?.toString(), createdAt: a.createdAt?.toISOString(),
-    updatedAt: a.updatedAt?.toISOString(),
+    ...a, _id: a.id, createdAt: a.createdAt?.toISOString(), updatedAt: a.updatedAt?.toISOString(),
   }));
   const serializedActivity = recentActivity.map((a: any) => ({
-    ...a, _id: a._id.toString(), applicationId: a.applicationId?.toString(),
-    createdAt: a.createdAt?.toISOString(),
+    ...a, _id: a.id, createdAt: a.createdAt?.toISOString(),
   }));
   const industryData = Object.entries(industryBreakdown).sort((a, b) => b[1] - a[1]);
   const maxCount = industryData.length > 0 ? Math.max(...industryData.map(([, v]) => v)) : 1;

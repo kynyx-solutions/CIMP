@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
-import { Activity } from '@/models/Activity';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
-import { Application } from '@/models/Application';
+import { withId, isId } from '@/lib/serialize';
 
 function getUser(req: NextRequest) {
   const token = req.cookies.get('incubator_token')?.value;
@@ -16,15 +15,13 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const applicationId = req.nextUrl.searchParams.get('applicationId');
-  if (!applicationId) return NextResponse.json({ error: 'applicationId required' }, { status: 400 });
-
-  await connectDB();
+  if (!isId(applicationId)) return NextResponse.json({ error: 'applicationId required' }, { status: 400 });
 
   if (user.role === 'incubatee') {
-    const app = await Application.findOne({ _id: applicationId, userId: user.userId });
+    const app = await prisma.application.findFirst({ where: { id: applicationId, userId: user.userId } });
     if (!app) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const activities = await Activity.find({ applicationId }).sort({ createdAt: -1 });
-  return NextResponse.json({ activities });
+  const activities = await prisma.activity.findMany({ where: { applicationId }, orderBy: { createdAt: 'desc' } });
+  return NextResponse.json({ activities: withId(activities) });
 }

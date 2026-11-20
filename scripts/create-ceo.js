@@ -4,13 +4,14 @@
  * Usage:
  *   npm run create-ceo -- --name "Jane Doe" --email jane@yourcompany.com --password "S3cure-pass"
  *
- * Requires MONGODB_URI and COMPANY_EMAIL_DOMAINS in .env.local.
+ * Requires DATABASE_URL (.env) and COMPANY_EMAIL_DOMAINS (.env.local).
  * Refuses to run if a CEO already exists (there is a single owner).
  */
 
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 require('dotenv').config({ path: '.env.local' });
+require('dotenv').config({ path: '.env' });
+const bcrypt = require('bcryptjs');
+const { PrismaClient } = require('@prisma/client');
 
 function arg(name) {
   const i = process.argv.indexOf(`--${name}`);
@@ -41,29 +42,19 @@ async function main() {
     fail(`CEO email must be on a company domain: ${domains.join(', ')}`);
   }
 
-  if (!process.env.MONGODB_URI) fail('Set MONGODB_URI in .env.local first.');
-  await mongoose.connect(process.env.MONGODB_URI);
+  const prisma = new PrismaClient();
+  try {
+    const existingCeo = await prisma.user.findFirst({ where: { role: 'ceo' } });
+    if (existingCeo) fail(`A CEO already exists: ${existingCeo.email}`);
+    if (await prisma.user.findUnique({ where: { email } })) fail(`A user with email ${email} already exists.`);
 
-  // Loose model over the existing users collection (schema lives in src/models/User.ts).
-  const User =
-    mongoose.models.User ||
-    mongoose.model('User', new mongoose.Schema({}, { strict: false, timestamps: true }), 'users');
-
-  const existingCeo = await User.findOne({ role: 'ceo' }).lean();
-  if (existingCeo) fail(`A CEO already exists: ${existingCeo.email}`);
-
-  if (await User.findOne({ email }).lean()) fail(`A user with email ${email} already exists.`);
-
-  await User.create({
-    name,
-    email,
-    password: await bcrypt.hash(password, 12),
-    role: 'ceo',
-    isVerified: true,
-  });
-
-  console.log(`✅ CEO created: ${email}`);
-  await mongoose.disconnect();
+    await prisma.user.create({
+      data: { name, email, password: await bcrypt.hash(password, 12), role: 'ceo', isVerified: true },
+    });
+    console.log(`✅ CEO created: ${email}`);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
 main().catch((err) => {
