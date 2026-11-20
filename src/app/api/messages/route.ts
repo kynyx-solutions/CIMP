@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
-import { Message } from '@/models/Message';
-import { Notification } from '@/models/Notification';
-import { Application } from '@/models/Application';
-import { User } from '@/models/User';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
+import { withId, isId } from '@/lib/serialize';
+import { APPROVAL_RANK, ROLE_LABELS } from '@/lib/workflow';
 
 function getUser(req: NextRequest) {
   const token = req.cookies.get('incubator_token')?.value;
@@ -18,25 +16,23 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const applicationId = req.nextUrl.searchParams.get('applicationId');
-  if (!applicationId) return NextResponse.json({ error: 'applicationId required' }, { status: 400 });
-
-  await connectDB();
+  if (!isId(applicationId)) return NextResponse.json({ error: 'applicationId required' }, { status: 400 });
 
   // Verify access: incubatee can only see their own app's messages
   if (user.role === 'incubatee') {
-    const app = await Application.findOne({ _id: applicationId, userId: user.userId });
+    const app = await prisma.application.findFirst({ where: { id: applicationId, userId: user.userId } });
     if (!app) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const messages = await Message.find({ applicationId }).sort({ createdAt: 1 });
+  const messages = await prisma.message.findMany({ where: { applicationId }, orderBy: { createdAt: 'asc' } });
 
-  // Mark messages as read for this user
-  await Message.updateMany(
-    { applicationId, senderId: { $ne: user.userId }, read: false },
-    { read: true }
-  );
+  // Mark messages from others as read
+  await prisma.message.updateMany({
+    where: { applicationId, senderId: { not: user.userId }, read: false },
+    data: { read: true },
+  });
 
-  return NextResponse.json({ messages });
+  return NextResponse.json({ messages: withId(messages) });
 }
 
 // POST /api/messages
@@ -45,55 +41,46 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { applicationId, content } = await req.json();
-  if (!applicationId || !content?.trim()) {
+  if (!isId(applicationId) || !content?.trim()) {
     return NextResponse.json({ error: 'applicationId and content required' }, { status: 400 });
   }
 
-  await connectDB();
-
-  // Access check
-  const app = await Application.findById(applicationId);
+  const app = await prisma.application.findUnique({ where: { id: applicationId } });
   if (!app) return NextResponse.json({ error: 'Application not found' }, { status: 404 });
 
-  if (user.role === 'incubatee' && app.userId.toString() !== user.userId) {
+  if (user.role === 'incubatee' && app.userId !== user.userId) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const message = await Message.create({
-    applicationId,
-    senderId: user.userId,
-    senderName: user.name,
-    senderRole: user.role,
-    content: content.trim(),
+  const message = await prisma.message.create({
+    data: {
+      applicationId, senderId: user.userId, senderName: user.name, senderRole: user.role,
+      content: content.trim(),
+    },
   });
 
   // Notify the other party
-  let notifyUserId: string | null = null;
-  let notifyTitle = '';
-  let notifyMsg = '';
-
   if (user.role === 'incubatee') {
-    // notify all managers/ceo — find any manager
-    const managers = await User.find({ role: { $in: ['manager', 'ceo'] } }).select('_id');
-    for (const m of managers) {
-      await Notification.create({
-        userId: m._id,
-        title: 'New Message',
-        message: `${user.name} sent a message about "${app.startupName}"`,
-        type: 'info',
-        applicationId: app._id,
+    // office users with approval authority
+    const reviewers = await prisma.user.findMany({
+      where: { role: { in: Object.keys(APPROVAL_RANK) } }, select: { id: true },
+    });
+    if (reviewers.length) {
+      await prisma.notification.createMany({
+        data: reviewers.map(r => ({
+          userId: r.id, title: 'New Message', type: 'info', applicationId: app.id,
+          message: `${user.name} sent a message about "${app.startupName}"`,
+        })),
       });
     }
   } else {
-    // notify incubatee
-    await Notification.create({
-      userId: app.userId,
-      title: 'New Message',
-      message: `${user.name} (${user.role}) sent you a message about "${app.startupName}"`,
-      type: 'info',
-      applicationId: app._id,
+    await prisma.notification.create({
+      data: {
+        userId: app.userId, title: 'New Message', type: 'info', applicationId: app.id,
+        message: `${user.name} (${ROLE_LABELS[user.role] ?? user.role}) sent you a message about "${app.startupName}"`,
+      },
     });
   }
 
-  return NextResponse.json({ success: true, message });
+  return NextResponse.json({ success: true, message: withId(message) });
 }

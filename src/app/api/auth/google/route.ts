@@ -1,44 +1,71 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB } from "@/lib/db";
-import { User } from "@/models/User";
-import { signToken } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { signToken, type Role } from "@/lib/auth";
+import { verifyFirebaseIdToken } from "@/lib/firebase-verify";
+import { isCompanyEmail, isPublicRole, isStaffRole } from "@/lib/roles";
+
+const STAFF_BLOCKED =
+  "Google sign-in is not available for staff. Sign in with your company email and password.";
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, image, role } = await req.json();
+    const { idToken, role } = await req.json();
 
-    if (!email) {
-      return NextResponse.json({ error: "Email required" }, { status: 400 });
+    if (!idToken) {
+      return NextResponse.json({ error: "ID token required" }, { status: 400 });
     }
 
-    await connectDB();
+    // Identity comes only from the verified token, never from the request body.
+    let identity;
+    try {
+      identity = await verifyFirebaseIdToken(idToken);
+    } catch {
+      return NextResponse.json({ error: "Invalid Google sign-in" }, { status: 401 });
+    }
 
-    let user = await User.findOne({ email: email.toLowerCase() });
+    if (!identity.email || !identity.emailVerified) {
+      return NextResponse.json(
+        { error: "Your Google account email is not verified" },
+        { status: 400 },
+      );
+    }
 
-    // 🆕 If user doesn't exist → create
+    if (isCompanyEmail(identity.email)) {
+      return NextResponse.json({ error: STAFF_BLOCKED }, { status: 403 });
+    }
+
+
+    let user = await prisma.user.findUnique({ where: { email: identity.email.toLowerCase() } });
+
+    if (user && isStaffRole(user.role)) {
+      return NextResponse.json({ error: STAFF_BLOCKED }, { status: 403 });
+    }
+
     if (!user) {
-      user = await User.create({
-        name,
-        email,
-        image,
-        role,
-        isVerified: true, // ✅ Google users are trusted
-        password: null, 
+      user = await prisma.user.create({
+        data: {
+          name: identity.name || identity.email.split("@")[0],
+          email: identity.email.toLowerCase(),
+          image: identity.picture,
+          role: isPublicRole(role) ? role : "incubatee",
+          isVerified: true,
+          // Google sign-up shows "By continuing you agree to the Terms and Privacy Policy".
+          consentAt: new Date(),
+        },
       });
     }
 
-    // ✅ Generate your JWT (same as normal login)
     const token = signToken({
-      userId: user._id.toString(),
+      userId: user.id,
       email: user.email,
       name: user.name,
-      role: user.role,
+      role: user.role as Role,
     });
 
     const response = NextResponse.json({
       success: true,
       user: {
-        id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,

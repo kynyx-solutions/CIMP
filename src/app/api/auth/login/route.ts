@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { connectDB } from "@/lib/db";
-import { User } from "@/models/User";
-import { signToken } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { signToken, type Role } from "@/lib/auth";
+import { isCompanyEmail, isStaffRole } from "@/lib/roles";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,8 +15,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await connectDB();
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
 
     if (!user) {
       return NextResponse.json(
@@ -25,11 +24,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!user.password) {
+      return NextResponse.json(
+        { error: "This account uses Google sign-in. Continue with Google." },
+        { status: 400 },
+      );
+    }
+
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 },
+      );
+    }
+
+    // Staff may only sign in with a company-domain email.
+    if (isStaffRole(user.role) && !isCompanyEmail(user.email)) {
+      return NextResponse.json(
+        { error: "Staff must sign in with a company email address." },
+        { status: 403 },
       );
     }
 
@@ -45,16 +59,16 @@ export async function POST(req: NextRequest) {
     }
 
     const token = signToken({
-      userId: user._id.toString(),
+      userId: user.id,
       email: user.email,
       name: user.name,
-      role: user.role,
+      role: user.role as Role,
     });
 
     const response = NextResponse.json({
       success: true,
       user: {
-        id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,

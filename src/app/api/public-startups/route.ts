@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
-import { Application } from '@/models/Application';
+import { prisma } from '@/lib/prisma';
+import { withId } from '@/lib/serialize';
+
+// Never cache at build time; the directory changes whenever an app is published.
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  await connectDB();
-  const startups = await Application.find({ isPublic: true, status: 'approved' })
-    .select('startupName applicantName idea industry isFastTracked createdAt')
-    .sort({ createdAt: -1 });
-  return NextResponse.json({ startups });
+  const startups = await prisma.application.findMany({
+    where: { isPublic: true, status: 'approved' },
+    select: { id: true, startupName: true, applicantName: true, idea: true, industry: true, isFastTracked: true, createdAt: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  return NextResponse.json({ startups: withId(startups) });
 }
