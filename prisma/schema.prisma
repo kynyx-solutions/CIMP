@@ -1,11 +1,12 @@
-// Demo data layer (MySQL). Phase 1 moves to MongoDB per the proposal (PRD §9).
+// Data layer: PostgreSQL via Prisma (proposed for Phase 1, PRD §9.4).
+// Schema changes go through migrations: npm run db:migrate -- --name <change>
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

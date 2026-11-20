@@ -275,6 +275,7 @@ Based on a review of 12 incubator websites (AIC-BIMTECH, IC IIT Patna, FITT IIT 
 | Performance | Typical pages load in under 2 s on broadband. Approval queues are paginated. |
 | Availability | Single-region AWS deployment. Uptime depends on third-party infrastructure (as the proposal states). |
 | Deployability | Docker + Docker Compose for local, staging and production. |
+| Database changes | Every schema change is a Prisma migration committed with the code (`prisma/migrations`). Deployments run `prisma migrate deploy`; nobody edits the production schema by hand. A demo seed script creates local data and refuses to run in production. |
 | Usability | Responsive web UI. English. |
 
 ## 9. Technical design
