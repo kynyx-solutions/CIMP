@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PublicHeader, PublicFooter, SectionHeading, SampleTag, Arrow, Check } from "@/components/public/Site";
+import { PublicHeader, PublicFooter, PageHero, CtaBand, SectionHeading, SampleTag, Arrow, Check } from "@/components/public/Site";
 import { ABOUT, SITE, STATS, IS_SAMPLE } from "@/content/site";
 
 export const metadata: Metadata = {
@@ -13,8 +13,9 @@ export default function AboutPage() {
     <main className="min-h-screen bg-bg antialiased">
       <PublicHeader />
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-12">
-        <SectionHeading as="h1" eyebrow="About" title={`About ${SITE.name}`} desc={SITE.fullName} />
+      <PageHero eyebrow="About" title={`About ${SITE.name}`} desc={SITE.fullName} />
+
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 -mt-12 relative z-10 pb-12">
         <div className="grid md:grid-cols-2 gap-6">
           <div className="bg-white border border-border rounded-2xl p-6 shadow-card">
             <h2 className="font-display text-xl font-semibold text-navy">Our mission <SampleTag /></h2>
@@ -94,6 +95,7 @@ export default function AboutPage() {
         </div>
       </section>
 
+      <CtaBand />
       <PublicFooter />
     </main>
   );

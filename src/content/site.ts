@@ -31,32 +31,64 @@ export const STATS = {
 export const OPEN_CALLS = [
   { title: "Incubation — Cohort 2027", deadline: "15 Jan 2027", href: "/register" },
   { title: "Pre-incubation — Rolling intake", deadline: "Rolling", href: "/register" },
-  { title: "Mentor & investor network", deadline: "Always open", href: "#contact" },
+  { title: "Mentor & investor network", deadline: "Always open", href: "/#contact" },
 ];
 
 export const PROGRAMS = [
   {
+    slug: "pre-incubation",
     stage: "Idea stage",
     name: "Pre-incubation",
     duration: "3 months",
+    format: "Hybrid: weekly sessions, mostly online",
     forWho: "Students, researchers and first-time founders with an idea or early prototype.",
     benefits: ["Weekly mentor sessions", "Problem & market validation", "Help with company registration"],
+    includes: [
+      "Weekly 1:1 or small-group mentor sessions",
+      "Customer discovery and market-validation sprints",
+      "Business model and pitch workshops",
+      "Help with company registration and DPIIT recognition",
+      "Guidance on NIDHI-PRAYAS style prototype grants",
+    ],
+    eligibility: ["An idea or early prototype", "Registration not required", "At least one committed founder"],
+    outcome: "A validated problem, a working prototype plan and readiness to apply for incubation.",
     terms: "No equity, no fee",
   },
   {
+    slug: "incubation",
     stage: "Prototype / MVP",
     name: "Incubation",
     duration: "12 months (extendable)",
+    format: "Resident or virtual",
     forWho: "Registered startups with a working prototype or MVP.",
     benefits: ["Dedicated mentor", "Office & lab access", "Seed-fund & scheme applications"],
+    includes: [
+      "A dedicated mentor plus access to the expert network",
+      "Office seat and shared lab access (resident track)",
+      "Support applying to seed funds and government schemes",
+      "Legal, IP, compliance and accounting clinics",
+      "Quarterly progress reviews with the incubation team",
+    ],
+    eligibility: ["Prototype or MVP ready", "Registered entity, or registering during the programme", "Not on equity terms with another incubator"],
+    outcome: "A market-ready product, early customers and a funding-ready company.",
     terms: "Terms shared before you apply",
   },
   {
+    slug: "acceleration",
     stage: "Early revenue",
     name: "Acceleration",
     duration: "6 months",
+    format: "Cohort-based",
     forWho: "Startups with early customers preparing to scale or raise.",
     benefits: ["Investor connects & demo day", "Industry pilots", "CXO-level mentoring"],
+    includes: [
+      "Investor introductions and a demo day",
+      "Pilot opportunities with industry and government partners",
+      "CXO-level mentoring on sales, hiring and fundraising",
+      "Fundraising readiness: data room, metrics and pitch reviews",
+    ],
+    eligibility: ["Paying customers or signed pilots", "Registered company", "Team of two or more"],
+    outcome: "A scalable go-to-market and a funding round or strategic partnership.",
     terms: "Terms shared before you apply",
   },
 ];
@@ -78,12 +110,78 @@ export const ELIGIBILITY = [
 
 export const RESPONSE_TIME = "Decision status visible in your dashboard at every stage";
 
-export const SCHEMES = [
-  { ministry: "DPIIT, Startup India", items: ["Startup India Seed Fund Scheme (SISFS)"] },
-  { ministry: "DST, Govt. of India", items: ["NIDHI-PRAYAS", "NIDHI-EIR"] },
-  { ministry: "MeitY", items: ["GENESIS"] },
-  { ministry: "DBT / BIRAC", items: ["Biotechnology Ignition Grant (BIG)"] },
+// Indicative summaries of public schemes. Amounts and rules change; the official
+// guidelines (linked) always prevail. CIMP to confirm which schemes it operates.
+export const SCHEME_DETAILS = [
+  {
+    ministry: "DPIIT, Startup India",
+    name: "Startup India Seed Fund Scheme (SISFS)",
+    support: "Grant for proof of concept, prototype and trials; convertible debentures or debt for market entry and scaling",
+    forWho: "DPIIT-recognised startups at an early stage",
+    howWeHelp: "Selected incubators evaluate and disburse SISFS funds. We help you prepare and submit the application.",
+    url: "https://seedfund.startupindia.gov.in/",
+  },
+  {
+    ministry: "DST, Govt. of India",
+    name: "NIDHI-PRAYAS",
+    support: "Grant to turn an idea into a working prototype",
+    forWho: "Innovators and early-stage founders with a hardware or deep-tech idea",
+    howWeHelp: "Guidance on eligibility and proposal preparation; available through PRAYAS centres.",
+    url: "https://nidhi.dst.gov.in/",
+  },
+  {
+    ministry: "DST, Govt. of India",
+    name: "NIDHI-EIR (Entrepreneur in Residence)",
+    support: "Monthly fellowship so you can work on your startup full time",
+    forWho: "Aspiring entrepreneurs, including recent graduates, pursuing a tech idea",
+    howWeHelp: "We help you apply and pair the fellowship with pre-incubation.",
+    url: "https://nidhi.dst.gov.in/",
+  },
+  {
+    ministry: "MeitY",
+    name: "GENESIS",
+    support: "Support for tech startups, with a focus on Tier-II and Tier-III cities",
+    forWho: "Early-stage technology startups outside the large metros",
+    howWeHelp: "We connect eligible incubatees to the programme and its partner network.",
+    url: "https://msh.meity.gov.in/",
+  },
+  {
+    ministry: "DBT / BIRAC",
+    name: "Biotechnology Ignition Grant (BIG)",
+    support: "Grant to establish proof of concept for biotech, medtech and healthcare ideas",
+    forWho: "Startups and entrepreneurs in life sciences and healthcare",
+    howWeHelp: "Help preparing the proposal and connecting with BIRAC partners.",
+    url: "https://birac.nic.in/",
+  },
 ];
+
+export const SCHEMES = SCHEME_DETAILS.reduce<{ ministry: string; items: string[] }[]>((groups, s) => {
+  const g = groups.find((x) => x.ministry === s.ministry);
+  if (g) g.items.push(s.name);
+  else groups.push({ ministry: s.ministry, items: [s.name] });
+  return groups;
+}, []);
+
+export const APPLY_GUIDE = {
+  documents: [
+    "Founder details: names, roles, background and LinkedIn links",
+    "Company registration (CIN) and DPIIT number, if any",
+    "One-line pitch, problem, solution and traction",
+    "Pitch deck (PDF or PowerPoint, up to 5 MB)",
+  ],
+  tips: [
+    "Lead with the problem and who has it. Numbers beat adjectives.",
+    "Show traction honestly, even if it is 'none yet' at idea stage.",
+    "Explain why your team is the right one to solve this.",
+    "Keep the deck to 10–12 slides.",
+  ],
+  afterSelection: [
+    "Onboarding call with the incubation team",
+    "Incubation agreement and any terms for your program",
+    "Mentor assignment and a 90-day plan",
+    "Optional listing in the public startup directory",
+  ],
+};
 
 export const MENTORS = [
   { name: "Mentor name", role: "Former CXO, FinTech", expertise: "Go-to-market, fundraising" },

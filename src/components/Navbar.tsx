@@ -129,7 +129,7 @@ export default function Navbar({ user }: NavbarProps) {
     { href: "/approvals", label: "Applications", roles: OFFICE_ROLES as string[] },
     { href: "/staff", label: "Team", roles: ["ceo"] },
     { href: "/messages", label: "Messages", roles: ALL },
-    { href: "/public-startups", label: "Directory", roles: ALL },
+    { href: "/startups", label: "Directory", roles: ALL },
   ].filter((l) => l.roles.includes(user.role));
 
   // Generate Avatar URL based on name if user doesn't have one

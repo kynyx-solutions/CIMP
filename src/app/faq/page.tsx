@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PublicHeader, PublicFooter, SectionHeading, SampleTag, Arrow } from "@/components/public/Site";
+import { PublicHeader, PublicFooter, PageHero, SampleTag, Arrow } from "@/components/public/Site";
 import { FAQS, SITE } from "@/content/site";
 
 export const metadata: Metadata = {
@@ -13,8 +13,9 @@ export default function FaqPage() {
     <main className="min-h-screen bg-bg antialiased">
       <PublicHeader />
 
+      <PageHero eyebrow="Help" title="Frequently asked questions" desc="Can't find your answer? Ask us from the contact section below, or through Messages once you have applied." />
+
       <section className="max-w-4xl mx-auto px-4 sm:px-6 pt-16 pb-20">
-        <SectionHeading as="h1" eyebrow="Help" title="Frequently asked questions" desc="Can't find your answer? Ask us from the contact section below, or through Messages once you have applied." />
 
         <div className="space-y-10">
           {FAQS.map((group) => (

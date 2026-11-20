@@ -1,15 +1,53 @@
 // Shared building blocks for public (logged-out) pages: header, footer, headings.
 import Link from "next/link";
 import { IS_SAMPLE, SITE, CONTACTS } from "@/content/site";
+import HeroBackground from "@/components/public/HeroBackground";
 
 export const PUBLIC_NAV = [
   { href: "/about", label: "About" },
-  { href: "/#programs", label: "Programs" },
-  { href: "/#apply", label: "How to Apply" },
-  { href: "/public-startups", label: "Startups" },
-  { href: "/#schemes", label: "Schemes" },
+  { href: "/programs", label: "Programs" },
+  { href: "/how-to-apply", label: "How to Apply" },
+  { href: "/startups", label: "Startups" },
+  { href: "/schemes", label: "Schemes" },
   { href: "/faq", label: "FAQ" },
 ];
+
+/** Dark banner at the top of each public sub-page (same visual language as the homepage hero). */
+export function PageHero({ eyebrow, title, desc, children }: {
+  eyebrow: string; title: string; desc?: string; children?: React.ReactNode;
+}) {
+  return (
+    <section className="relative overflow-hidden bg-[#081127]">
+      <HeroBackground compact />
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-24 md:pt-20 md:pb-28">
+        <p className="text-cyan-200 text-xs font-mono tracking-[0.15em] uppercase font-semibold mb-4">{eyebrow}</p>
+        <h1 className="font-display text-4xl md:text-5xl font-semibold text-white max-w-2xl leading-tight drop-shadow-[0_2px_24px_rgba(59,130,246,0.35)]">{title}</h1>
+        {desc && <p className="text-blue-100/90 font-body text-lg mt-4 max-w-2xl leading-relaxed">{desc}</p>}
+        {children && <div className="mt-8">{children}</div>}
+      </div>
+    </section>
+  );
+}
+
+/** Closing call to action used at the bottom of public pages. */
+export function CtaBand({ title = "Ready to build with CIMP-BIIF?", desc = "Apply in about 15 minutes and track every step of your review online." }: { title?: string; desc?: string }) {
+  return (
+    <section className="bg-navy">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16 text-center">
+        <h2 className="font-display text-3xl md:text-4xl font-semibold text-white">{title}</h2>
+        <p className="text-blue-100 font-body mt-3">{desc}</p>
+        <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+          <Link href="/register" className="px-7 py-3.5 rounded-xl bg-white text-navy font-semibold font-body hover:bg-blue-50 transition-colors inline-flex items-center justify-center gap-2">
+            Apply for Incubation <Arrow />
+          </Link>
+          <Link href="/faq" className="px-7 py-3.5 rounded-xl border border-blue-300/40 text-white font-body hover:bg-white/10 transition-colors">
+            Read the FAQ
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export const Arrow = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

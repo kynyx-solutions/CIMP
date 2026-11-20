@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { PublicHeader, PublicFooter, SectionHeading } from "@/components/public/Site";
+import { PublicHeader, PublicFooter, PageHero } from "@/components/public/Site";
 import { INDUSTRIES, APPLICATION_FIELDS } from "@/lib/application-fields";
 
 export const metadata: Metadata = {
@@ -49,9 +49,10 @@ export default async function PublicStartupsPage({ searchParams }: { searchParam
     <main className="min-h-screen bg-bg antialiased">
       <PublicHeader />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-20">
-        <SectionHeading as="h1" eyebrow="Portfolio" title="Startup directory"
-          desc="Startups approved through CIMP-BIIF's four-stage review and published to the directory." />
+      <PageHero eyebrow="Portfolio" title="Startup directory"
+        desc="Startups approved through CIMP-BIIF's four-stage review and published to the directory." />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 -mt-12 relative z-10 pb-20">
 
         {/* Filters: a plain GET form, so it works without JavaScript and results are shareable by URL */}
         <form method="get" className="bg-white border border-border rounded-2xl p-4 shadow-card mb-8 grid gap-3 md:grid-cols-[1fr_auto_auto_auto] items-end" role="search">
@@ -76,7 +77,7 @@ export default async function PublicStartupsPage({ searchParams }: { searchParam
           </label>
           <div className="flex gap-2">
             <button type="submit" className="px-5 py-2.5 rounded-xl bg-brand text-white text-sm font-semibold font-body hover:opacity-90">Filter</button>
-            {filtering && <Link href="/public-startups" className="px-4 py-2.5 rounded-xl border border-border text-sm font-body text-secondary hover:text-navy">Clear</Link>}
+            {filtering && <Link href="/startups" className="px-4 py-2.5 rounded-xl border border-border text-sm font-body text-secondary hover:text-navy">Clear</Link>}
           </div>
         </form>
 
