@@ -39,28 +39,32 @@ export default async function HomePage() {
     <main className="min-h-screen bg-bg antialiased">
       <PublicHeader />
 
-      {/* ═══ HERO ═══ */}
-      <section className="relative overflow-hidden">
+      {/* ═══ HERO (dark "Launchpad") ═══ */}
+      <section className="relative overflow-hidden bg-[#081127]">
         <HeroBackground />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-16 md:pt-24 md:pb-20 grid lg:grid-cols-[1.05fr_1fr] gap-12 lg:gap-8 items-center">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-28 md:pt-24 md:pb-36 grid lg:grid-cols-[1.05fr_1fr] gap-12 lg:gap-8 items-center">
           <div className="text-center lg:text-left">
-          <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-brand text-xs font-mono tracking-[0.15em] uppercase font-semibold mb-8">
-            <span className="w-2 h-2 rounded-full bg-brand" aria-hidden="true" /> Applications open
-          </p>
-          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-semibold text-navy leading-[1.08] max-w-3xl mx-auto lg:mx-0 mb-6">
-            Build your startup with <span className="shimmer-blue">CIMP-BIIF</span>
-          </h1>
-          <p className="text-secondary font-body text-lg md:text-xl max-w-2xl mx-auto lg:mx-0 mb-10 leading-relaxed">
-            {SITE.tagline} {SITE.intro}
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
-            <Link href="/register" className="group w-full sm:w-auto px-7 py-3.5 rounded-xl text-white font-semibold font-body bg-brand hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-2" style={{ boxShadow: "0 4px 20px rgba(29,78,216,0.3)" }}>
-              Apply for Incubation <Arrow />
-            </Link>
-            <Link href="#programs" className="w-full sm:w-auto px-7 py-3.5 rounded-xl border border-border bg-white text-secondary hover:text-brand hover:border-brand font-body transition-colors">
-              Find the right program
-            </Link>
-          </div>
+            <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-cyan-200 text-xs font-mono tracking-[0.15em] uppercase font-semibold mb-8 backdrop-blur">
+              <span className="relative flex w-2 h-2" aria-hidden="true">
+                <span className="hero-ping absolute inline-flex w-full h-full rounded-full bg-cyan-300" />
+                <span className="relative inline-flex w-2 h-2 rounded-full bg-cyan-300" />
+              </span>
+              Applications open
+            </p>
+            <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-semibold text-white leading-[1.08] max-w-3xl mx-auto lg:mx-0 mb-6 drop-shadow-[0_2px_24px_rgba(59,130,246,0.35)]">
+              Launch your startup with <span className="hero-gradient-text">CIMP-BIIF</span>
+            </h1>
+            <p className="text-blue-100/90 font-body text-lg md:text-xl max-w-2xl mx-auto lg:mx-0 mb-10 leading-relaxed">
+              {SITE.tagline} {SITE.intro}
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
+              <Link href="/register" className="group w-full sm:w-auto px-7 py-3.5 rounded-xl text-navy font-semibold font-body bg-gradient-to-r from-cyan-300 to-blue-300 hover:from-cyan-200 hover:to-blue-200 transition-colors inline-flex items-center justify-center gap-2 shadow-[0_0_32px_rgba(103,232,249,0.45)]">
+                Apply for Incubation <span className="group-hover:translate-x-0.5 transition-transform"><Arrow /></span>
+              </Link>
+              <Link href="#programs" className="w-full sm:w-auto px-7 py-3.5 rounded-xl border border-white/25 bg-white/5 text-white hover:bg-white/10 hover:border-white/40 font-body transition-colors backdrop-blur">
+                Find the right program
+              </Link>
+            </div>
           </div>
 
           <HeroVisual />
@@ -68,7 +72,7 @@ export default async function HomePage() {
       </section>
 
       {/* ═══ OPEN CALLS ═══ */}
-      <section aria-labelledby="calls-heading" className="max-w-7xl mx-auto px-4 sm:px-6 -mt-2 mb-16">
+      <section aria-labelledby="calls-heading" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 -mt-14 mb-16">
         <div className="bg-white border border-border rounded-2xl shadow-card p-4 sm:p-5">
           <h2 id="calls-heading" className="text-xs font-mono uppercase tracking-[0.15em] text-muted font-semibold mb-3 px-1">
             Open calls <SampleTag />

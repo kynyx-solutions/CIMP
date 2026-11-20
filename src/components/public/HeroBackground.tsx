@@ -1,52 +1,47 @@
-// Animated hero background: drifting colour fields, a circuit-style grid with
-// travelling signal pulses, and sparks rising (growth). Pure CSS, decorative.
-// Grid cell = 48px; pulses are placed on grid lines so they ride along them.
+// "Launchpad" hero background (dark): neon aurora, a 3D runway grid moving
+// toward the viewer, light streaks launching from the horizon, and twinkling
+// stars. Pure CSS, decorative; static under prefers-reduced-motion.
 
-const CELL = 48;
-
-// [grid line index, duration s, delay s]
-const H_PULSES: [number, number, number][] = [[2, 7, 0], [5, 9, 2.5], [8, 6.5, 4], [11, 10, 1.2]];
-const V_PULSES: [number, number, number][] = [[4, 8, 1], [11, 6, 3.5], [18, 9.5, 0.4], [25, 7.5, 5], [30, 8.5, 2]];
-
-// [left %, size px, duration s, delay s]
-const SPARKS: [number, number, number, number][] = [
-  [6, 4, 9, 0], [14, 3, 11, 3], [23, 5, 10, 6], [35, 3, 12, 1.5], [47, 4, 9.5, 4.5],
-  [58, 3, 11.5, 0.8], [66, 5, 10.5, 5.5], [74, 3, 9, 2.2], [83, 4, 12, 7], [92, 3, 10, 3.8],
+// [left %, delay s, duration s, height px]. Kept clear of the headline column for readability.
+const STREAKS: [number, number, number, number][] = [
+  [2, 0, 3.2, 140], [48, 1.6, 2.6, 110], [52.5, 0.7, 3.6, 170], [58, 2.4, 2.9, 120],
+  [66, 0.3, 3.4, 160], [76, 1.9, 2.7, 130], [86, 1.1, 3.8, 180], [97, 2.8, 3.1, 120],
 ];
+
+// Deterministic star field: [left %, top %, size px, delay s]
+const STARS: [number, number, number, number][] = Array.from({ length: 34 }, (_, i) => [
+  (i * 37) % 100, (i * 53) % 48, 1 + (i % 3), (i * 0.37) % 4,
+]);
 
 export default function HeroBackground() {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-      {/* 1. Drifting colour fields */}
-      <div className="hero-blob absolute -top-32 -left-24 w-[28rem] h-[28rem] rounded-full bg-blue-300/40 blur-3xl" />
-      <div className="hero-blob absolute top-1/3 -right-32 w-[32rem] h-[32rem] rounded-full bg-cyan-200/50 blur-3xl" style={{ animationDelay: "-7s", animationDuration: "26s" }} />
-      <div className="hero-blob absolute -bottom-40 left-1/3 w-[26rem] h-[26rem] rounded-full bg-indigo-200/50 blur-3xl" style={{ animationDelay: "-14s", animationDuration: "30s" }} />
+    <div className="absolute inset-0 overflow-hidden pointer-events-none bg-[radial-gradient(ellipse_at_top,#1e3a8a_0%,#0f2144_45%,#081127_100%)]" aria-hidden="true">
+      {/* 1. Neon aurora */}
+      <div className="hero-aurora absolute -top-40 left-[5%] w-[38rem] h-[24rem] rounded-full bg-blue-500/50 blur-[90px]" />
+      <div className="hero-aurora absolute -top-24 left-[40%] w-[34rem] h-[22rem] rounded-full bg-cyan-400/40 blur-[90px]" style={{ animationDelay: "-5s", animationDuration: "14s" }} />
+      <div className="hero-aurora absolute -top-32 right-[-5%] w-[30rem] h-[22rem] rounded-full bg-violet-500/45 blur-[90px]" style={{ animationDelay: "-9s", animationDuration: "18s" }} />
 
-      {/* 2. Grid + signal pulses, faded towards the edges */}
-      <div className="absolute inset-0 [mask-image:radial-gradient(ellipse_75%_70%_at_50%_45%,black_35%,transparent_100%)]">
-        <div className="hero-grid absolute inset-0" />
-        {H_PULSES.map(([row, dur, delay]) => (
-          <span key={`h${row}`} className="hero-pulse-h absolute left-0 h-px w-32 bg-gradient-to-r from-transparent via-blue-500 to-transparent"
-            style={{ top: row * CELL, animationDuration: `${dur}s`, animationDelay: `${delay}s` }} />
-        ))}
-        {V_PULSES.map(([col, dur, delay]) => (
-          <span key={`v${col}`} className="hero-pulse-v absolute top-0 w-px h-32 bg-gradient-to-b from-transparent via-cyan-500 to-transparent"
-            style={{ left: col * CELL, animationDuration: `${dur}s`, animationDelay: `${delay}s` }} />
-        ))}
-        {/* Junction glows where signals cross */}
-        {[[4, 2], [11, 5], [18, 8], [25, 5], [30, 11]].map(([c, r], i) => (
-          <span key={i} className="hero-node absolute w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-blue-500"
-            style={{ left: c * CELL, top: r * CELL, animationDelay: `${i * 0.9}s` }} />
-        ))}
+      {/* 4. Twinkling stars (upper half) */}
+      {STARS.map(([left, top, size, delay], i) => (
+        <span key={i} className="hero-star absolute rounded-full bg-white"
+          style={{ left: `${left}%`, top: `${top}%`, width: size, height: size, animationDelay: `${delay}s` }} />
+      ))}
+
+      {/* 2. 3D runway grid moving toward the viewer */}
+      <div className="absolute inset-x-0 bottom-0 h-[52%] overflow-hidden [perspective:320px] [perspective-origin:50%_0%] [mask-image:linear-gradient(to_top,black_40%,transparent_100%)]">
+        <div className="hero-floor absolute left-[-50%] right-[-50%] bottom-0 h-[220%] origin-bottom" />
       </div>
+      {/* Horizon glow */}
+      <div className="absolute inset-x-0 bottom-[52%] h-px bg-gradient-to-r from-transparent via-cyan-300/80 to-transparent" />
+      <div className="absolute inset-x-[10%] bottom-[46%] h-24 bg-cyan-400/20 blur-3xl" />
 
-      {/* Soft fade into the page background so the hero has no hard bottom edge */}
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-bg" />
-
-      {/* 3. Rising sparks */}
-      {SPARKS.map(([left, size, dur, delay], i) => (
-        <span key={i} className="hero-spark absolute bottom-0 rounded-full bg-gradient-to-t from-blue-500 to-cyan-300"
-          style={{ left: `${left}%`, width: size, height: size, animationDuration: `${dur}s`, animationDelay: `${delay}s` }} />
+      {/* 3. Launch streaks rising from the horizon */}
+      {STREAKS.map(([left, delay, dur, h], i) => (
+        // On narrow screens the text spans the full width, so only edge streaks show there.
+        <span key={i} className={`hero-streak absolute bottom-[52%] w-[2px] rounded-full bg-gradient-to-t from-transparent via-cyan-300 to-white ${left > 10 && left < 90 ? "hidden md:block" : ""}`}
+          style={{ left: `${left}%`, height: h, animationDelay: `${delay}s`, animationDuration: `${dur}s` }}>
+          <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white shadow-[0_0_12px_4px_rgba(103,232,249,0.9)]" />
+        </span>
       ))}
     </div>
   );
