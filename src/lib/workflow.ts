@@ -129,3 +129,17 @@ export function canAct(role: string, stage: string, action: WorkflowAction, stat
   // advance / reject: must hold authority for the current stage (or higher).
   return rank >= required;
 }
+
+// When did the application enter its current stage? (last decision, or submission)
+export function stageEnteredAt(app: { createdAt: string | Date; steps?: { at: string | Date }[] }): Date {
+  const last = app.steps && app.steps.length ? app.steps[app.steps.length - 1].at : app.createdAt;
+  return new Date(last);
+}
+
+export function daysSince(date: Date, now: Date = new Date()): number {
+  return Math.max(0, Math.floor((now.getTime() - date.getTime()) / 86_400_000));
+}
+
+export function daysLabel(days: number): string {
+  return days === 0 ? "today" : days === 1 ? "1 day" : `${days} days`;
+}

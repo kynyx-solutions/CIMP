@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { withId, isId } from '@/lib/serialize';
+import { parseApplication } from '@/lib/application-fields';
 
 function getUser(req: NextRequest) {
   const token = req.cookies.get('incubator_token')?.value;
@@ -17,7 +18,11 @@ export async function GET(req: NextRequest) {
     include: { steps: { orderBy: { at: 'asc' } } },
     orderBy: { createdAt: 'desc' },
   });
-  return NextResponse.json({ applications: withId(applications) });
+  // Internal review remarks are for the office only (the rejection reason is shared separately).
+  const visible = user.role === 'incubatee'
+    ? applications.map(a => ({ ...a, steps: a.steps.map(({ remark, ...s }) => s) }))
+    : applications;
+  return NextResponse.json({ applications: withId(visible) });
 }
 
 export async function POST(req: NextRequest) {
@@ -25,16 +30,16 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (user.role !== 'incubatee') return NextResponse.json({ error: 'Only incubatees can apply' }, { status: 403 });
 
-  const { startupName, idea, industry } = await req.json();
-  if (!startupName || !idea || !industry) return NextResponse.json({ error: 'All fields required' }, { status: 400 });
+  const parsed = parseApplication(await req.json());
+  if (parsed.error) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   const existing = await prisma.application.findFirst({ where: { userId: user.userId } });
   if (existing) return NextResponse.json({ error: 'You already have an application' }, { status: 409 });
 
   const application = await prisma.application.create({
     data: {
-      userId: user.userId, applicantName: user.name,
-      startupName: startupName.trim(), idea, industry, status: 'pending', stage: 'submitted',
+      ...(parsed.data as any),
+      userId: user.userId, applicantName: user.name, status: 'pending', stage: 'submitted',
     },
   });
 
@@ -51,8 +56,12 @@ export async function PATCH(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (user.role !== 'incubatee') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { applicationId, startupName, idea, industry } = await req.json();
+  const body = await req.json();
+  const { applicationId } = body;
   if (!isId(applicationId)) return NextResponse.json({ error: 'applicationId required' }, { status: 400 });
+
+  const parsed = parseApplication(body);
+  if (parsed.error) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   const app = await prisma.application.findFirst({ where: { id: applicationId, userId: user.userId } });
   if (!app) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -60,11 +69,7 @@ export async function PATCH(req: NextRequest) {
 
   const updated = await prisma.application.update({
     where: { id: app.id },
-    data: {
-      ...(startupName ? { startupName } : {}),
-      ...(idea ? { idea } : {}),
-      ...(industry ? { industry } : {}),
-    },
+    data: parsed.data as any,
   });
 
   await prisma.activity.create({

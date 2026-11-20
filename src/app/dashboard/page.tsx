@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { verifyToken } from '@/lib/auth';
@@ -5,7 +6,10 @@ import { prisma } from '@/lib/prisma';
 import Navbar from '@/components/Navbar';
 import StageBadge from '@/components/StageBadge';
 import Link from 'next/link';
-import { PIPELINE, STAGES, ROLE_ICONS, ROLE_LABELS, isOfficeRole } from '@/lib/workflow';
+import {
+  PIPELINE, STAGES, ROLE_ICONS, ROLE_LABELS, APPROVAL_RANK, isOfficeRole,
+  stageEnteredAt, daysSince, daysLabel, type Stage,
+} from '@/lib/workflow';
 
 async function getUser() {
   const cookieStore = cookies();
@@ -13,6 +17,8 @@ async function getUser() {
   if (!token) return null;
   return verifyToken(token);
 }
+
+export const metadata: Metadata = { title: "Dashboard", robots: { index: false } };
 
 export default async function DashboardPage() {
   const user = await getUser();
@@ -29,9 +35,26 @@ export default async function DashboardPage() {
   let recentActivity: any[] = [];
   let industryBreakdown: Record<string, number> = {};
 
+  // Office: applications waiting on *my* stage, oldest first (PRD RBAC-3)
+  let myQueue: { id: string; startupName: string; stage: string; days: number }[] = [];
+  const myRank = APPROVAL_RANK[user.role];
+
   if (user.role === 'incubatee') {
-    applications = await prisma.application.findMany({ where: { userId: user.userId }, orderBy: { createdAt: 'desc' } });
+    applications = await prisma.application.findMany({
+      where: { userId: user.userId }, orderBy: { createdAt: 'desc' },
+      include: { steps: { orderBy: { at: 'asc' } } },
+    });
   } else {
+    if (myRank) {
+      const myStages = (Object.keys(STAGES) as Stage[]).filter(s => STAGES[s].requiredRank === myRank);
+      const waiting = await prisma.application.findMany({
+        where: { stage: { in: myStages } },
+        include: { steps: { orderBy: { at: 'asc' } } },
+      });
+      myQueue = waiting
+        .map(a => ({ id: a.id, startupName: a.startupName, stage: a.stage, days: daysSince(stageEnteredAt(a)) }))
+        .sort((a, b) => b.days - a.days);
+    }
     const [byStage, ft, allApps] = await Promise.all([
       prisma.application.groupBy({ by: ['stage'], _count: { _all: true } }),
       prisma.application.count({ where: { isFastTracked: true } }),
@@ -78,6 +101,88 @@ export default async function DashboardPage() {
             {isManager && ` · ${ROLE_LABELS[user.role]}`}
           </p>
         </div>
+
+        {/* My queue (office roles with approval authority) */}
+        {myRank && (
+          <div className="bg-white border border-border rounded-2xl p-5 mb-6 shadow-card flex flex-col md:flex-row md:items-center gap-4">
+            <div className="flex-shrink-0">
+              <p className="text-xs font-mono text-muted uppercase tracking-wider">My queue</p>
+              <p className="font-display text-3xl font-semibold text-navy">
+                {myQueue.length} <span className="text-base font-body text-secondary">waiting on you</span>
+              </p>
+              {myQueue[0] && (
+                <p className={`text-xs font-mono mt-1 ${myQueue[0].days >= 7 ? 'text-red-600' : 'text-muted'}`}>
+                  Oldest: {daysLabel(myQueue[0].days)} in {STAGES[myQueue[0].stage as Stage].label}
+                </p>
+              )}
+            </div>
+            <ul className="flex-1 flex flex-wrap gap-2">
+              {myQueue.slice(0, 5).map(q => (
+                <li key={q.id} className={`text-xs font-body px-3 py-1.5 rounded-lg border ${q.days >= 7 ? 'border-red-200 bg-red-50 text-red-700' : 'border-border bg-bg text-secondary'}`}>
+                  {q.startupName} · {daysLabel(q.days)}
+                </li>
+              ))}
+              {myQueue.length === 0 && <li className="text-sm text-muted font-body">Nothing waiting on you. 🎉</li>}
+            </ul>
+            {myQueue.length > 0 && (
+              <Link href="/approvals" className="flex-shrink-0 px-4 py-2 rounded-lg bg-brand text-white text-sm font-semibold font-body hover:opacity-90">Review now →</Link>
+            )}
+          </div>
+        )}
+
+        {/* Incubatee: where you stand */}
+        {user.role === 'incubatee' && serialized[0] && (() => {
+          const app = serialized[0];
+          const cur = PIPELINE.indexOf(app.stage as Stage);
+          const def = STAGES[app.stage as Stage];
+          const days = daysSince(stageEnteredAt(app));
+          return (
+            <div className="bg-white border border-border rounded-2xl p-6 mb-8 shadow-card">
+              <h2 className="font-display text-lg font-semibold text-navy mb-4">Where you stand</h2>
+              {app.stage !== 'rejected' && (
+                <ol className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-5">
+                  {PIPELINE.map((s, i) => (
+                    <li key={s} className={`rounded-xl border px-3 py-2 text-xs font-body ${i < cur || app.stage === 'ceo_approved' ? 'bg-blue-50 border-blue-100 text-brand' : i === cur ? 'bg-amber-50 border-amber-200 text-amber-800 font-semibold' : 'bg-bg border-border text-muted'}`}>
+                      <span className="font-mono">{i + 1}.</span> {s === 'ceo_approved' ? 'Approved' : STAGES[s].label}
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {def?.waitingOn && (
+                <p className="text-sm font-body text-secondary">
+                  <strong className="text-navy">Now:</strong> waiting on the {def.waitingOn} ({daysLabel(days)} so far).
+                  {' '}Next: {STAGES[def.next!].label === 'Approved' ? 'final decision' : STAGES[def.next!].label}. You will be notified by email and here.
+                </p>
+              )}
+              {app.stage === 'ceo_approved' && (
+                <p className="text-sm font-body text-green-700">
+                  <strong>Approved.</strong> The incubation team will contact you about onboarding, agreements and your mentor.
+                  {app.isPublic ? ' Your startup is listed in the public directory.' : ''}
+                </p>
+              )}
+              {app.stage === 'rejected' && (
+                <div className="text-sm font-body text-secondary space-y-1">
+                  <p className="text-red-600"><strong>Not approved</strong> at this stage. Reason: {app.rejectionReason}</p>
+                  <p>What you can do: use the reviewer&apos;s feedback, strengthen traction or team details, and reach out through Messages if you have questions. Re-application rules will be confirmed by CIMP.</p>
+                </div>
+              )}
+              {app.steps?.length > 0 && (
+                <div className="mt-5 border-t border-border pt-4">
+                  <p className="text-xs font-mono text-muted uppercase tracking-wider mb-3">Review history</p>
+                  <ul className="space-y-2">
+                    {app.steps.map((s: any) => (
+                      <li key={s.id} className="text-sm font-body text-secondary flex flex-col sm:flex-row sm:gap-2">
+                        <span className="text-faint font-mono text-xs w-36 flex-shrink-0">{new Date(s.at).toLocaleDateString('en-IN')}</span>
+                        {/* Internal remarks stay with the office; only the rejection reason is shared above. */}
+                        <span><strong className="text-navy">{ROLE_LABELS[s.actorRole]}</strong>: {s.action}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Stats cards */}
         {(isCEO || isManager) && (

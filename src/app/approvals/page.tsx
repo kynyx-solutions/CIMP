@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import StageBadge from '@/components/StageBadge';
-import { STAGES, PIPELINE, ROLE_LABELS, ROLE_ICONS, APPROVAL_RANK, canAct, isOfficeRole, type Stage } from '@/lib/workflow';
+import { STAGES, PIPELINE, ROLE_LABELS, ROLE_ICONS, APPROVAL_RANK, canAct, isOfficeRole, stageEnteredAt, daysSince, daysLabel, type Stage } from '@/lib/workflow';
+import { APPLICATION_SECTIONS } from '@/lib/application-fields';
 
 type Step = { fromStage: string; toStage: string; action: string; actorName: string; actorRole: string; remark?: string; signature?: string; at: string; };
 type App = {
@@ -11,6 +12,7 @@ type App = {
   industry: string; stage: string; status: string; isFastTracked: boolean;
   isPublic: boolean; rejectionReason?: string; steps?: Step[];
   pitchDeckUrl?: string; pitchDeckName?: string; createdAt: string;
+  [field: string]: any; // dynamic application form fields
 };
 
 type Activity = { _id: string; actorName: string; actorRole: string; action: string; detail?: string; createdAt: string; };
@@ -29,7 +31,8 @@ export default function ApprovalsPage() {
   const [signature, setSignature] = useState('');
   // Side panel
   const [sideApp, setSideApp] = useState<App | null>(null);
-  const [sideTab, setSideTab] = useState<'trail'|'timeline'|'messages'>('trail');
+  const [sideTab, setSideTab] = useState<'details'|'trail'|'timeline'|'messages'>('details');
+  const [search, setSearch] = useState('');
   const [activities, setActivities] = useState<Activity[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [msgInput, setMsgInput] = useState('');
@@ -72,7 +75,7 @@ export default function ApprovalsPage() {
   }
 
   async function openSidePanel(app: App) {
-    setSideApp(app); setSideTab('trail');
+    setSideApp(app); setSideTab('details');
     const [actRes, msgRes] = await Promise.all([
       fetch(`/api/activity?applicationId=${app._id}`),
       fetch(`/api/messages?applicationId=${app._id}`),
@@ -93,7 +96,9 @@ export default function ApprovalsPage() {
     } finally { setMsgLoading(false); }
   }
 
+  const q = search.trim().toLowerCase();
   const filtered = apps.filter(a => {
+    if (q && ![a.startupName, a.applicantName, a.industry, a.city].some(v => v?.toLowerCase().includes(q))) return false;
     if (filter === 'all') return true;
     // Items waiting specifically on my role's stage
     if (filter === 'queue') return !!user && STAGES[a.stage as Stage]?.requiredRank === APPROVAL_RANK[user.role];
@@ -178,7 +183,10 @@ export default function ApprovalsPage() {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Search + Filters */}
+        <input type="search" value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search by startup, founder, industry or city…" aria-label="Search applications"
+          className="w-full sm:w-96 mb-3 bg-white border border-border rounded-xl px-4 py-2.5 text-sm font-body text-navy focus:outline-none focus:border-brand-2 placeholder:text-faint" />
         <div className="flex gap-2 mb-6 flex-wrap">
           {[{k:'all',l:'All'},...(APPROVAL_RANK[user.role]?[{k:'queue',l:'📥 My Queue'}]:[]),{k:'pending',l:'Pending'},{k:'approved',l:'Approved'},{k:'rejected',l:'Rejected'},
             ...(isCEO?[{k:'fasttracked',l:'⚡ Fast-Tracked'}]:[])].map(f=>(
@@ -226,7 +234,12 @@ export default function ApprovalsPage() {
                           className={`h-1.5 flex-1 rounded-full ${app.stage === 'rejected' ? 'bg-red-200' : i <= cur ? 'bg-brand' : 'bg-slate-200'}`} />;
                       })}
                     </div>
-                    {STAGES[app.stage as Stage]?.waitingOn && <p className="mt-1 text-[11px] text-muted font-mono">Waiting on: {STAGES[app.stage as Stage].waitingOn}</p>}
+                    {STAGES[app.stage as Stage]?.waitingOn && (() => {
+                      const d = daysSince(stageEnteredAt(app));
+                      return <p className={`mt-1 text-[11px] font-mono ${d >= 7 ? 'text-red-600' : 'text-muted'}`}>
+                        Waiting on: {STAGES[app.stage as Stage].waitingOn} · {daysLabel(d)} in this stage{d >= 7 ? ' ⚠' : ''}
+                      </p>;
+                    })()}
                     {(() => { const last = app.steps?.filter(s => s.remark).slice(-1)[0]; return last && app.stage !== 'rejected' ? (
                       <p className="mt-2 text-xs text-amber-700 font-body bg-amber-50 px-3 py-1.5 rounded-lg">{ROLE_LABELS[last.actorRole]}: {last.remark}</p>) : null; })()}
                     {app.rejectionReason && <p className="mt-2 text-xs text-red-600 font-body bg-red-50 px-3 py-1.5 rounded-lg">Rejected: {app.rejectionReason}</p>}
@@ -278,15 +291,42 @@ export default function ApprovalsPage() {
 
               {/* Tabs */}
               <div className="flex border-b border-border">
-                {(['trail','timeline','messages'] as const).map(t => (
+                {(['details','trail','timeline','messages'] as const).map(t => (
                   <button key={t} onClick={() => setSideTab(t)}
-                    className={`flex-1 py-2.5 text-xs font-body font-medium capitalize transition-colors ${sideTab===t ? 'text-brand border-b-2 border-brand bg-blue-50/50' : 'text-muted hover:text-navy'}`}>
-                    {t === 'trail' ? '✍️ Approvals' : t === 'timeline' ? '⏱ Activity' : '💬 Messages'}
+                    className={`flex-1 py-2.5 text-[11px] font-body font-medium capitalize transition-colors ${sideTab===t ? 'text-brand border-b-2 border-brand bg-blue-50/50' : 'text-muted hover:text-navy'}`}>
+                    {t === 'details' ? '📄 Details' : t === 'trail' ? '✍️ Approvals' : t === 'timeline' ? '⏱ Activity' : '💬 Chat'}
                   </button>
                 ))}
               </div>
 
               <div className="h-96 overflow-y-auto">
+                {sideTab === 'details' && (
+                  <div className="p-4 space-y-4">
+                    {APPLICATION_SECTIONS.map(sec => (
+                      <div key={sec.title}>
+                        <p className="text-[10px] font-mono uppercase tracking-wider text-muted mb-1.5">{sec.title}</p>
+                        <dl className="space-y-1.5">
+                          {sec.fields.map(f => (
+                            <div key={f.key}>
+                              <dt className="text-[11px] text-muted font-body">{f.label}</dt>
+                              <dd className="text-xs text-navy font-body whitespace-pre-line break-words">
+                                {sideApp[f.key] == null || sideApp[f.key] === ''
+                                  ? <span className="text-faint">Not provided</span>
+                                  : f.type === 'url'
+                                    ? <a href={sideApp[f.key]} target="_blank" rel="noopener noreferrer" className="text-brand underline">{sideApp[f.key]}</a>
+                                    : String(sideApp[f.key])}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </div>
+                    ))}
+                    {sideApp.pitchDeckUrl && (
+                      <a href={sideApp.pitchDeckUrl} target="_blank" rel="noopener noreferrer"
+                        className="block text-center text-xs font-body font-semibold text-brand border border-blue-200 bg-blue-50 rounded-lg py-2">📎 Open pitch deck</a>
+                    )}
+                  </div>
+                )}
                 {sideTab === 'trail' && (
                   <div className="p-4 space-y-3">
                     {(sideApp.steps ?? []).length === 0 ? (
