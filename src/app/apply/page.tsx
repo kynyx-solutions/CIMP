@@ -8,7 +8,7 @@ import { PIPELINE, STAGES } from '@/lib/workflow';
 const emptyForm = () => Object.fromEntries(APPLICATION_FIELDS.map(f => [f.key, ''])) as Record<string, string>;
 
 const inputCls =
-  'w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-navy font-body text-sm focus:outline-none focus:border-brand-2 focus:ring-2 focus:ring-blue-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors placeholder:text-faint';
+  'w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-navy font-body text-sm focus:outline-none focus:border-brand-2 focus:ring-2 focus:ring-leaf-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors placeholder:text-faint';
 
 export default function ApplyPage() {
   const router = useRouter();
@@ -45,7 +45,7 @@ export default function ApplyPage() {
       const res = await fetch('/api/applications', {
         method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(isEdit ? { applicationId: existingApp._id, ...form } : form),
+        body: JSON.stringify(isEdit ? { applicationId: existingApp._id, ...form, resubmit: isReturned } : form),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
@@ -81,7 +81,7 @@ export default function ApplyPage() {
     <div className="min-h-screen bg-bg flex items-center justify-center px-4">
       <div className="text-center">
         <div className="w-16 h-16 rounded-full bg-green-100 border border-green-200 flex items-center justify-center text-3xl mx-auto mb-4">🎉</div>
-        <h2 className="font-display text-2xl font-semibold text-navy mb-2">
+        <h2 className="font-display text-2xl font-bold text-navy mb-2">
           {existingApp ? 'Application Updated!' : 'Application Submitted!'}
         </h2>
         <p className="text-muted font-body">You can track every review step from your dashboard. Redirecting…</p>
@@ -90,6 +90,7 @@ export default function ApplyPage() {
   );
 
   const isLocked = existingApp && !existingApp.isEditable;
+  const isReturned = existingApp?.stage === 'returned';
   const requiredCount = APPLICATION_FIELDS.filter(f => f.required).length;
   const filledRequired = APPLICATION_FIELDS.filter(f => f.required && form[f.key]?.trim()).length;
 
@@ -116,7 +117,7 @@ export default function ApplyPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 grid lg:grid-cols-[1fr_280px] gap-8 items-start">
         <div>
           <div className="mb-6">
-            <h1 className="font-display text-3xl font-semibold text-navy mb-1">
+            <h1 className="font-display text-3xl font-bold text-navy mb-1">
               {existingApp ? 'Your Application' : 'Apply for Incubation'}
             </h1>
             <p className="text-secondary font-body text-sm">
@@ -131,6 +132,14 @@ export default function ApplyPage() {
             </div>
           )}
 
+          {isReturned && (
+            <div role="status" className="mb-6 px-5 py-4 bg-orange-50 border border-orange-200 rounded-xl">
+              <p className="text-sm font-body font-semibold text-orange-800">✏️ The reviewer asked for changes</p>
+              <p className="text-sm font-body text-orange-800 mt-1 whitespace-pre-line">{existingApp.changeRequest}</p>
+              <p className="text-xs font-body text-orange-700 mt-2">Update the fields below, then press <strong>Resubmit for review</strong>. Your application returns to the same review stage.</p>
+            </div>
+          )}
+
           {error && <div role="alert" className="mb-6 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-body">{error}</div>}
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -139,7 +148,7 @@ export default function ApplyPage() {
                 <legend className="sr-only">{section.title}</legend>
                 <div className="mb-5">
                   <p className="text-xs font-mono text-brand uppercase tracking-wider font-semibold">Step {si + 1} of {APPLICATION_SECTIONS.length}</p>
-                  <h2 className="font-display text-xl font-semibold text-navy mt-1">{section.title}</h2>
+                  <h2 className="font-display text-xl font-bold text-navy mt-1">{section.title}</h2>
                   <p className="text-sm text-muted font-body">{section.desc}</p>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-5">
@@ -163,7 +172,7 @@ export default function ApplyPage() {
 
             {/* Pitch Deck Upload (after the application exists) */}
             <fieldset className="bg-white border border-border rounded-2xl p-6 sm:p-8 shadow-card">
-              <h2 className="font-display text-xl font-semibold text-navy">Pitch deck</h2>
+              <h2 className="font-display text-xl font-bold text-navy">Pitch deck</h2>
               <p className="text-sm text-muted font-body mb-4">PDF or PowerPoint, max 5 MB. Strongly recommended.</p>
               {existingApp ? (
                 <>
@@ -187,7 +196,7 @@ export default function ApplyPage() {
             {!isLocked && (
               <button type="submit" disabled={loading}
                 className="w-full py-3.5 text-white font-semibold rounded-xl transition-all disabled:opacity-50 font-body text-sm hover:opacity-90 bg-brand">
-                {loading ? 'Saving…' : existingApp ? 'Update Application' : 'Submit Application →'}
+                {loading ? 'Saving…' : isReturned ? 'Resubmit for review →' : existingApp ? 'Update Application' : 'Submit Application →'}
               </button>
             )}
           </form>
@@ -210,7 +219,7 @@ export default function ApplyPage() {
             <ol className="space-y-3">
               {PIPELINE.map((s, i) => (
                 <li key={s} className="flex gap-3 text-sm font-body">
-                  <span className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100 text-brand text-xs font-mono flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                  <span className="w-6 h-6 rounded-full bg-leaf-50 border border-leaf-100 text-brand text-xs font-mono flex items-center justify-center flex-shrink-0">{i + 1}</span>
                   <span className="text-navy">{s === 'ceo_approved' ? "You're in! 🎉" : STAGES[s].label}</span>
                 </li>
               ))}

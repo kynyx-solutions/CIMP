@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { withId, isId } from '@/lib/serialize';
 import { parseApplication } from '@/lib/application-fields';
+import { notifyReviewers } from '@/lib/notify';
+import type { Stage } from '@/lib/workflow';
 
 function getUser(req: NextRequest) {
   const token = req.cookies.get('incubator_token')?.value;
@@ -67,14 +69,30 @@ export async function PATCH(req: NextRequest) {
   if (!app) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (!app.isEditable) return NextResponse.json({ error: 'Application is locked for editing' }, { status: 400 });
 
+  // Resubmitting after "send back for changes": return to the stage it came from (PRD WF-3).
+  const resubmit = body.resubmit === true && app.stage === 'returned';
+  const target = (resubmit ? app.returnedFrom ?? 'submitted' : app.stage) as Stage;
+
   const updated = await prisma.application.update({
     where: { id: app.id },
-    data: parsed.data as any,
+    data: {
+      ...(parsed.data as any),
+      ...(resubmit ? {
+        stage: target,
+        isEditable: target === 'submitted', // editable again only before Executive acceptance
+        returnedFrom: null, changeRequest: null,
+        steps: { create: {
+          fromStage: 'returned', toStage: target, action: 'resubmitted with changes',
+          actorId: user.userId, actorName: user.name, actorRole: user.role,
+        } },
+      } : {}),
+    },
   });
 
   await prisma.activity.create({
-    data: { applicationId: app.id, actorName: user.name, actorRole: user.role, action: 'edited application' },
+    data: { applicationId: app.id, actorName: user.name, actorRole: user.role, action: resubmit ? 'resubmitted application with changes' : 'edited application' },
   });
+  if (resubmit) await notifyReviewers(target, app.startupName, app.id, 'Application Resubmitted');
 
   return NextResponse.json({ success: true, application: withId(updated) });
 }

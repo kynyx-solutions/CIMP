@@ -3,9 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { withId, isId } from '@/lib/serialize';
 import {
-  STAGES, PIPELINE, ROLE_LABELS, APPROVAL_RANK,
+  STAGES, PIPELINE, ROLE_LABELS,
   canAct, isOfficeRole, type Stage, type WorkflowAction,
 } from '@/lib/workflow';
+import { notify, notifyReviewers } from '@/lib/notify';
 
 function getUser(req: NextRequest) {
   const token = req.cookies.get('incubator_token')?.value;
@@ -13,28 +14,8 @@ function getUser(req: NextRequest) {
   return verifyToken(token);
 }
 
-type NotifyType = 'info' | 'success' | 'warning' | 'error';
 
-async function notify(userId: string, title: string, message: string, type: NotifyType, applicationId: string) {
-  await prisma.notification.create({ data: { userId, title, message, type, applicationId } });
-}
-
-// Notify every office user who has authority to act on `stage`.
-async function notifyReviewers(stage: Stage, startupName: string, applicationId: string) {
-  const required = STAGES[stage].requiredRank;
-  if (!required) return;
-  const roles = Object.entries(APPROVAL_RANK).filter(([, r]) => r === required).map(([role]) => role);
-  const reviewers = await prisma.user.findMany({ where: { role: { in: roles } }, select: { id: true } });
-  if (reviewers.length === 0) return;
-  await prisma.notification.createMany({
-    data: reviewers.map(r => ({
-      userId: r.id, title: 'Action Required', type: 'info', applicationId,
-      message: `"${startupName}" is waiting for ${STAGES[stage].label}.`,
-    })),
-  });
-}
-
-const ACTIONS: WorkflowAction[] = ['advance', 'reject', 'fasttrack', 'toggle_public'];
+const ACTIONS: WorkflowAction[] = ['advance', 'reject', 'send_back', 'fasttrack', 'toggle_public'];
 
 export async function POST(req: NextRequest) {
   const user = getUser(req);
@@ -104,6 +85,20 @@ export async function POST(req: NextRequest) {
     await notify(app.userId, 'Application Rejected', `"${app.startupName}" was not approved at ${STAGES[fromStage].label}. Reason: ${cleanRemark}`, 'error', app.id);
   }
 
+  else if (action === 'send_back') {
+    // Return to the applicant for edits instead of rejecting (PRD WF-3).
+    if (!cleanRemark) return NextResponse.json({ error: 'Tell the applicant what to change' }, { status: 400 });
+    await prisma.application.update({
+      where: { id: app.id },
+      data: {
+        stage: 'returned', returnedFrom: fromStage, changeRequest: cleanRemark,
+        isEditable: true, steps: step('returned', 'sent back for changes'),
+      },
+    });
+    await log(`sent back for changes at ${STAGES[fromStage].label} (${roleLabel})`, cleanRemark);
+    await notify(app.userId, 'Changes requested ✏️', `The reviewer asked for changes to "${app.startupName}": ${cleanRemark}`, 'warning', app.id);
+  }
+
   else if (action === 'fasttrack') {
     await prisma.application.update({
       where: { id: app.id },
@@ -142,7 +137,7 @@ export async function GET(req: NextRequest) {
     prisma.application.groupBy({ by: ['stage'], _count: { _all: true } }),
     prisma.application.count({ where: { isFastTracked: true } }),
   ]);
-  const stages: Record<string, number> = Object.fromEntries([...PIPELINE, 'rejected'].map(s => [s, 0]));
+  const stages: Record<string, number> = Object.fromEntries([...PIPELINE, 'returned', 'rejected'].map(s => [s, 0]));
   for (const s of byStage) stages[s.stage] = s._count._all;
   const total = Object.values(stages).reduce((a, b) => a + b, 0);
 

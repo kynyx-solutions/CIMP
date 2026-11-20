@@ -87,7 +87,7 @@ export default async function PublicStartupsPage({ searchParams }: { searchParam
 
         {startups.length === 0 ? (
           <div className="text-center py-20 bg-white border border-border rounded-2xl shadow-card">
-            <h2 className="font-display text-2xl font-semibold text-navy mb-2">
+            <h2 className="font-display text-2xl font-bold text-navy mb-2">
               {filtering ? "No startups match these filters" : "No startups published yet"}
             </h2>
             <p className="text-muted font-body">
@@ -99,11 +99,11 @@ export default async function PublicStartupsPage({ searchParams }: { searchParam
             {startups.map((s) => (
               <li key={s.id} className={`bg-white border rounded-2xl p-6 flex flex-col shadow-card ${s.isFastTracked ? "border-amber-300" : "border-border"}`}>
                 <div className="flex items-center gap-2 mb-4 flex-wrap">
-                  <span className="text-xs font-mono text-brand bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">{s.industry}</span>
+                  <span className="text-xs font-mono text-brand bg-leaf-50 border border-leaf-100 px-2 py-0.5 rounded-full">{s.industry}</span>
                   {s.ventureStage && <span className="text-xs font-mono text-secondary bg-bg border border-border px-2 py-0.5 rounded-full">{s.ventureStage}</span>}
                   {s.isFastTracked && <span className="text-xs font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">Fast-tracked</span>}
                 </div>
-                <h2 className="font-display text-2xl font-semibold text-navy mb-1">{s.startupName}</h2>
+                <h2 className="font-display text-2xl font-bold text-navy mb-1">{s.startupName}</h2>
                 {(s.city || s.state) && <p className="text-muted text-xs font-body mb-3">📍 {[s.city, s.state].filter(Boolean).join(", ")}</p>}
                 <p className="text-secondary text-sm font-body leading-relaxed flex-1 line-clamp-4">{s.idea}</p>
                 <div className="mt-5 pt-4 border-t border-border flex items-center justify-between gap-3">

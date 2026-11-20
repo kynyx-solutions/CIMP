@@ -10,10 +10,17 @@ function generateOTP(): string {
 }
 
 export async function POST(req: NextRequest) {
-  const { name, email, password, role } = await req.json();
+  const { name, email, password, role, consent } = await req.json();
 
   if (!name || !email || !password)
     return NextResponse.json({ error: "All fields required" }, { status: 400 });
+
+  // Explicit consent to the Terms and Privacy Policy is required (DPDP Act, PRD WEB-10).
+  if (consent !== true)
+    return NextResponse.json(
+      { error: "Please accept the Terms of Use and Privacy Policy to continue." },
+      { status: 400 },
+    );
 
   // Staff (manager / CEO) can never self-register.
   if (role !== undefined && !isPublicRole(role))
@@ -53,6 +60,7 @@ export async function POST(req: NextRequest) {
       isVerified: false,
       otp,
       otpExpiresAt,
+      consentAt: new Date(),
     },
   });
 

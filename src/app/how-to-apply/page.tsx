@@ -18,10 +18,10 @@ export default function HowToApplyPage() {
       <PageHero eyebrow="How to apply" title="Apply online, track every step"
         desc="No email chains or external forms. You apply in the portal and see each review stage and decision as it happens.">
         <div className="flex flex-col sm:flex-row gap-3">
-          <Link href="/register" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-navy font-semibold font-body bg-gradient-to-r from-cyan-300 to-blue-300 shadow-[0_0_28px_rgba(103,232,249,0.4)]">
+          <Link href="/register" className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full text-white font-semibold font-body bg-brand hover:bg-leaf-800 shadow-[0_8px_24px_rgba(63,122,22,0.3)]">
             Start your application <Arrow />
           </Link>
-          <Link href="/programs" className="inline-flex items-center justify-center px-6 py-3 rounded-xl border border-white/25 bg-white/5 text-white font-body hover:bg-white/10">
+          <Link href="/programs" className="inline-flex items-center justify-center px-6 py-3 rounded-full border border-border bg-white text-navy font-body hover:border-brand hover:text-brand">
             Compare programs
           </Link>
         </div>
@@ -79,25 +79,25 @@ export default function HowToApplyPage() {
       <section className="border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 grid lg:grid-cols-2 gap-6">
           <div className="bg-white border border-border rounded-2xl p-6 sm:p-8 shadow-card">
-            <h2 className="font-display text-2xl font-semibold text-navy">Tips for a strong application</h2>
+            <h2 className="font-display text-2xl font-bold text-navy">Tips for a strong application</h2>
             <ul className="mt-5 space-y-3">
               {APPLY_GUIDE.tips.map((t, i) => (
                 <li key={t} className="flex gap-3 font-body text-secondary">
-                  <span className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100 text-brand text-xs font-mono flex items-center justify-center flex-shrink-0">{i + 1}</span>{t}
+                  <span className="w-6 h-6 rounded-full bg-leaf-50 border border-leaf-100 text-brand text-xs font-mono flex items-center justify-center flex-shrink-0">{i + 1}</span>{t}
                 </li>
               ))}
             </ul>
           </div>
           <div className="rounded-2xl p-6 sm:p-8 bg-navy text-white">
-            <h2 className="font-display text-2xl font-semibold">After you are selected</h2>
+            <h2 className="font-display text-2xl font-bold">After you are selected</h2>
             <ul className="mt-5 space-y-3">
               {APPLY_GUIDE.afterSelection.map((a) => (
-                <li key={a} className="flex gap-2 font-body text-blue-100">
-                  <span className="text-cyan-300" aria-hidden="true">✓</span>{a}
+                <li key={a} className="flex gap-2 font-body text-leaf-100">
+                  <span className="text-leaf-300" aria-hidden="true">✓</span>{a}
                 </li>
               ))}
             </ul>
-            <p className="text-sm text-blue-200 font-body mt-6">
+            <p className="text-sm text-leaf-200 font-body mt-6">
               Not selected? You will see the reason on your dashboard, and you can ask questions through Messages.
             </p>
           </div>

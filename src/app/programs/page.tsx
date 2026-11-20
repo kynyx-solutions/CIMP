@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicHeader, PublicFooter, PageHero, CtaBand, SectionHeading, SampleTag, Check, Arrow } from "@/components/public/Site";
-import { PROGRAMS, IS_SAMPLE } from "@/content/site";
+import { PROGRAMS, IS_SAMPLE, ENDEAVOURS } from "@/content/site";
 
 export const metadata: Metadata = {
   title: "Programs",
@@ -12,12 +12,12 @@ export default function ProgramsPage() {
   return (
     <main className="min-h-screen bg-bg antialiased">
       <PublicHeader />
-      <PageHero eyebrow="Programs" title="A program for every stage of your startup"
+      <PageHero eyebrow="Programs" title="Programs for every stage of your journey"
         desc="From a first idea to scaling with investors. Every program lists who it is for, what you get and the terms, before you apply.">
         <nav aria-label="Programs on this page" className="flex flex-wrap gap-2">
           {PROGRAMS.map((p) => (
-            <a key={p.slug} href={`#${p.slug}`} className="px-4 py-2 rounded-full bg-white/10 border border-white/20 text-white text-sm font-body hover:bg-white/20 transition-colors backdrop-blur">
-              {p.name} <span className="text-cyan-200">· {p.stage}</span>
+            <a key={p.slug} href={`#${p.slug}`} className="px-4 py-2 rounded-full bg-white border border-border text-navy text-sm font-body hover:border-brand hover:text-brand transition-colors">
+              {p.name} <span className="text-saffron-600">· {p.stage}</span>
             </a>
           ))}
         </nav>
@@ -25,7 +25,7 @@ export default function ProgramsPage() {
 
       {/* Stage path */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 -mt-12 relative z-10">
-        <ol className="grid md:grid-cols-3 gap-4">
+        <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {PROGRAMS.map((p, i) => (
             <li key={p.slug} className="bg-white border border-border rounded-2xl p-5 shadow-card-md flex items-center gap-4">
               <span className="w-10 h-10 rounded-full bg-brand text-white font-mono font-bold flex items-center justify-center flex-shrink-0">{i + 1}</span>
@@ -45,7 +45,7 @@ export default function ProgramsPage() {
             <div className="grid lg:grid-cols-[1.1fr_1fr]">
               <div className="p-6 sm:p-10">
                 <p className="text-xs font-mono uppercase tracking-wider text-brand font-semibold">{p.stage}</p>
-                <h2 id={`${p.slug}-title`} className="font-display text-3xl font-semibold text-navy mt-1">
+                <h2 id={`${p.slug}-title`} className="font-display text-3xl font-bold text-navy mt-1">
                   {p.name} {IS_SAMPLE && <SampleTag />}
                 </h2>
                 <p className="text-secondary font-body mt-3 leading-relaxed">{p.forWho}</p>
@@ -53,7 +53,7 @@ export default function ProgramsPage() {
                 <ul className="space-y-2.5">
                   {p.includes.map((b) => <li key={b} className="flex gap-2 text-sm font-body text-navy"><Check />{b}</li>)}
                 </ul>
-                <p className="mt-6 text-sm font-body text-secondary bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+                <p className="mt-6 text-sm font-body text-secondary bg-leaf-50 border border-leaf-100 rounded-xl px-4 py-3">
                   <strong className="text-navy">Outcome:</strong> {p.outcome}
                 </p>
               </div>
@@ -100,6 +100,18 @@ export default function ProgramsPage() {
           <p className="text-sm text-muted font-body mt-4">
             Not sure which fits? Check the <Link href="/how-to-apply" className="text-brand underline">application process</Link> or the <Link href="/faq" className="text-brand underline">FAQ</Link>.
           </p>
+        </section>
+        {/* Other initiatives listed on cimpbiif.com as "Our Entrepreneurial Endeavours" */}
+        <section aria-labelledby="endeavours-title">
+          <SectionHeading eyebrow="Beyond incubation" title="Our entrepreneurial endeavours" desc="Learning programmes and initiatives run by CIMP and CIMP-BIIF." />
+          <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {ENDEAVOURS.map((e) => (
+              <li key={e.name} className="bg-white border border-border rounded-2xl p-6 shadow-card">
+                <h3 className="font-body font-bold text-navy">{e.name}</h3>
+                <p className="text-sm text-secondary font-body mt-2 leading-relaxed">{e.desc}</p>
+              </li>
+            ))}
+          </ul>
         </section>
       </div>
 

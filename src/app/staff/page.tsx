@@ -108,7 +108,7 @@ export default function StaffPage() {
       )}
 
       <div className="max-w-5xl mx-auto px-6 py-8">
-        <h1 className="font-display text-3xl font-semibold text-navy mb-1">Office Team</h1>
+        <h1 className="font-display text-3xl font-bold text-navy mb-1">Office Team</h1>
         <p className="text-secondary font-body text-sm mb-8">
           Create and manage office users. Staff cannot sign up themselves and must use a
           company email{domains.length ? ` (${domains.map((d) => "@" + d).join(", ")})` : ""}.
@@ -164,7 +164,7 @@ export default function StaffPage() {
               type="submit"
               disabled={saving}
               className="w-full py-2.5 text-white font-semibold rounded-xl disabled:opacity-50 font-body text-sm hover:opacity-90"
-              style={{ background: "#1D4ED8" }}
+              style={{ background: "#3F7A16" }}
             >
               {saving ? "Adding..." : "Add User"}
             </button>
@@ -190,7 +190,7 @@ export default function StaffPage() {
                     <div className="min-w-0">
                       <p className="font-body font-medium text-navy text-sm truncate">
                         {m.name}
-                        <span className="ml-2 text-[11px] font-mono text-brand bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-full">
+                        <span className="ml-2 text-[11px] font-mono text-brand bg-leaf-50 border border-leaf-100 px-2 py-0.5 rounded-full">
                           {ROLE_ICONS[m.role]} {ROLE_LABELS[m.role] ?? m.role}
                         </span>
                       </p>

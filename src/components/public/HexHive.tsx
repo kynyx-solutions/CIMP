@@ -6,11 +6,15 @@
 // - Static frame (a few lit cells) under prefers-reduced-motion
 import { useEffect, useRef } from "react";
 
-const PALETTE = ["29,78,216", "14,165,233", "8,145,178", "79,70,229", "245,158,11"];
+// Logo palette: bodhi greens + saffron accent (last entry)
+const PALETTE = ["63,122,22", "111,174,46", "140,198,63", "78,138,31", "232,115,26"];
 
 type Cell = { x: number; y: number; a: number; target: number; c: string };
 
-export default function HexHive() {
+export default function HexHive({ focus = "centre" }: {
+  /** where the text sits; cells there are dimmed for readability */
+  focus?: "centre" | "left";
+} = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -56,7 +60,8 @@ export default function HexHive() {
 
     // Dim cells behind the centred headline so the text stays readable
     function centreFade(x: number, y: number) {
-      const dx = (x - w / 2) / (w * 0.32), dy = (y - h * 0.45) / (h * 0.38);
+      const cx = focus === "left" ? w * 0.22 : w / 2;
+      const dx = (x - cx) / (w * 0.32), dy = (y - h * 0.45) / (h * 0.38);
       const d = Math.sqrt(dx * dx + dy * dy);
       return Math.min(1, Math.max(0.15, d));
     }
@@ -98,7 +103,7 @@ export default function HexHive() {
           ctx!.fillStyle = `rgba(${cell.c},${0.4 * cell.a * fade})`;
           ctx!.fill();
         }
-        ctx!.strokeStyle = `rgba(29,78,216,${(0.07 + 0.22 * wave + 0.5 * cell.a) * fade})`;
+        ctx!.strokeStyle = `rgba(63,122,22,${(0.07 + 0.22 * wave + 0.5 * cell.a) * fade})`;
         ctx!.lineWidth = 1;
         ctx!.stroke();
 
@@ -142,7 +147,7 @@ export default function HexHive() {
       section.removeEventListener("pointerleave", onLeave);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, []);
+  }, [focus]);
 
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" aria-hidden="true" />;
 }

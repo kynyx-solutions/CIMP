@@ -8,7 +8,7 @@ import StageBadge from '@/components/StageBadge';
 import Link from 'next/link';
 import {
   PIPELINE, STAGES, ROLE_ICONS, ROLE_LABELS, APPROVAL_RANK, isOfficeRole,
-  stageEnteredAt, daysSince, daysLabel, type Stage,
+  stageEnteredAt, daysSince, daysLabel, progressStage, type Stage,
 } from '@/lib/workflow';
 
 async function getUser() {
@@ -93,7 +93,7 @@ export default async function DashboardPage() {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="font-display text-3xl font-semibold text-navy mb-1">
+          <h1 className="font-display text-3xl font-bold text-navy mb-1">
             {isCEO ? <><span className="shimmer-blue">CEO</span> Command Center</> : 'Dashboard'}
           </h1>
           <p className="text-secondary font-body text-sm">
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
           <div className="bg-white border border-border rounded-2xl p-5 mb-6 shadow-card flex flex-col md:flex-row md:items-center gap-4">
             <div className="flex-shrink-0">
               <p className="text-xs font-mono text-muted uppercase tracking-wider">My queue</p>
-              <p className="font-display text-3xl font-semibold text-navy">
+              <p className="font-display text-3xl font-bold text-navy">
                 {myQueue.length} <span className="text-base font-body text-secondary">waiting on you</span>
               </p>
               {myQueue[0] && (
@@ -133,22 +133,22 @@ export default async function DashboardPage() {
         {/* Incubatee: where you stand */}
         {user.role === 'incubatee' && serialized[0] && (() => {
           const app = serialized[0];
-          const cur = PIPELINE.indexOf(app.stage as Stage);
+          const cur = PIPELINE.indexOf(progressStage(app) as Stage);
           const def = STAGES[app.stage as Stage];
           const days = daysSince(stageEnteredAt(app));
           return (
             <div className="bg-white border border-border rounded-2xl p-6 mb-8 shadow-card">
-              <h2 className="font-display text-lg font-semibold text-navy mb-4">Where you stand</h2>
+              <h2 className="font-display text-lg font-bold text-navy mb-4">Where you stand</h2>
               {app.stage !== 'rejected' && (
                 <ol className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-5">
                   {PIPELINE.map((s, i) => (
-                    <li key={s} className={`rounded-xl border px-3 py-2 text-xs font-body ${i < cur || app.stage === 'ceo_approved' ? 'bg-blue-50 border-blue-100 text-brand' : i === cur ? 'bg-amber-50 border-amber-200 text-amber-800 font-semibold' : 'bg-bg border-border text-muted'}`}>
+                    <li key={s} className={`rounded-xl border px-3 py-2 text-xs font-body ${i < cur || app.stage === 'ceo_approved' ? 'bg-leaf-50 border-leaf-100 text-brand' : i === cur ? 'bg-amber-50 border-amber-200 text-amber-800 font-semibold' : 'bg-bg border-border text-muted'}`}>
                       <span className="font-mono">{i + 1}.</span> {s === 'ceo_approved' ? 'Approved' : STAGES[s].label}
                     </li>
                   ))}
                 </ol>
               )}
-              {def?.waitingOn && (
+              {def?.next && (
                 <p className="text-sm font-body text-secondary">
                   <strong className="text-navy">Now:</strong> waiting on the {def.waitingOn} ({daysLabel(days)} so far).
                   {' '}Next: {STAGES[def.next!].label === 'Approved' ? 'final decision' : STAGES[def.next!].label}. You will be notified by email and here.
@@ -159,6 +159,13 @@ export default async function DashboardPage() {
                   <strong>Approved.</strong> The incubation team will contact you about onboarding, agreements and your mentor.
                   {app.isPublic ? ' Your startup is listed in the public directory.' : ''}
                 </p>
+              )}
+              {app.stage === 'returned' && (
+                <div className="text-sm font-body bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 text-orange-800">
+                  <p><strong>Changes requested</strong> by the reviewer:</p>
+                  <p className="mt-1 whitespace-pre-line">{app.changeRequest}</p>
+                  <Link href="/apply" className="mt-3 inline-flex px-4 py-2 rounded-lg bg-orange-600 text-white font-semibold hover:bg-orange-700">Edit &amp; resubmit →</Link>
+                </div>
               )}
               {app.stage === 'rejected' && (
                 <div className="text-sm font-body text-secondary space-y-1">
@@ -186,17 +193,18 @@ export default async function DashboardPage() {
 
         {/* Stats cards */}
         {(isCEO || isManager) && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-3 mb-8">
             {[
               { label: 'Total', value: Object.values(stageCounts).reduce((a, b) => a + b, 0), color: 'text-navy', bg: 'bg-bg' },
               ...PIPELINE.filter(s => s !== 'ceo_approved').map(s => (
-                { label: STAGES[s].label, value: stageCounts[s] ?? 0, color: 'text-blue-600', bg: 'bg-blue-50' })),
+                { label: STAGES[s].label, value: stageCounts[s] ?? 0, color: 'text-leaf-700', bg: 'bg-leaf-50' })),
               { label: 'Approved', value: stageCounts.ceo_approved ?? 0, color: 'text-green-600', bg: 'bg-green-50' },
+              { label: 'Changes requested', value: stageCounts.returned ?? 0, color: 'text-orange-600', bg: 'bg-orange-50' },
               { label: 'Rejected', value: stageCounts.rejected ?? 0, color: 'text-red-500', bg: 'bg-red-50' },
               { label: 'Fast-Tracked ⚡', value: fastTracked, color: 'text-amber-600', bg: 'bg-amber-50' },
             ].map(s => (
               <div key={s.label} className={`${s.bg} border border-border rounded-2xl p-4 shadow-card`}>
-                <div className={`font-display text-3xl font-semibold ${s.color}`}>{s.value}</div>
+                <div className={`font-display text-3xl font-bold ${s.color}`}>{s.value}</div>
                 <div className="text-muted text-xs font-mono mt-1 leading-tight">{s.label}</div>
               </div>
             ))}
@@ -206,7 +214,7 @@ export default async function DashboardPage() {
         {/* CEO Analytics Chart */}
         {isCEO && industryData.length > 0 && (
           <div className="bg-white border border-border rounded-2xl p-6 mb-8 shadow-card">
-            <h2 className="font-display text-lg font-semibold text-navy mb-5">Applications by Industry</h2>
+            <h2 className="font-display text-lg font-bold text-navy mb-5">Applications by Industry</h2>
             <div className="space-y-3">
               {industryData.map(([industry, count]) => (
                 <div key={industry} className="flex items-center gap-4">
@@ -214,7 +222,7 @@ export default async function DashboardPage() {
                   <div className="flex-1 h-7 bg-bg rounded-lg overflow-hidden">
                     <div
                       className="h-full rounded-lg flex items-center px-3 transition-all duration-700"
-                      style={{ width: `${Math.max((count / maxCount) * 100, 8)}%`, background: '#1D4ED8' }}>
+                      style={{ width: `${Math.max((count / maxCount) * 100, 8)}%`, background: '#3F7A16' }}>
                       <span className="text-white text-xs font-mono">{count}</span>
                     </div>
                   </div>
@@ -228,7 +236,7 @@ export default async function DashboardPage() {
           {/* Applications */}
           <div className={isCEO || isManager ? 'lg:col-span-2' : ''}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display text-lg font-semibold text-navy">
+              <h2 className="font-display text-lg font-bold text-navy">
                 {user.role === 'incubatee' ? 'My Application' : 'Recent Applications'}
               </h2>
               {(isCEO || isManager) && (
@@ -239,9 +247,9 @@ export default async function DashboardPage() {
             {user.role === 'incubatee' && serialized.length === 0 ? (
               <div className="bg-white border border-border rounded-2xl p-12 text-center shadow-card">
                 <div className="text-5xl mb-4">🚀</div>
-                <h3 className="font-display text-xl font-semibold text-navy mb-2">Ready to launch?</h3>
+                <h3 className="font-display text-xl font-bold text-navy mb-2">Ready to launch?</h3>
                 <p className="text-muted font-body text-sm mb-6">Submit your startup application and get in front of our team.</p>
-                <Link href="/apply" className="inline-flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-xl font-body text-sm hover:opacity-90" style={{ background: '#1D4ED8' }}>
+                <Link href="/apply" className="inline-flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-xl font-body text-sm hover:opacity-90" style={{ background: '#3F7A16' }}>
                   Submit Application →
                 </Link>
               </div>
@@ -254,7 +262,7 @@ export default async function DashboardPage() {
                         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                           <h3 className="font-body font-semibold text-navy">{app.startupName}</h3>
                           {app.isFastTracked && <span className="text-xs font-mono text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">⚡ Fast-Tracked</span>}
-                          {app.pitchDeckUrl && <span className="text-xs font-mono text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">📎 Deck</span>}
+                          {app.pitchDeckUrl && <span className="text-xs font-mono text-leaf-700 bg-leaf-50 border border-leaf-200 px-2 py-0.5 rounded-full">📎 Deck</span>}
                         </div>
                         <p className="text-secondary text-sm font-body line-clamp-2 mb-2">{app.idea}</p>
                         <div className="flex items-center gap-3 text-xs text-muted font-mono">
@@ -278,7 +286,7 @@ export default async function DashboardPage() {
           {/* Activity Feed */}
           {(isCEO || isManager) && (
             <div>
-              <h2 className="font-display text-lg font-semibold text-navy mb-4">Recent Activity</h2>
+              <h2 className="font-display text-lg font-bold text-navy mb-4">Recent Activity</h2>
               <div className="bg-white border border-border rounded-2xl p-5 shadow-card">
                 {serializedActivity.length === 0 ? (
                   <p className="text-muted text-sm font-body text-center py-8">No activity yet</p>
@@ -287,7 +295,7 @@ export default async function DashboardPage() {
                     {serializedActivity.map((act: any, i: number) => (
                       <div key={act._id} className="flex gap-3">
                         <div className="flex flex-col items-center">
-                          <div className="w-7 h-7 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-xs flex-shrink-0">
+                          <div className="w-7 h-7 rounded-full bg-leaf-50 border border-leaf-200 flex items-center justify-center text-xs flex-shrink-0">
                             {ROLE_ICONS[act.actorRole] ?? '•'}
                           </div>
                           {i < serializedActivity.length - 1 && <div className="w-px flex-1 bg-border mt-1" />}

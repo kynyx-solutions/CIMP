@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Client** | CIMP — Centre for Innovation, Management & Policy (BIIF: Business Incubation & Innovation Fund) |
+| **Client** | CIMP-BIIF: CIMP Business Incubation and Innovation Foundation, a Section 8 company of Chandragupt Institute of Management Patna (CIMP). Note: the client's overview document expands the name as "Centre for Innovation, Management & Policy – Business Incubation & Innovation Fund"; confirm the official name with CIMP (Q14). |
 | **Vendor** | Homeasy Automation Pvt. Ltd. |
 | **Status** | Draft v0.3, internally agreed; ready for the requirement-alignment meeting with CIMP |
 | **Last updated** | 2026-11-20 |
@@ -402,3 +402,5 @@ Roughly 10–15% of the Phase 1 scope exists, at prototype quality.
 11. **Branding:** logo, colours, domain name.
 12. **Single incubation programme or several cohorts/programmes** in Phase 1?
 13. **Database:** we recommend PostgreSQL instead of the MongoDB in your spec and our proposal, for transactions, reporting and data integrity (see §9.4). Do you agree, or does your IT team require MongoDB or MySQL?
+14. **Official name:** is it "CIMP Business Incubation and Innovation Foundation" (as on the old cimpbiif.com) or the expansion in your overview document? Also confirm the current Director and CEO, and the contact phone number.
+15. **Bihar seed-fund flow:** should the portal record Department of Industries seed-fund approval as a step, given seed funding is approved by the Department after pre-incubation?

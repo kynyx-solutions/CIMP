@@ -49,6 +49,8 @@ export async function POST(req: NextRequest) {
           image: identity.picture,
           role: isPublicRole(role) ? role : "incubatee",
           isVerified: true,
+          // Google sign-up shows "By continuing you agree to the Terms and Privacy Policy".
+          consentAt: new Date(),
         },
       });
     }
