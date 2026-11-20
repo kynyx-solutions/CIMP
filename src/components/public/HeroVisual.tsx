@@ -31,7 +31,7 @@ export default function HeroVisual() {
   return (
     <div className="relative mx-auto w-full max-w-[560px] py-12 px-2 sm:px-10" aria-hidden="true">
       {/* Soft glow behind the card */}
-      <div className="absolute inset-8 rounded-[2rem] bg-blue-400/20 blur-3xl" />
+      <div className="absolute inset-8 rounded-[2rem] bg-cyan-400/30 blur-3xl" />
 
       <div className="relative bg-white/95 backdrop-blur border border-border rounded-3xl shadow-card-lg p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">

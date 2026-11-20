@@ -117,45 +117,43 @@ body {
   .hero-mover { display: none; }
 }
 
-/* ─── Homepage hero background (src/components/public/HeroBackground.tsx) ─── */
-.hero-grid {
+/* ─── Homepage hero background "Launchpad" (src/components/public/HeroBackground.tsx) ─── */
+.hero-aurora { animation: heroAurora 12s ease-in-out infinite alternate; will-change: transform, opacity; }
+.hero-star { opacity: .2; animation: heroTwinkle 3.2s ease-in-out infinite; }
+.hero-floor {
   background-image:
-    linear-gradient(to right, rgba(29, 78, 216, 0.07) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(29, 78, 216, 0.07) 1px, transparent 1px);
-  background-size: 48px 48px;
+    linear-gradient(to right, rgba(103, 232, 249, 0.45) 1.5px, transparent 1.5px),
+    linear-gradient(to bottom, rgba(103, 232, 249, 0.45) 1.5px, transparent 1.5px);
+  background-size: 56px 56px;
+  transform: rotateX(72deg);
+  animation: heroRunway 1.6s linear infinite;
+  will-change: transform;
 }
-.hero-blob { animation: heroBlob 22s ease-in-out infinite alternate; will-change: transform; }
-.hero-pulse-h { opacity: 0; animation: heroPulseH 8s linear infinite; }
-.hero-pulse-v { opacity: 0; animation: heroPulseV 8s linear infinite; }
-.hero-node { animation: heroNode 3.6s ease-in-out infinite; opacity: .25; }
-.hero-spark { opacity: 0; animation: heroSpark 10s ease-out infinite; }
+.hero-streak { opacity: 0; animation: heroLaunch 3s cubic-bezier(.45,0,.75,.4) infinite; }
+/* Gradient text that reads on the dark hero */
+.hero-gradient-text {
+  background: linear-gradient(100deg, #67e8f9 0%, #60a5fa 45%, #c4b5fd 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: heroTextShift 6s ease-in-out infinite alternate;
+}
 
-@keyframes heroBlob {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(60px, 40px) scale(1.12); }
-  100% { transform: translate(-40px, 70px) scale(0.95); }
+@keyframes heroAurora {
+  0% { transform: translate(0, 0) scale(1); opacity: .75; }
+  50% { transform: translate(80px, 30px) scale(1.15); opacity: 1; }
+  100% { transform: translate(-60px, 50px) scale(.95); opacity: .8; }
 }
-@keyframes heroPulseH {
-  0% { transform: translateX(-10rem); opacity: 0; }
-  10%, 85% { opacity: .9; }
-  100% { transform: translateX(110vw); opacity: 0; }
+@keyframes heroTwinkle { 0%, 100% { opacity: .15; } 50% { opacity: .9; } }
+@keyframes heroRunway { from { transform: rotateX(72deg) translateY(0); } to { transform: rotateX(72deg) translateY(56px); } }
+@keyframes heroLaunch {
+  0% { transform: translateY(0); opacity: 0; }
+  10% { opacity: 1; }
+  80% { opacity: .9; }
+  100% { transform: translateY(-460px); opacity: 0; }
 }
-@keyframes heroPulseV {
-  0% { transform: translateY(-10rem); opacity: 0; }
-  10%, 85% { opacity: .9; }
-  100% { transform: translateY(900px); opacity: 0; }
-}
-@keyframes heroNode {
-  0%, 100% { opacity: .2; box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
-  50% { opacity: .9; box-shadow: 0 0 0 6px rgba(59, 130, 246, .15); }
-}
-@keyframes heroSpark {
-  0% { transform: translateY(0) scale(.6); opacity: 0; }
-  15% { opacity: .8; }
-  100% { transform: translateY(-520px) scale(1.1); opacity: 0; }
-}
+@keyframes heroTextShift { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-blob, .hero-node { animation: none; }
-  .hero-pulse-h, .hero-pulse-v, .hero-spark { display: none; }
+  .hero-aurora, .hero-star, .hero-floor, .hero-gradient-text { animation: none; }
+  .hero-streak { display: none; }
 }
