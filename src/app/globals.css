@@ -1,36 +1,36 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg:        #F0F4F9;
-  --bg-alt:    #E8EEF6;
+  --bg:        #F5F8F0;
+  --bg-alt:    #EAF2DF;
   --surface:   #FFFFFF;
-  --surface-2: #F7FAFD;
-  --border:    #D1DDF0;
-  --border-2:  #B8CDE8;
-  --blue-900:  #0F2144;
-  --blue-800:  #1A3560;
-  --blue-700:  #1E4080;
-  --blue-600:  #1D4ED8;
-  --blue-500:  #3B82F6;
-  --blue-400:  #60A5FA;
-  --blue-100:  #DBEAFE;
-  --blue-50:   #EFF6FF;
-  --amber:     #D97706;
-  --amber-bg:  #FEF3C7;
-  --amber-border: #FCD34D;
+  --surface-2: #F9FBF5;
+  --border:    #DCE5D0;
+  --border-2:  #C3D3AE;
+  --blue-900:  #1C3510;
+  --blue-800:  #2E5016;
+  --blue-700:  #2E5E14;
+  --blue-600:  #3F7A16;
+  --blue-500:  #6FAE2E;
+  --blue-400:  #A6D45A;
+  --blue-100:  #E3F0D2;
+  --blue-50:   #F2F8EA;
+  --amber:     #C2570C;
+  --amber-bg:  #FEF3EA;
+  --amber-border: #F5B47E;
   --green:     #059669;
   --green-bg:  #D1FAE5;
   --red:       #DC2626;
   --red-bg:    #FEE2E2;
   --purple:    #7C3AED;
   --purple-bg: #EDE9FE;
-  --text-primary:   #0F2144;
-  --text-secondary: #3D5A80;
-  --text-muted:     #6B87A8;
-  --text-faint:     #9BB3CC;
+  --text-primary:   #1C3510;
+  --text-secondary: #4A5A3F;
+  --text-muted:     #6A7860;
+  --text-faint:     #A3B096;
 }
 
 * { box-sizing: border-box; }
@@ -38,7 +38,7 @@
 body {
   background: var(--bg);
   color: var(--text-primary);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Montserrat', 'Noto Sans Devanagari', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -48,7 +48,7 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: var(--blue-400); }
 
 .shimmer-blue {
-  background: linear-gradient(90deg, #1E4080 0%, #3B82F6 40%, #1E4080 60%, #0F2144 100%);
+  background: linear-gradient(90deg, #2E5E14 0%, #6FAE2E 40%, #2E5E14 60%, #1C3510 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
@@ -61,10 +61,10 @@ body {
   to   { background-position: -200% center; }
 }
 
-.shadow-card    { box-shadow: 0 1px 3px rgba(15,33,68,0.06), 0 1px 2px rgba(15,33,68,0.04); }
-.shadow-card-md { box-shadow: 0 4px 12px rgba(15,33,68,0.08), 0 2px 4px rgba(15,33,68,0.04); }
-.shadow-card-lg { box-shadow: 0 10px 30px rgba(15,33,68,0.1), 0 4px 8px rgba(15,33,68,0.06); }
-.shadow-blue    { box-shadow: 0 0 0 3px rgba(59,130,246,0.15), 0 4px 12px rgba(29,78,216,0.12); }
+.shadow-card    { box-shadow: 0 1px 3px rgba(28,53,16,0.06), 0 1px 2px rgba(28,53,16,0.04); }
+.shadow-card-md { box-shadow: 0 4px 12px rgba(28,53,16,0.08), 0 2px 4px rgba(28,53,16,0.04); }
+.shadow-card-lg { box-shadow: 0 10px 30px rgba(28,53,16,0.1), 0 4px 8px rgba(28,53,16,0.06); }
+.shadow-blue    { box-shadow: 0 0 0 3px rgba(111,174,46,0.15), 0 4px 12px rgba(63,122,22,0.12); }
 .shadow-amber   { box-shadow: 0 0 0 3px rgba(217,119,6,0.15),  0 4px 12px rgba(217,119,6,0.12); }
 
 @keyframes fadeUp {
@@ -84,8 +84,113 @@ body {
 .animate-pulse-amber { animation: pulseAmber 2s ease-in-out infinite; }
 
 .dot-grid {
-  background-image: radial-gradient(circle, #D1DDF0 1px, transparent 1px);
+  background-image: radial-gradient(circle, #DCE5D0 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
-.timeline-line { border-left: 2px dashed #B8CDE8; }
+.timeline-line { border-left: 2px dashed #C3D3AE; }
+
+/* ─── Homepage hero ─── */
+.hero-ping { animation: heroPing 1.6s cubic-bezier(0,0,.2,1) infinite; }
+@keyframes heroPing { 75%, 100% { transform: scale(2.2); opacity: 0; } }
+.hero-title-gradient {
+  background: linear-gradient(90deg, #1C3510 0%, #3F7A16 45%, #5B9424 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  animation: heroTitleShift 8s ease-in-out infinite alternate;
+}
+@keyframes heroTitleShift { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+@media (prefers-reduced-motion: reduce) {
+  .hero-ping, .hero-title-gradient { animation: none; }
+}
+
+/* ─── Homepage bodhi tree (src/components/public/BodhiTree.tsx) ─── */
+.tree-ring   { transform-box: fill-box; transform-origin: center; animation: treeSpin 82s linear infinite; }
+.tree-trunk  { transform-box: fill-box; transform-origin: 50% 100%; transform: scaleY(0); animation: treeGrow 1s cubic-bezier(.22,1,.36,1) .18s forwards; }
+.tree-branch { stroke-dasharray: 1; stroke-dashoffset: 1; animation: treeDraw 1s ease-out forwards; }
+.tree-sway   { transform-box: view-box; transform-origin: 200px 236px; animation: treeSway 6.4s ease-in-out 3.2s infinite alternate; }
+.tree-leaf   { opacity: 0; transform-box: fill-box; transform-origin: 50% 100%; animation: leafPop .55s cubic-bezier(.34,1.56,.64,1) forwards; }
+.tree-flutter { animation: leafPop .55s cubic-bezier(.34,1.56,.64,1) forwards, leafFlutter 2.55s ease-in-out infinite alternate; }
+
+@keyframes treeSpin { to { transform: rotate(360deg); } }
+@keyframes treeGrow { to { transform: scaleY(1); } }
+@keyframes treeDraw { to { stroke-dashoffset: 0; } }
+@keyframes treeSway { from { transform: rotate(-1.2deg); } to { transform: rotate(1.2deg); } }
+@keyframes leafPop { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+@keyframes leafFlutter { from { transform: scale(1) rotate(-7deg); } to { transform: scale(1) rotate(7deg); } }
+
+/* Nourishment cycle (4.1 s, starts after the tree has grown; timings are 10% faster than the first version):
+   0–38% light travels from root tips to the trunk base,
+   40–56% up the trunk, 57–80% out along the branches, 74–100% canopy glows.
+   Paths use pathLength=1; a single short dash is moved along each path. */
+.root-pulse   { stroke-dasharray: .14 1.4; stroke-dashoffset: -1.2; opacity: 0; animation: rootPulse 4.1s ease-in 2.7s infinite; }
+.trunk-pulse  { stroke-dasharray: .3 1.4;  stroke-dashoffset: .3;   opacity: 0; animation: trunkPulse 4.1s linear 2.7s infinite; }
+.branch-pulse { stroke-dasharray: .2 1.4;  stroke-dashoffset: .2;   opacity: 0; animation: branchPulse 4.1s ease-out 2.7s infinite; }
+.canopy-glow  { opacity: 0; animation: canopyGlow 4.1s ease-in-out 2.7s infinite; }
+
+@keyframes rootPulse {
+  0%       { stroke-dashoffset: -1.2; opacity: 0; }
+  6%       { opacity: 1; }
+  38%      { stroke-dashoffset: .14; opacity: 1; }
+  40%, 100% { stroke-dashoffset: .14; opacity: 0; }
+}
+@keyframes trunkPulse {
+  0%, 38%  { stroke-dashoffset: .3; opacity: 0; }
+  40%      { opacity: 1; }
+  56%      { stroke-dashoffset: -1; opacity: 1; }
+  58%, 100% { stroke-dashoffset: -1; opacity: 0; }
+}
+@keyframes branchPulse {
+  0%, 55%  { stroke-dashoffset: .2; opacity: 0; }
+  57%      { opacity: 1; }
+  80%      { stroke-dashoffset: -1; opacity: .9; }
+  82%, 100% { stroke-dashoffset: -1; opacity: 0; }
+}
+@keyframes canopyGlow { 0%, 74% { opacity: 0; } 86% { opacity: .85; } 100% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-ring, .tree-sway { animation: none; }
+  .tree-trunk { animation: none; transform: none; }
+  .tree-branch { animation: none; stroke-dashoffset: 0; }
+  .tree-leaf, .tree-flutter { animation: none; opacity: 1; transform: none; }
+  .root-pulse, .trunk-pulse, .branch-pulse, .canopy-glow { display: none; }
+}
+
+/* ─── Hero "fountain of ideas" fireflies (src/components/public/FireflyField.tsx) ─── */
+.ff-x { animation-name: ffX; animation-timing-function: linear; animation-iteration-count: infinite; animation-fill-mode: both; will-change: transform; }
+.ff-y { animation-name: ffY; animation-iteration-count: infinite; animation-fill-mode: both; will-change: transform; }
+.ff-dot {
+  opacity: 0;
+  background: radial-gradient(circle, #FFE7A3 0%, #F6C453 45%, #E8731A 100%);
+  box-shadow: 0 0 8px 3px rgba(246,196,83,.9), 0 0 22px 8px rgba(232,115,26,.35);
+  animation-name: ffGlow; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-fill-mode: both;
+}
+.ff-twinkle {
+  opacity: .1;
+  background: radial-gradient(circle, #FFE7A3 0%, #F6C453 55%, rgba(232,115,26,0) 100%);
+  box-shadow: 0 0 8px 3px rgba(246,196,83,.7), 0 0 18px 6px rgba(232,115,26,.2);
+  animation: ffTwinkle 4s ease-in-out infinite alternate;
+}
+@keyframes ffX { from { transform: translateX(0); } to { transform: translateX(var(--dx)); } }
+/* rise (decelerating), then fall (accelerating) = a smooth arc */
+@keyframes ffY {
+  0%   { transform: translateY(0); animation-timing-function: cubic-bezier(.2,.75,.45,1); }
+  32%  { transform: translateY(var(--up)); animation-timing-function: cubic-bezier(.55,0,.8,.45); }
+  100% { transform: translateY(var(--down)); }
+}
+@keyframes ffGlow {
+  0%   { opacity: 0; transform: scale(.5); }
+  8%   { opacity: 1; transform: scale(1); }
+  30%  { opacity: .55; }
+  45%  { opacity: 1; }
+  65%  { opacity: .6; }
+  82%  { opacity: .95; }
+  100% { opacity: 0; transform: scale(.6); }
+}
+@keyframes ffTwinkle { from { opacity: .15; transform: translate(0, 0); } to { opacity: 1; transform: translate(var(--drift), -8px); } }
+@media (prefers-reduced-motion: reduce) {
+  .ff-x, .ff-twinkle { display: none; }
+}
+
+/* Small labels and badges use the logo font; keep digits aligned (dates, counts, deadlines). */
+.font-mono { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }

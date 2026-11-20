@@ -52,7 +52,7 @@ export default function MessagesPage() {
       <Navbar user={user} />
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="mb-8">
-          <h1 className="font-display text-3xl font-semibold text-navy mb-1">Messages</h1>
+          <h1 className="font-display text-3xl font-bold text-navy mb-1">Messages</h1>
           <p className="text-secondary font-body text-sm">Direct communication between applicants and the review team</p>
         </div>
 
@@ -67,7 +67,7 @@ export default function MessagesPage() {
                 <p className="text-muted text-sm font-body text-center py-10">No conversations yet</p>
               ) : apps.map(app => (
                 <button key={app._id} onClick={() => selectApp(app)}
-                  className={`w-full px-4 py-4 text-left border-b border-border/60 hover:bg-bg transition-colors ${selectedApp?._id === app._id ? 'bg-blue-50 border-l-2 border-l-brand' : ''}`}>
+                  className={`w-full px-4 py-4 text-left border-b border-border/60 hover:bg-bg transition-colors ${selectedApp?._id === app._id ? 'bg-leaf-50 border-l-2 border-l-brand' : ''}`}>
                   <p className={`text-sm font-body font-semibold truncate ${selectedApp?._id === app._id ? 'text-brand' : 'text-navy'}`}>{app.startupName}</p>
                   <p className="text-xs text-muted font-body mt-0.5">{app.applicantName}</p>
                   <div className="mt-1.5">
@@ -83,7 +83,7 @@ export default function MessagesPage() {
             {!selectedApp ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
                 <div className="w-16 h-16 rounded-2xl bg-bg border border-border flex items-center justify-center text-3xl mb-4">💬</div>
-                <h3 className="font-display text-xl font-semibold text-navy mb-2">Select a conversation</h3>
+                <h3 className="font-display text-xl font-bold text-navy mb-2">Select a conversation</h3>
                 <p className="text-muted font-body text-sm">Choose an application from the left to start messaging</p>
               </div>
             ) : (
@@ -112,8 +112,8 @@ export default function MessagesPage() {
                     return (
                       <div key={m._id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                         <div className={`max-w-[70%] px-4 py-3 rounded-2xl ${isMe ? 'rounded-br-sm text-white' : 'rounded-bl-sm bg-bg border border-border text-navy'}`}
-                          style={isMe ? { background: '#1D4ED8' } : {}}>
-                          <p className={`text-xs font-semibold mb-1 font-body ${isMe ? 'text-blue-200' : 'text-muted'}`}>
+                          style={isMe ? { background: '#3F7A16' } : {}}>
+                          <p className={`text-xs font-semibold mb-1 font-body ${isMe ? 'text-leaf-200' : 'text-muted'}`}>
                             {m.senderName} · {m.senderRole}
                           </p>
                           <p className="text-sm font-body leading-relaxed">{m.content}</p>
@@ -132,11 +132,11 @@ export default function MessagesPage() {
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }}}
                     rows={1} placeholder="Type a message... (Enter to send)"
                     className="flex-1 bg-bg border border-border rounded-xl px-4 py-3 text-sm font-body text-navy focus:outline-none resize-none placeholder:text-faint transition-colors"
-                    onFocus={e => { e.target.style.borderColor='#3B82F6'; e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,0.12)'; }}
+                    onFocus={e => { e.target.style.borderColor='#6FAE2E'; e.target.style.boxShadow='0 0 0 3px rgba(111,174,46,0.12)'; }}
                     onBlur={e => { e.target.style.borderColor=''; e.target.style.boxShadow=''; }} />
                   <button onClick={sendMessage} disabled={sending || !msgInput.trim()}
                     className="w-11 h-11 rounded-xl flex items-center justify-center text-white disabled:opacity-40 hover:opacity-90 transition-all flex-shrink-0"
-                    style={{ background: '#1D4ED8' }}>
+                    style={{ background: '#3F7A16' }}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>

@@ -1,766 +1,312 @@
-"use client"
-
 import Link from "next/link";
-import { motion, Variants } from "framer-motion";
+import { PublicHeader, PublicFooter, SectionHeading, SampleTag, Arrow, Check } from "@/components/public/Site";
+import BodhiTree from "@/components/public/BodhiTree";
+import FireflyField from "@/components/public/FireflyField";
+import { prisma } from "@/lib/prisma";
+import {
+  IS_SAMPLE, STATS, OPEN_CALLS, PROGRAMS, APPLY_STEPS, ELIGIBILITY,
+  RESPONSE_TIME, SCHEMES, MENTORS, PARTNERS,
+} from "@/content/site";
 
-/* ─── Icon Components (replacing emojis) ─── */
-const IconSubmit = () => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <polyline points="14 2 14 8 20 8" />
-    <line x1="12" y1="18" x2="12" y2="12" />
-    <line x1="9" y1="15" x2="15" y2="15" />
-  </svg>
-);
-const IconSearch = () => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-);
-const IconCrown = () => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M2 20h20" />
-    <path d="M4 20V10l4-6 4 4 4-4 4 6v10" />
-    <circle cx="8" cy="14" r="1" fill="currentColor" />
-    <circle cx="16" cy="14" r="1" fill="currentColor" />
-  </svg>
-);
-const IconRocket = () => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
-    <path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
-    <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
-    <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
-  </svg>
-);
-const IconShield = () => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    <polyline points="9 12 11 14 15 10" />
-  </svg>
-);
-const IconBolt = () => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-  </svg>
-);
-const IconEye = () => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-const IconArrowRight = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="5" y1="12" x2="19" y2="12" />
-    <polyline points="12 5 19 12 12 19" />
-  </svg>
-);
-const IconCheck = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="3"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
+// Server-rendered on every request: numbers are in the HTML (no "0+" counters)
+// and the featured startups reflect the live public directory.
+export const dynamic = "force-dynamic";
 
-const workflowSteps = [
-  {
-    icon: <IconSubmit />,
-    label: "Submit",
-    desc: "Apply with your pitch deck and vision",
-  },
-  {
-    icon: <IconSearch />,
-    label: "Manager Review",
-    desc: "Rigorous first-pass screening",
-  },
-  {
-    icon: <IconCrown />,
-    label: "CEO Approval",
-    desc: "Direct access, final decision",
-  },
-  { icon: <IconRocket />, label: "Incubated", desc: "Funded and accelerated" },
-];
+type Featured = { _id: string; startupName: string; industry: string; idea: string; isFastTracked: boolean };
 
-const workflowColors = [
-  { from: "#3b82f6", to: "#06b6d4" },
-  { from: "#06b6d4", to: "#a855f7" },
-  { from: "#a855f7", to: "#1D4ED8" },
-];
+async function loadFeatured(): Promise<Featured[]> {
+  const rows = await prisma.application.findMany({
+    where: { isPublic: true, status: "approved" },
+    select: { id: true, startupName: true, industry: true, idea: true, isFastTracked: true },
+    orderBy: { updatedAt: "desc" },
+    take: 6,
+  });
+  return rows.map((r) => ({ ...r, _id: r.id }));
+}
 
-const differentiators = [
-  {
-    icon: <IconBolt />,
-    title: "14-Day Decisions",
-    desc: "No months of waiting. Our pipeline moves fast because we review continuously, not in batches.",
-  },
-  {
-    icon: <IconCrown />,
-    title: "CEO-to-CEO Access",
-    desc: "Your final review is with the decision-maker, not a junior analyst screening with a checklist.",
-  },
-  {
-    icon: <IconEye />,
-    title: "Full Transparency",
-    desc: "See where your application stands at every stage. No black boxes, no ghosting.",
-  },
-  {
-    icon: <IconShield />,
-    title: "No Hidden Terms",
-    desc: "Our terms are public before you apply. No surprise clawbacks buried in fine print.",
-  },
-];
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (i = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.6,
-      delay: i * 0.1,
-      ease: [0.22, 1, 0.36, 1] as const,
-    },
-  }),
-};
-export default function HomePage() {
+// The homepage must render even if the database is slow or down:
+// give up on featured startups after 3 s instead of hanging on a slow connection.
+async function getFeaturedStartups(): Promise<Featured[]> {
+  const timeout = new Promise<Featured[]>((resolve) => setTimeout(() => resolve([]), 3000));
+  return Promise.race([loadFeatured().catch(() => []), timeout]);
+}
+
+
+export default async function HomePage() {
+  const featured = await getFeaturedStartups();
+
   return (
     <main className="min-h-screen bg-bg antialiased">
-      {/* ══════════════════════════════════════
-          STYLES (scoped to this page)
-          ══════════════════════════════════════ */}
-      <style jsx global>{`
-        .dot-grid {
-          background-image: radial-gradient(
-            circle,
-            rgba(15, 33, 68, 0.08) 1px,
-            transparent 1px
-          );
-          background-size: 24px 24px;
-        }
-        .shimmer-blue {
-          background: linear-gradient(
-            105deg,
-            #0f2144 0%,
-            #0f2144 35%,
-            #1d4ed8 50%,
-            #0f2144 65%,
-            #0f2144 100%
-          );
-          background-size: 250% 100%;
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
-          animation: shimmer 4s ease-in-out infinite;
-        }
-        @keyframes shimmer {
-          0%,
-          100% {
-            background-position: 200% center;
-          }
-          50% {
-            background-position: -200% center;
-          }
-        }
-        @keyframes float-slow {
-          0%,
-          100% {
-            transform: translateY(0) rotate(0deg);
-          }
-          50% {
-            transform: translateY(-12px) rotate(1deg);
-          }
-        }
-        .float-slow {
-          animation: float-slow 7s ease-in-out infinite;
-        }
-        @keyframes pulse-ring {
-          0% {
-            transform: scale(1);
-            opacity: 0.6;
-          }
-          100% {
-            transform: scale(2.2);
-            opacity: 0;
-          }
-        }
-        .pulse-ring::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          border-radius: 9999px;
-          background: #1d4ed8;
-          animation: pulse-ring 2s ease-out infinite;
-          z-index: -1;
-        }
-      `}</style>
+      <PublicHeader />
 
-      {/* ══════════════════════════════════════
-          NAV
-          ══════════════════════════════════════ */}
-      <motion.nav
-        className="bg-white/80 backdrop-blur-lg border-b border-border sticky top-0 z-50"
-        style={{ boxShadow: "0 1px 3px rgba(15,33,68,0.04)" }}
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center bg-brand group-hover:scale-105 transition-transform"
-              style={{ boxShadow: "0 2px 8px rgba(29,78,216,0.25)" }}
-            >
-              <span
-                className="text-white font-bold text-sm"
-                style={{ fontFamily: "Lora,serif" }}
-              >
-                C
-              </span>
-            </div>
-            <span className="font-display text-xl font-semibold text-navy">
-              CIMP
+      {/* ═══ HERO: bodhi tree as a full background animation, content centred ═══ */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-leaf-50 via-white to-leaf-50/60">
+        {/* Bodhi tree centred in the hero background. The SVG scales to fit this box
+            (preserveAspectRatio "meet"), so on every screen size it stays whole and centred.
+            Bottom padding (56px) equals the Open calls card overlap (-mt-14), so roots are never hidden. */}
+        <div className="pointer-events-none absolute inset-0 px-2 pt-2 pb-14 sm:pt-3 sm:pb-14" aria-hidden="true">
+          <BodhiTree className="block w-full h-full" treeOpacity={0.32} />
+        </div>
+        {/* Soft white glow behind the text so it stays readable over the tree */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_44%_30%_at_50%_42%,rgba(255,255,255,0.7)_0%,rgba(255,255,255,0.35)_55%,rgba(255,255,255,0)_100%)]" aria-hidden="true" />
+        <FireflyField />
+
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 pt-20 pb-36 md:pt-24 md:pb-44 text-center">
+          <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 border border-leaf-200 text-brand text-xs font-mono tracking-[0.15em] uppercase font-semibold mb-7 backdrop-blur">
+            <span className="relative flex w-2 h-2" aria-hidden="true">
+              <span className="hero-ping absolute inline-flex w-full h-full rounded-full bg-brand" />
+              <span className="relative inline-flex w-2 h-2 rounded-full bg-brand" />
             </span>
-          </Link>
-          <div className="hidden sm:flex items-center gap-1">
-            <Link
-              href="/public-startups"
-              className="text-secondary hover:text-navy text-sm font-body px-3 py-2 rounded-lg hover:bg-slate-50 transition-all"
-            >
-              Portfolio
-            </Link>
-            <Link
-              href="/login"
-              className="text-secondary hover:text-navy text-sm font-body px-3 py-2 rounded-lg hover:bg-slate-50 transition-all"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/register"
-              className="ml-2 px-5 py-2 rounded-lg text-white text-sm font-semibold font-body transition-all hover:opacity-90 hover:shadow-lg"
-              style={{ background: "#1D4ED8" }}
-            >
-              Apply Now
-            </Link>
-          </div>
-          {/* Mobile menu button */}
-          <button className="sm:hidden p-2 rounded-lg hover:bg-slate-50 transition-colors text-navy">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            >
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-        </div>
-      </motion.nav>
-
-      {/* ══════════════════════════════════════
-          HERO
-          ══════════════════════════════════════ */}
-      <section className="relative overflow-hidden">
-        <div className="dot-grid absolute inset-0" />
-
-        {/* Floating decorative elements */}
-        <div
-          className="absolute top-32 right-[15%] w-64 h-64 rounded-full opacity-[0.04] float-slow"
-          style={{
-            background: "radial-gradient(circle, #1D4ED8, transparent 70%)",
-          }}
-        />
-        <div
-          className="absolute bottom-20 left-[10%] w-48 h-48 rounded-full opacity-[0.03]"
-          style={{
-            background: "radial-gradient(circle, #1D4ED8, transparent 70%)",
-            animation: "float-slow 9s ease-in-out infinite reverse",
-          }}
-        />
-
-        <div className="relative max-w-7xl mx-auto px-6 py-28 md:py-36 text-center">
-          {/* Badge */}
-          <motion.div
-            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-blue-50 border border-blue-100 mb-10"
-            initial={{ opacity: 0, y: 16, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-brand" />
-            </span>
-            <span className="text-brand text-xs font-mono tracking-[0.15em] uppercase font-semibold">
-              Applications Open
-            </span>
-          </motion.div>
-
-          {/* Heading */}
-          <motion.h1
-            className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-semibold text-navy leading-[1.05] mb-7 max-w-5xl mx-auto"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-          >
-            Where Bold Ideas <span className="shimmer-blue">Become</span>
-            <br />
-            Funded Companies
-          </motion.h1>
-
-          {/* Subtext */}
-          <motion.p
-            className="text-secondary font-body text-lg md:text-xl max-w-xl mx-auto mb-12 leading-relaxed"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: 0.6,
-              delay: 0.35,
-              ease: [0.22, 1, 0.36, 1],
-            }}
-          >
-            Rigorous multi-stage review. Direct CEO access.
-            <br className="hidden sm:block" />
-            Fast-track for exceptional ventures.
-          </motion.p>
-
-          {/* CTAs */}
-          <motion.div
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: 0.6,
-              delay: 0.45,
-              ease: [0.22, 1, 0.36, 1],
-            }}
-          >
-            <Link
-              href="/register"
-              className="group px-8 py-4 rounded-xl text-white font-semibold font-body transition-all hover:scale-[1.03] active:scale-[0.98] flex items-center gap-2"
-              style={{
-                background: "#1D4ED8",
-                boxShadow: "0 4px 20px rgba(29,78,216,0.3)",
-              }}
-            >
-              Submit Your Startup
-              <span className="group-hover:translate-x-0.5 transition-transform">
-                <IconArrowRight />
-              </span>
-            </Link>
-            <Link
-              href="/public-startups"
-              className="px-8 py-4 border border-slate-200 text-secondary rounded-xl hover:border-brand hover:text-brand transition-all font-body bg-white hover:shadow-sm flex items-center gap-2"
-            >
-              View Portfolio
-            </Link>
-          </motion.div>
-
-          {/* Stats */}
-          <motion.div
-            className="mt-24 inline-grid grid-cols-3 gap-x-16 gap-y-0 bg-white border border-slate-100 rounded-2xl px-10 md:px-14 py-8"
-            style={{ boxShadow: "0 4px 32px rgba(15,33,68,0.06)" }}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          >
-            {[
-              { value: "< 14", unit: "Days", label: "Avg. Decision Time" },
-              { value: "3", unit: "Stages", label: "Deep Review Process" },
-              { value: "100%", unit: "", label: "Transparent Pipeline" },
-            ].map((s, i) => (
-              <motion.div
-                key={s.label}
-                className="text-center"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.75 + i * 0.1 }}
-              >
-                <div className="font-display text-3xl md:text-4xl font-bold text-navy leading-none">
-                  {s.value}
-                  <span className="text-brand text-lg md:text-xl">
-                    {s.unit}
-                  </span>
-                </div>
-                <div className="text-muted text-[11px] font-mono tracking-[0.12em] uppercase mt-2">
-                  {s.label}
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════
-          WORKFLOW — Curved Connectors
-          ══════════════════════════════════════ */}
-      <section className="border-t border-slate-100 bg-white">
-        <div className="max-w-5xl mx-auto px-6 py-24 md:py-32">
-          <motion.p
-            className="text-center text-muted text-xs font-mono tracking-[0.2em] uppercase mb-16"
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-          >
-            The Journey
-          </motion.p>
-
-          {/* Desktop: Horizontal */}
-          <div className="hidden md:flex items-start">
-            {workflowSteps.map((step, i) => (
-              <div key={step.label} className="flex items-start flex-1">
-                {/* Step card */}
-                <motion.div
-                  className="flex-1 text-center group"
-                  variants={fadeUp}
-                  custom={i}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true, margin: "-40px" }}
-                >
-                  <div className="relative inline-flex items-center justify-center w-14 h-14 rounded-2xl border-2 border-slate-100 bg-white text-secondary mb-5 group-hover:border-brand group-hover:text-brand group-hover:shadow-lg group-hover:shadow-blue-50 transition-all duration-300 mx-auto">
-                    {step.icon}
-                  </div>
-                  <div className="text-navy text-sm font-body font-bold tracking-tight">
-                    {step.label}
-                  </div>
-                  <div className="text-muted text-xs mt-1 font-body max-w-[160px] mx-auto leading-relaxed">
-                    {step.desc}
-                  </div>
-                </motion.div>
-
-                {/* Curved connector */}
-                {i < 3 && (
-                  <div className="self-start mt-7 flex-shrink-0 w-16 lg:w-24 -mx-1">
-                    <svg
-                      width="100%"
-                      height="36"
-                      viewBox="0 0 80 36"
-                      fill="none"
-                      preserveAspectRatio="xMidYMid meet"
-                    >
-                      <defs>
-                        <linearGradient
-                          id={`wf-${i}`}
-                          x1="0"
-                          y1="0"
-                          x2="80"
-                          y2="0"
-                          gradientUnits="userSpaceOnUse"
-                        >
-                          <stop
-                            offset="0%"
-                            stopColor={workflowColors[i].from}
-                            stopOpacity="0.5"
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor={workflowColors[i].to}
-                            stopOpacity="0.5"
-                          />
-                        </linearGradient>
-                      </defs>
-                      <motion.path
-                        d="M 4 8 C 26 32, 54 32, 76 8"
-                        stroke={`url(#wf-${i})`}
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        fill="none"
-                        pathLength={1}
-                        initial={{ pathLength: 0 }}
-                        whileInView={{ pathLength: 1 }}
-                        viewport={{ once: true }}
-                        transition={{
-                          duration: 0.8,
-                          delay: 0.3 + i * 0.15,
-                          ease: "easeInOut",
-                        }}
-                      />
-                      <motion.circle
-                        cx="76"
-                        cy="8"
-                        r="3"
-                        fill={workflowColors[i].to}
-                        initial={{ scale: 0, opacity: 0 }}
-                        whileInView={{ scale: 1, opacity: 1 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.3, delay: 0.8 + i * 0.15 }}
-                      />
-                    </svg>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Mobile: Vertical */}
-          <div className="md:hidden flex flex-col items-center">
-            {workflowSteps.map((step, i) => (
-              <div
-                key={step.label}
-                className="flex flex-col items-center w-full"
-              >
-                <motion.div
-                  className="w-full bg-slate-50 border border-slate-100 rounded-xl p-5 flex items-center gap-4"
-                  variants={fadeUp}
-                  custom={i}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                >
-                  <div className="flex-shrink-0 w-12 h-12 rounded-xl border-2 border-slate-200 bg-white text-secondary flex items-center justify-center">
-                    {step.icon}
-                  </div>
-                  <div>
-                    <div className="text-navy text-sm font-bold">
-                      {step.label}
-                    </div>
-                    <div className="text-muted text-xs mt-0.5">{step.desc}</div>
-                  </div>
-                </motion.div>
-                {i < 3 && (
-                  <div className="my-1">
-                    <svg width="24" height="40" viewBox="0 0 24 40" fill="none">
-                      <motion.path
-                        d="M 6 4 C 22 12, 22 28, 6 36"
-                        stroke={workflowColors[i].from}
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        fill="none"
-                        opacity="0.4"
-                        pathLength={1}
-                        initial={{ pathLength: 0 }}
-                        whileInView={{ pathLength: 1 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
-                      />
-                    </svg>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════
-          DIFFERENTIATORS
-          ══════════════════════════════════════ */}
-      <section className="border-t border-slate-100 bg-bg">
-        <div className="max-w-6xl mx-auto px-6 py-24 md:py-32">
-          <motion.div
-            className="text-center mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-          >
-            <p className="text-muted text-xs font-mono tracking-[0.2em] uppercase mb-4">
-              Why CIMP
-            </p>
-            <h2 className="font-display text-3xl md:text-4xl font-semibold text-navy tracking-tight">
-              What Sets Us Apart
-            </h2>
-          </motion.div>
-
-          <div className="grid sm:grid-cols-2 gap-5">
-            {differentiators.map((d, i) => (
-              <motion.div
-                key={d.title}
-                className="group bg-white border border-slate-100 rounded-2xl p-7 hover:border-slate-200 hover:shadow-lg hover:shadow-slate-100/50 transition-all duration-300"
-                variants={fadeUp}
-                custom={i}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-40px" }}
-              >
-                <div className="w-11 h-11 rounded-xl bg-blue-50 text-brand flex items-center justify-center mb-5 group-hover:bg-brand group-hover:text-white transition-colors duration-300">
-                  {d.icon}
-                </div>
-                <h3 className="font-display text-lg font-semibold text-navy mb-2 tracking-tight">
-                  {d.title}
-                </h3>
-                <p className="text-secondary text-sm font-body leading-relaxed">
-                  {d.desc}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════
-          CTA BAND
-          ══════════════════════════════════════ */}
-      <section className="border-t border-slate-100 bg-navy relative overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-[0.04]"
-          style={{
-            background:
-              "radial-gradient(ellipse at 30% 50%, #1D4ED8, transparent 60%)",
-          }}
-        />
-        <div className="relative max-w-3xl mx-auto px-6 py-24 md:py-28 text-center">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-          >
-            <h2 className="font-display text-3xl md:text-5xl font-semibold text-white tracking-tight mb-5 leading-tight">
-              Ready to Build
-              <br />
-              Something Real?
-            </h2>
-            <p className="text-slate-400 font-body text-lg mb-10 max-w-md mx-auto">
-              Applications are reviewed continuously. The earlier you apply, the
-              faster you hear back.
-            </p>
-            <Link
-              href="/register"
-              className="group inline-flex items-center gap-2 px-9 py-4 rounded-xl text-white font-semibold font-body transition-all hover:scale-[1.03] active:scale-[0.98]"
-              style={{
-                background: "#1D4ED8",
-                boxShadow: "0 4px 24px rgba(29,78,216,0.35)",
-              }}
-            >
-              Start Your Application
-              <span className="group-hover:translate-x-0.5 transition-transform">
-                <IconArrowRight />
-              </span>
-            </Link>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════
-          FOOTER
-          ══════════════════════════════════════ */}
-      <footer className="border-t border-slate-100 bg-white">
-        <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-brand">
-              <span
-                className="text-white font-bold text-[10px]"
-                style={{ fontFamily: "Lora,serif" }}
-              >
-                C
-              </span>
-            </div>
-            <span className="font-display text-sm font-semibold text-navy">
-              CIMP
-            </span>
-          </div>
-          <div className="flex items-center gap-6">
-            <Link
-              href="/public-startups"
-              className="text-muted hover:text-navy text-xs font-body transition-colors"
-            >
-              Portfolio
-            </Link>
-            <Link
-              href="/login"
-              className="text-muted hover:text-navy text-xs font-body transition-colors"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/register"
-              className="text-muted hover:text-navy text-xs font-body transition-colors"
-            >
-              Apply
-            </Link>
-          </div>
-          <p className="text-muted text-xs font-body">
-            &copy; {new Date().getFullYear()} CIMP
+            Applications open
           </p>
+          <p className="text-secondary font-body text-xs sm:text-sm uppercase tracking-[0.35em] mb-4">
+            Chandragupt Institute of Management Patna
+          </p>
+          <h1 className="font-body font-extrabold uppercase tracking-[0.03em] leading-[1.05] text-4xl sm:text-6xl md:text-7xl">
+            <span className="hero-title-gradient">Business Incubation</span>
+            <br />
+            <span className="hero-title-gradient">&amp; Innovation Foundation</span>
+          </h1>
+          <p className="mt-6 font-body text-2xl sm:text-4xl font-semibold text-saffron-600" lang="sa">
+            सर्व सिद्धि मूलम् उद्यमिता
+          </p>
+          <p className="mt-1 text-sm font-body italic text-muted">Entrepreneurship is the root of all accomplishment</p>
+          <p className="mt-6 text-secondary font-body text-lg max-w-2xl mx-auto leading-relaxed">
+            The startup incubator of CIMP, Patna, since 2017: mentorship, seed-fund support, co-working and a transparent, fully digital incubation process.
+          </p>
+          <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link href="/register" className="group w-full sm:w-auto px-8 py-3.5 rounded-full text-white font-semibold font-body tracking-wide bg-brand hover:bg-leaf-800 transition inline-flex items-center justify-center gap-2 shadow-[0_8px_24px_rgba(63,122,22,0.3)]">
+              Apply for Incubation <span className="group-hover:translate-x-0.5 transition-transform"><Arrow /></span>
+            </Link>
+            <Link href="/programs" className="w-full sm:w-auto px-8 py-3.5 rounded-full border border-border bg-white/90 text-navy font-body font-medium hover:border-brand hover:text-brand transition backdrop-blur">
+              Explore programs
+            </Link>
+          </div>
+          <ul className="mt-10 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm font-body text-secondary">
+            {["Section 8 company of CIMP", "Supported by Dept. of Industries, Govt. of Bihar", "Manages B-Hub, Patna"].map((t) => (
+              <li key={t} className="inline-flex items-center gap-2"><Check />{t}</li>
+            ))}
+          </ul>
         </div>
-      </footer>
+      </section>
+
+      {/* ═══ OPEN CALLS ═══ */}
+      <section aria-labelledby="calls-heading" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 -mt-14 mb-16">
+        <div className="bg-white border border-border rounded-2xl shadow-card p-4 sm:p-5">
+          <h2 id="calls-heading" className="text-xs font-mono uppercase tracking-[0.15em] text-muted font-semibold mb-3 px-1">
+            Open calls <SampleTag />
+          </h2>
+          <ul className="grid sm:grid-cols-3 gap-3">
+            {OPEN_CALLS.map((c) => (
+              <li key={c.title}>
+                <Link href={c.href} className="group flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3 hover:border-brand transition-colors h-full">
+                  <span>
+                    <span className="block font-body font-semibold text-navy text-sm">{c.title}</span>
+                    <span className="block font-mono text-xs text-muted mt-0.5">Deadline: {c.deadline}</span>
+                  </span>
+                  <span className="text-brand group-hover:translate-x-0.5 transition-transform"><Arrow /></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* ═══ IMPACT STATS ═══ */}
+      <section aria-labelledby="impact-heading" className="max-w-7xl mx-auto px-4 sm:px-6 mb-20">
+        <h2 id="impact-heading" className="sr-only">Impact</h2>
+        <dl className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {STATS.items.map((s) => (
+            <div key={s.label} className="bg-white border border-border rounded-2xl p-6 shadow-card text-center flex flex-col">
+              <dt className="order-2 text-muted text-xs font-mono uppercase tracking-wider mt-2">{s.label}</dt>
+              <dd className="order-1 font-display text-3xl md:text-4xl font-bold text-navy">{s.value}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="text-[11px] text-faint font-mono mt-3 text-center">
+          Source: {STATS.source}, as of {STATS.asOf}. <SampleTag />
+        </p>
+      </section>
+
+      {/* ═══ PROGRAMS BY STAGE ═══ */}
+      <section id="programs" className="border-t border-border bg-white scroll-mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
+          <SectionHeading eyebrow="Programs" title="Pick the program that fits your stage" desc="Every program lists who it is for, what you get and the terms, before you apply." sample={IS_SAMPLE} />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {PROGRAMS.map((p) => (
+              <article key={p.name} className="flex flex-col border border-border rounded-2xl p-6 bg-surface-2 hover:shadow-card-md transition-shadow">
+                <p className="text-xs font-mono uppercase tracking-wider text-brand font-semibold">{p.stage}</p>
+                <h3 className="font-display text-2xl font-bold text-navy mt-1">{p.name}</h3>
+                <p className="text-xs font-mono text-muted mt-1">{p.duration}</p>
+                <p className="text-sm text-secondary font-body mt-4">{p.forWho}</p>
+                <ul className="mt-4 space-y-2 flex-1">
+                  {p.benefits.map((b) => (
+                    <li key={b} className="flex gap-2 text-sm font-body text-navy"><Check />{b}</li>
+                  ))}
+                </ul>
+                <p className="mt-5 pt-4 border-t border-border text-xs font-body text-secondary">
+                  <span className="font-semibold text-navy">Terms:</span> {p.terms}
+                </p>
+                <Link href={`/programs#${p.slug}`} className="mt-4 text-sm font-body font-semibold text-brand hover:text-navy inline-flex items-center gap-1">
+                  Program details <Arrow />
+                </Link>
+              </article>
+            ))}
+          </div>
+          <Link href="/programs" className="mt-8 inline-flex items-center gap-1 text-brand font-body font-medium text-sm hover:text-navy">
+            Compare all programs <Arrow />
+          </Link>
+        </div>
+      </section>
+
+      {/* ═══ HOW TO APPLY ═══ */}
+      <section id="apply" className="border-t border-border scroll-mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 grid lg:grid-cols-[1.4fr_1fr] gap-12">
+          <div>
+            <SectionHeading eyebrow="How to apply" title="A clear process you can track live" desc="No email chains or external forms. You apply in the portal and see each review stage, remark and decision as it happens." />
+            <ol className="relative border-l-2 border-leaf-100 ml-3 space-y-8">
+              {APPLY_STEPS.map((s, i) => (
+                <li key={s.title} className="pl-8 relative">
+                  <span className="absolute -left-[17px] top-0 w-8 h-8 rounded-full bg-brand text-white font-mono text-sm font-bold flex items-center justify-center">{i + 1}</span>
+                  <h3 className="font-body font-semibold text-navy">{s.title}</h3>
+                  <p className="text-sm text-secondary font-body mt-1">{s.desc}</p>
+                </li>
+              ))}
+            </ol>
+            <Link href="/how-to-apply" className="mt-8 inline-flex items-center gap-1 text-brand font-body font-medium text-sm hover:text-navy">
+              Full guide: documents, tips and what happens after selection <Arrow />
+            </Link>
+          </div>
+          <aside className="space-y-6">
+            <div className="bg-white border border-border rounded-2xl p-6 shadow-card">
+              <h3 className="font-body font-semibold text-navy mb-4">Who can apply <SampleTag /></h3>
+              <ul className="space-y-2.5">
+                {ELIGIBILITY.map((e) => (
+                  <li key={e} className="flex gap-2 text-sm font-body text-secondary"><Check />{e}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-2xl p-6 bg-navy text-white">
+              <p className="text-xs font-mono uppercase tracking-wider text-leaf-200">Always know where you stand</p>
+              <p className="font-body mt-2 text-sm leading-relaxed text-leaf-50">{RESPONSE_TIME}, with email and in-app notifications.</p>
+              <Link href="/register" className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white text-navy font-semibold text-sm font-body hover:bg-leaf-50 transition-colors">
+                Start your application <Arrow />
+              </Link>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      {/* ═══ FEATURED STARTUPS (live) ═══ */}
+      <section className="border-t border-border bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <SectionHeading eyebrow="Portfolio" title="Startups building with us" desc="Live from the public directory. Startups appear here once approved and published." />
+            <Link href="/startups" className="text-brand font-body font-medium text-sm inline-flex items-center gap-1 hover:text-navy whitespace-nowrap mb-10">
+              View full directory <Arrow />
+            </Link>
+          </div>
+          {featured.length === 0 ? (
+            <div className="border border-dashed border-border rounded-2xl p-10 text-center text-muted font-body text-sm">
+              No startups published yet. Approved startups appear here after the CEO or Admin IT publishes them.
+            </div>
+          ) : (
+            <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {featured.map((s) => (
+                <li key={s._id} className="border border-border rounded-2xl p-5 bg-surface-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-body font-semibold text-navy">{s.startupName}</h3>
+                    <span className="text-[11px] font-mono text-brand bg-leaf-50 border border-leaf-100 px-2 py-0.5 rounded-full">{s.industry}</span>
+                    {s.isFastTracked && <span className="text-[11px] font-mono text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">Fast-tracked</span>}
+                  </div>
+                  <p className="text-sm text-secondary font-body mt-2 line-clamp-3">{s.idea}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      {/* ═══ MENTORS & INVESTORS ═══ */}
+      <section id="mentors" className="border-t border-border scroll-mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
+          <SectionHeading eyebrow="Network" title="Mentors and investors" desc="Incubatees are matched with mentors and investors through a reviewed connection process." sample={IS_SAMPLE} />
+          <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {MENTORS.map((m, i) => (
+              <li key={i} className="bg-white border border-border rounded-2xl p-5 shadow-card">
+                <div className="w-12 h-12 rounded-full bg-leaf-50 border border-leaf-100 flex items-center justify-center font-display text-brand text-lg" aria-hidden="true">
+                  {m.name.charAt(0)}
+                </div>
+                <h3 className="font-body font-semibold text-navy mt-3">{m.name}</h3>
+                <p className="text-xs text-muted font-mono">{m.role}</p>
+                <p className="text-sm text-secondary font-body mt-2">{m.expertise}</p>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-white border border-border rounded-2xl p-5">
+            <p className="font-body text-sm text-secondary flex-1">
+              <span className="font-semibold text-navy">Experienced founder, expert or investor?</span> Join the CIMP-BIIF mentor and investor network.
+            </p>
+            <Link href="#contact" className="px-5 py-2.5 rounded-lg border border-brand text-brand font-semibold text-sm font-body hover:bg-leaf-50 transition-colors">
+              Become a mentor
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ GOVERNMENT SCHEMES ═══ */}
+      <section id="schemes" className="border-t border-border bg-white scroll-mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
+          <SectionHeading eyebrow="Funding" title="Government schemes we can help you access" desc="Grouped by ministry. Indicative list; CIMP to confirm which schemes it operates." />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {SCHEMES.map((g) => (
+              <div key={g.ministry} className="border border-border rounded-2xl p-5 bg-surface-2">
+                <p className="text-xs font-mono uppercase tracking-wider text-muted font-semibold">{g.ministry}</p>
+                <ul className="mt-3 space-y-2">
+                  {g.items.map((it) => (
+                    <li key={it} className="flex gap-2 text-sm font-body text-navy"><Check />{it}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <Link href="/schemes" className="mt-8 inline-flex items-center gap-1 text-brand font-body font-medium text-sm hover:text-navy">
+            What each scheme offers and how we help <Arrow />
+          </Link>
+        </div>
+      </section>
+
+      {/* ═══ PARTNERS ═══ */}
+      <section className="border-t border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14">
+          <h2 className="text-center text-xs font-mono uppercase tracking-[0.15em] text-muted font-semibold mb-6">
+            Supported by <SampleTag />
+          </h2>
+          <ul className="flex flex-wrap justify-center gap-3">
+            {PARTNERS.map((p) => (
+              <li key={p} className="px-4 py-2 rounded-lg border border-border bg-white text-sm font-body text-secondary">{p}</li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* ═══ FINAL CTA ═══ */}
+      <section className="bg-navy">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16 text-center">
+          <h2 className="font-display text-3xl md:text-4xl font-bold text-white">Ready to build with CIMP-BIIF?</h2>
+          <p className="text-leaf-100 font-body mt-3">Apply in minutes and track every step of your review online.</p>
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/register" className="px-7 py-3.5 rounded-xl bg-white text-navy font-semibold font-body hover:bg-leaf-50 transition-colors inline-flex items-center justify-center gap-2">
+              Apply for Incubation <Arrow />
+            </Link>
+            <Link href="/login" className="px-7 py-3.5 rounded-xl border border-leaf-300/40 text-white font-body hover:bg-white/10 transition-colors">
+              Login to your dashboard
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <PublicFooter />
     </main>
   );
 }

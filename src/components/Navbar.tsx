@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
+import { OFFICE_ROLES, ROLE_LABELS } from "@/lib/workflow";
 
 // Icons (You can use lucide-react or heroicons, I'm using inline SVGs for zero dependencies)
 const SearchIcon = () => (
@@ -121,24 +122,14 @@ export default function Navbar({ user }: NavbarProps) {
     router.push("/login");
   }
 
+  const ALL = ["incubatee", ...OFFICE_ROLES];
   const links = [
-    {
-      href: "/dashboard",
-      label: "Dashboard",
-      roles: ["incubatee", "manager", "ceo"],
-    },
+    { href: "/dashboard", label: "Dashboard", roles: ALL },
     { href: "/apply", label: "Apply", roles: ["incubatee"] },
-    { href: "/approvals", label: "Approvals", roles: ["manager", "ceo"] },
-    {
-      href: "/messages",
-      label: "Messages",
-      roles: ["incubatee", "manager", "ceo"],
-    },
-    {
-      href: "/public-startups",
-      label: "Portfolio",
-      roles: ["incubatee", "manager", "ceo"],
-    },
+    { href: "/approvals", label: "Applications", roles: OFFICE_ROLES as string[] },
+    { href: "/staff", label: "Team", roles: ["ceo"] },
+    { href: "/messages", label: "Messages", roles: ALL },
+    { href: "/startups", label: "Directory", roles: ALL },
   ].filter((l) => l.roles.includes(user.role));
 
   // Generate Avatar URL based on name if user doesn't have one
@@ -150,16 +141,16 @@ export default function Navbar({ user }: NavbarProps) {
         {/* 1. Logo Section */}
         <div className="flex items-center gap-8">
           <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-leaf-700 to-indigo-700 flex items-center justify-center shadow-sm">
               <span
                 className="text-white font-bold text-lg"
                 style={{ fontFamily: "serif" }}
               >
-                L
+                C
               </span>
             </div>
             <span className="font-display text-lg font-bold text-slate-800 hidden sm:block tracking-tight">
-              Launchpad
+              CIMP-BIIF
             </span>
           </Link>
 
@@ -174,7 +165,7 @@ export default function Navbar({ user }: NavbarProps) {
                 <span
                   className={`text-sm font-medium transition-colors ${
                     pathname === l.href
-                      ? "text-blue-600"
+                      ? "text-leaf-700"
                       : "text-slate-600 group-hover:text-slate-900"
                   }`}
                 >
@@ -182,7 +173,7 @@ export default function Navbar({ user }: NavbarProps) {
                 </span>
                 {/* Active Indicator Dot */}
                 {pathname === l.href && (
-                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-600" />
+                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-leaf-700" />
                 )}
               </Link>
             ))}
@@ -226,7 +217,7 @@ export default function Navbar({ user }: NavbarProps) {
                   {notifCount > 0 && (
                     <button
                       onClick={markAllRead}
-                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                      className="text-xs text-leaf-700 hover:text-leaf-800 font-medium"
                     >
                       Mark all read
                     </button>
@@ -241,7 +232,7 @@ export default function Navbar({ user }: NavbarProps) {
                     notifs.map((n: any) => (
                       <div
                         key={n._id}
-                        className={`px-4 py-3 border-b border-slate-50 hover:bg-slate-50 cursor-pointer ${!n.read ? "bg-blue-50/30" : ""}`}
+                        className={`px-4 py-3 border-b border-slate-50 hover:bg-slate-50 cursor-pointer ${!n.read ? "bg-leaf-50/30" : ""}`}
                       >
                         <p
                           className={`text-sm ${n.read ? "text-slate-600" : "text-slate-900 font-semibold"}`}
@@ -273,7 +264,7 @@ export default function Navbar({ user }: NavbarProps) {
                   {user.name.split(" ")[0]}
                 </p>
                 <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wide">
-                  {user.role}
+                  {ROLE_LABELS[user.role] ?? user.role}
                 </p>
               </div>
               <div className="relative">
@@ -301,13 +292,13 @@ export default function Navbar({ user }: NavbarProps) {
                 <div className="py-1">
                   <Link
                     href="/settings"
-                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600"
+                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-leaf-700"
                   >
                     Settings
                   </Link>
                   <Link
                     href="/profile"
-                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600"
+                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-leaf-700"
                   >
                     Your Profile
                   </Link>

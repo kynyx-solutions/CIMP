@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { connectDB } from "@/lib/db";
-import { User } from "@/models/User";
-import { sendOTPEmail } from "@/lib/email"; // 👈 add this
+import { prisma } from "@/lib/prisma";
+import { sendOTPEmail } from "@/lib/email";
+import { isCompanyEmail, isPublicRole } from "@/lib/roles";
 
 // Helper — generate 6-digit OTP
 function generateOTP(): string {
@@ -10,14 +10,36 @@ function generateOTP(): string {
 }
 
 export async function POST(req: NextRequest) {
-  const { name, email, password, role } = await req.json();
+  const { name, email, password, role, consent } = await req.json();
 
   if (!name || !email || !password)
     return NextResponse.json({ error: "All fields required" }, { status: 400 });
 
-  await connectDB();
+  // Explicit consent to the Terms and Privacy Policy is required (DPDP Act, PRD WEB-10).
+  if (consent !== true)
+    return NextResponse.json(
+      { error: "Please accept the Terms of Use and Privacy Policy to continue." },
+      { status: 400 },
+    );
 
-  const existing = await User.findOne({ email: email.toLowerCase() });
+  // Staff (manager / CEO) can never self-register.
+  if (role !== undefined && !isPublicRole(role))
+    return NextResponse.json(
+      { error: "Staff accounts are created by the organisation." },
+      { status: 403 },
+    );
+
+  if (isCompanyEmail(email))
+    return NextResponse.json(
+      {
+        error:
+          "Company email addresses are reserved for staff. Staff accounts are created by the CEO.",
+      },
+      { status: 403 },
+    );
+
+
+  const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (existing)
     return NextResponse.json(
       { error: "Email already registered" },
@@ -29,14 +51,17 @@ export async function POST(req: NextRequest) {
   const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
   // Create user — unverified
-  await User.create({
-    name,
-    email,
-    password: hashed,
-    role,
-    isVerified: false,
-    otp,
-    otpExpiresAt,
+  await prisma.user.create({
+    data: {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password: hashed,
+      role: isPublicRole(role) ? role : "incubatee",
+      isVerified: false,
+      otp,
+      otpExpiresAt,
+      consentAt: new Date(),
+    },
   });
 
   // Send OTP email

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB } from "@/lib/db";
-import { User } from "@/models/User";
-import { signToken } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { signToken, type Role } from "@/lib/auth";
 import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
@@ -13,8 +12,7 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
 
-  await connectDB();
-  const user = await User.findOne({ email: email.toLowerCase() });
+  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
 
   if (!user)
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -25,26 +23,26 @@ export async function POST(req: NextRequest) {
   if (!user.otp || user.otp !== otp)
     return NextResponse.json({ error: "Invalid OTP" }, { status: 400 });
 
-  if (user.otpExpiresAt < new Date())
+  if (!user.otpExpiresAt || user.otpExpiresAt < new Date())
     return NextResponse.json(
       { error: "OTP expired. Request a new one." },
       { status: 400 },
     );
 
   // Mark verified, clear OTP
-  user.isVerified = true;
-  user.otp = undefined;
-  user.otpExpiresAt = undefined;
-  await user.save();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { isVerified: true, otp: null, otpExpiresAt: null },
+  });
 
   await sendWelcomeEmail(user.email, user.name, user.role);
 
   // Now issue JWT and log them in
   const token = signToken({
-    userId: user._id.toString(),
+    userId: user.id,
     email: user.email,
     name: user.name,
-    role: user.role,
+    role: user.role as Role,
   });
 
   const response = NextResponse.json({ success: true });
