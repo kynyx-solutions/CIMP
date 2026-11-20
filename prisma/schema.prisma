@@ -36,6 +36,21 @@ model Application {
   startupName     String
   idea            String   @db.Text
   industry        String
+  // Application form fields (src/lib/application-fields.ts)
+  ventureStage       String?
+  city               String?
+  state              String?
+  website            String?
+  founders           String?  @db.Text
+  teamSize           Int?
+  phone              String?
+  problem            String?  @db.Text
+  solution           String?  @db.Text
+  traction           String?  @db.Text
+  registrationStatus String?
+  cin                String?
+  dpiitNumber        String?
+  fundingRaised      String?
   pitchDeckUrl    String?
   pitchDeckName   String?
   status          String   @default("pending")   // pending | approved | rejected

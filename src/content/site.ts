@@ -108,3 +108,59 @@ export const CONTACTS = [
   { audience: "Partners & CSR", value: "To be provided by CIMP" },
   { audience: "Media", value: "To be provided by CIMP" },
 ];
+
+export const ABOUT = {
+  mission:
+    "To help early-stage founders turn innovative ideas into sustainable, investable companies, through mentorship, funding access, infrastructure and a transparent incubation process.",
+  vision:
+    "A thriving regional startup ecosystem where every promising founder can access the support they need, regardless of background.",
+  hostedBy: "Host institution: to be provided by CIMP",
+  established: "Year established: to be provided by CIMP",
+  recognitions: [
+    "Government recognition / scheme partner: to be provided by CIMP",
+    "DPIIT / Startup India affiliation: to be provided by CIMP",
+    "Legal entity (e.g. Section 8 company): to be provided by CIMP",
+  ],
+  pillars: [
+    { title: "Mentorship", desc: "Every incubatee gets a dedicated mentor and access to a network of domain experts." },
+    { title: "Funding access", desc: "Support with seed-fund applications, government schemes and investor introductions." },
+    { title: "Infrastructure", desc: "Office space, labs and shared facilities for building and testing products." },
+    { title: "Transparent process", desc: "A digital, auditable review with status, remarks and decisions visible at every stage." },
+  ],
+  leadership: [
+    { name: "Leader name", role: "Chief Executive Officer" },
+    { name: "Leader name", role: "Senior Manager, Incubation" },
+    { name: "Leader name", role: "Incubation Manager" },
+  ],
+  governance:
+    "Applications are reviewed in four stages: Executive review, Incubation Manager due diligence, Senior Manager approval and CEO final approval. Senior Manager and CEO decisions are digitally signed, and every action is recorded in an audit log.",
+};
+
+export const FAQS: { category: string; items: { q: string; a: string }[] }[] = [
+  {
+    category: "Eligibility",
+    items: [
+      { q: "Who can apply?", a: "Founders with an innovative, scalable idea or product. Students, researchers and first-time founders are welcome for pre-incubation; incubation expects a prototype or MVP." },
+      { q: "Do I need a registered company?", a: "Not for pre-incubation. For incubation, a registered entity is preferred, or you can register during the programme." },
+      { q: "Can I apply if I am incubated elsewhere?", a: "Generally not if the other incubator holds equity. Contact us to discuss your case." },
+    ],
+  },
+  {
+    category: "Process",
+    items: [
+      { q: "How does the review work?", a: "Your application goes through Executive review, Incubation Manager due diligence, Senior Manager approval and CEO final approval. You can follow each step on your dashboard." },
+      { q: "How long does a decision take?", a: "Timelines depend on the call and volume. Your dashboard always shows which stage you are in and for how long." },
+      { q: "Will I get feedback if I am not selected?", a: "Yes. If an application is not approved, the reason is shared with you on your dashboard." },
+      { q: "Can I edit my application after submitting?", a: "Yes, until the Executive accepts it for review. After that it is locked so reviewers assess a stable version." },
+    ],
+  },
+  {
+    category: "Terms & support",
+    items: [
+      { q: "Does CIMP-BIIF take equity?", a: "Terms differ by program and are listed on each program card. Pre-incubation is free with no equity." },
+      { q: "Who owns my IP?", a: "You do. Any specific terms are set out in the incubation agreement you sign after selection." },
+      { q: "Is remote (virtual) incubation possible?", a: "Programme formats will be confirmed by CIMP. Mentoring and reviews already run online through the portal." },
+      { q: "Which government schemes can you help with?", a: "Schemes such as SISFS, NIDHI-PRAYAS, NIDHI-EIR, GENESIS and BIRAC BIG, depending on which ones CIMP operates." },
+    ],
+  },
+];

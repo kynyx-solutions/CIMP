@@ -231,7 +231,21 @@ Based on a review of 12 incubator websites (AIC-BIMTECH, IC IIT Patna, FITT IIT 
 | WEB-6 | Admin IT edits all website content from the admin panel (stored in `site_config`): stats, open calls, programs, eligibility, schemes, partners, contacts. Real content is pushed at final deployment. Until then the site uses demo data with visible "Sample" tags. |
 | WEB-7 | The homepage still renders if the database is slow or unavailable. Only the live sections fall back. |
 | WEB-8 | Quality bar: meaningful alt text, no key content hidden in carousels, no placeholder or "#" links at launch, footer year updates automatically, and the layout works on mobile first. |
-| WEB-9 | Phase 2: events with registration, blog, and individual startup and mentor profile pages. |
+| WEB-9 | Phase 2: events with registration, and blog. |
+| WEB-10 | Privacy policy and terms pages, plus a consent checkbox at registration, as required for personal data under India's DPDP Act 2023. Phase 1, before go-live. |
+| WEB-11 | About page (institution, mission, leadership, governance, recognitions) and FAQ page (eligibility, process, terms), all editable by Admin IT. Phase 1; demo pages exist. |
+| WEB-12 | Facilities page: labs, co-working, equipment and how to book. Phase 1. |
+| WEB-13 | Startup directory with search and filters (sector, stage, location), plus an individual profile page for each startup and mentor. Mentor and investor directory per PUB-1. Phase 1; demo has search and filters. |
+| WEB-14 | Each page has its own title and description, share previews (Open Graph) and a sitemap. Portal pages are marked noindex. Phase 1; done in the demo. |
+
+#### 7.10 Portal information (implemented in the demo)
+
+| ID | Requirement |
+|---|---|
+| INFO-1 | The applicant dashboard shows where the application stands: progress through the stages, who it is waiting on, how long it has been there, what comes next, and the review history. Internal reviewer remarks are never shown to applicants; only the rejection reason is. |
+| INFO-2 | Office dashboards show "My queue": applications waiting on that user's stage, the count and the oldest wait. Items waiting 7 days or more are highlighted. |
+| INFO-3 | Every application card shows how many days it has been in its current stage. The review panel shows the full application, with search across startup, founder, industry and city. |
+| INFO-4 | The demo application form covers basics, founders and team, the venture (pitch, problem, solution, traction) and legal and funding details, with help text, character limits and a completion meter. In Phase 1 the same fields come from the form builder (FORM-1). |
 
 ### Phase 2 (separate scope & commercials)
 
