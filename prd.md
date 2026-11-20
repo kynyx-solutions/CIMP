@@ -254,7 +254,7 @@ Based on a review of 12 incubator websites (AIC-BIMTECH, IC IIT Patna, FITT IIT 
 
 | Area | Requirement |
 |---|---|
-| Architecture | Three tiers: web client, stateless REST API, MongoDB + Redis, with S3 for files. The API scales horizontally. |
+| Architecture | Three tiers: web client, stateless REST API, PostgreSQL + Redis, with S3 for files. The API scales horizontally. |
 | API conventions | REST for resources. Named action endpoints for workflow steps (`/approve`, `/fast-track`, `/reroute`). Responses use the envelope `{ success, data, meta }`. Zod validates every request body and the environment variables. |
 | Security | bcrypt password hashing, RBAC enforced in middleware, rate limiting, presigned S3 only (the API never proxies file bytes), HTTPS everywhere, secrets kept in environment variables. |
 | Auditability | Immutable audit log for every mutating request (AUD-1). |
@@ -271,7 +271,7 @@ Based on a review of 12 incubator websites (AIC-BIMTECH, IC IIT Patna, FITT IIT 
 |---|---|
 | Frontend | **[DECIDED]** Next.js (React, TypeScript, Tailwind), reusing the current prototype UI |
 | Backend | **[DECIDED]** Node.js + Express (TypeScript), as stated in the proposal |
-| Database | MongoDB (Mongoose) |
+| Database | **[PROPOSED, needs CIMP sign-off]** PostgreSQL with Prisma ORM. The proposal and CIMP's spec say MongoDB; see §9.4 for why we recommend changing. **[OPEN Q13]** |
 | Cache / sessions | Redis (ioredis): refresh tokens, rate limits, verification tokens, dedup keys |
 | Files | AWS S3 (presigned URLs) |
 | Email | Nodemailer + Handlebars templates |
@@ -282,26 +282,44 @@ Based on a review of 12 incubator websites (AIC-BIMTECH, IC IIT Patna, FITT IIT 
 
 > **Decision (internal):** Phase 1 uses a separate Express API with a Next.js frontend, in one monorepo. This matches the proposal and the client's spec. The prototype backend is small (~600 lines), so moving it costs little, and a separate API makes the BIIF 2.0 integrations easier. Until the SRS is signed, the prototype stays a Next.js monolith and is used only as a demo for the alignment meeting.
 
-### 9.2 Data model (13 collections)
+### 9.2 Data model
 
-| Collection | Purpose | Key fields |
+CIMP's spec defines 13 MongoDB collections. In PostgreSQL each becomes a table. Flexible parts use JSONB columns, and embedded arrays such as approval steps become child tables.
+
+| Table | Purpose | Key fields |
 |---|---|---|
-| users | All users: incubatees, mentors, investors, office | email, userType[], officeRole, status |
-| profiles | Profile data for each user type plus dynamic answers | userId, answers{}, documents[], completionStatus |
-| approvals | Approval workflows for profiles and connections | entityId, currentStage, steps[], status |
-| connections | Mentor–incubatee and investor–incubatee links | incubateeId, mentorId, type, status |
-| notifications | Dashboard and email notifications | userId, type, channel, read |
-| threads | Conversations | participants[], context, lastMessageAt |
-| messages | Messages in a thread | threadId, senderId, body, attachments[] |
-| reports | QPR and progress reports (Phase 2) | userId, period, data{}, status |
-| blogs | Blog posts (Phase 2) | authorId, slug, status, publishedAt |
-| id_cards | Virtual ID cards (Phase 2) | userId, generatedUrl, issuedAt |
-| form_schemas | Configurable form definitions | schemaType, version, fields[], isActive |
-| site_config | Global key-value config | key, value, updatedBy |
-| audit_logs | Immutable action log | actorId, action, entityId, diff{}, ts |
+| users | All users: incubatees, mentors, investors, office | email, user_types (text[]), office_role, status |
+| profiles | Profile data for each user type plus dynamic answers | user_id, answers (JSONB), documents (JSONB), completion_status |
+| approvals | Approval workflows for profiles and connections | entity_type, entity_id, current_stage, status |
+| approval_steps | One row per decision (actor, remark, signature, timestamp) | approval_id, from_stage, to_stage, actor_id, remark, signature, at |
+| connections | Mentor–incubatee and investor–incubatee links | incubatee_id, mentor_id, type, status |
+| notifications | Dashboard and email notifications | user_id, type, channel, read |
+| threads | Conversations | context, last_message_at (participants in thread_participants) |
+| messages | Messages in a thread | thread_id, sender_id, body, attachments (JSONB) |
+| reports | QPR and progress reports (Phase 2) | user_id, period, data (JSONB), status |
+| blogs | Blog posts (Phase 2) | author_id, slug, status, published_at |
+| id_cards | Virtual ID cards (Phase 2) | user_id, generated_url, issued_at |
+| form_schemas | Configurable form definitions | schema_type, version, fields (JSONB), is_active |
+| site_config | Global key-value config, including website content (WEB-6) | key, value (JSONB), updated_by |
+| audit_logs | Immutable action log | actor_id, action, entity_id, diff (JSONB), ts |
 
 ### 9.3 API route groups
 `/auth` · `/profiles` · `/approvals` · `/connections` · `/messages` · `/notifications` · `/dashboard` · `/upload` · `/admin/*` · `/public/*` in Phase 1. Phase 2 adds `/reports` · `/mentorship` · `/exports` · `/blogs`.
+
+### 9.4 Database choice: PostgreSQL instead of MongoDB
+
+**Recommendation:** PostgreSQL. To be agreed with CIMP at the requirement-alignment meeting (Q13), and confirmed in writing because it changes the proposal.
+
+| Concern | Why PostgreSQL fits better |
+|---|---|
+| Relational data | Users, applications, approvals, connections, reports and audit logs are linked. Directory filters, stage reports and Excel exports are plain SQL joins. |
+| Workflow integrity | A stage change, its approval step and its audit entry are saved in one transaction. They either all succeed or all roll back. |
+| Dynamic forms | `answers` and `fields` are JSONB columns, which can be indexed and queried. Admin IT can still add or remove fields without migrations, which was the reason the spec chose MongoDB. |
+| Data quality | Foreign keys, unique constraints and NOT NULL rules stop duplicate or orphaned records. |
+| Reuse | The demo already uses Prisma. Moving it to PostgreSQL is mostly a provider change, so its data layer carries into Phase 1. |
+| Hosting | Managed options in the Mumbai region (AWS RDS, Supabase, Neon), or self-hosted on the Phase 1 VPS within the infra budget. |
+
+What does not change: Redis stays for refresh tokens, rate limits and notification dedup, and S3 stays for files. If CIMP requires MongoDB, the data model in §9.2 maps back to collections one-to-one. MySQL is an acceptable fallback if CIMP's hosting or IT requires it, but its JSON support is weaker for dynamic forms.
 
 ## 10. Delivery plan (Phase 1)
 
@@ -328,7 +346,7 @@ Weekly demos on staging. Anything outside the signed SRS goes through a change r
 
 ## 11. Current state
 
-A prototype ("Launchpad") was built in April 2026 alongside the proposal. It is a Next.js monolith. **For the local demo its data layer runs on MySQL (Prisma)**; this is a demo-only choice. Phase 1 uses MongoDB as committed in the proposal (§9), so the demo's data layer is not reused as is. Here is what can be reused:
+A prototype ("Launchpad") was built in April 2026 alongside the proposal. It is a Next.js monolith. **The demo's data layer runs on PostgreSQL with Prisma**, the database proposed for Phase 1 (§9.4), so it can be reused if CIMP agrees. Here is what can be reused:
 
 | Prototype feature | Reuse in Phase 1 |
 |---|---|
@@ -350,7 +368,8 @@ Roughly 10–15% of the Phase 1 scope exists, at prototype quality.
 | Digital signature means legal eSign | Third-party integration, cost, timeline | Settle Q1 early. Phase 1 uses image signatures. |
 | Stack differs from the proposal (if Next.js only) | Client IT objects at review | Separate Express API, or written agreement |
 | Spec ambiguities (approval order, routing) | Rework | Resolve the open questions before week 3 |
-| Infra budget of ₹30k/year for MongoDB + Redis + S3 + Puppeteer | Performance or cost overrun | One VPS plus S3 for Phase 1. Review before Phase 2 (Puppeteer needs a lot of memory). |
+| CIMP's IT prefers MongoDB, as written in their spec | Rework of the data layer | Present §9.4 at the alignment meeting; the §9.2 model maps back to collections if needed |
+| Infra budget of ₹30k/year for PostgreSQL + Redis + S3 + Puppeteer | Performance or cost overrun | One VPS plus S3 for Phase 1. Review before Phase 2 (Puppeteer needs a lot of memory). |
 | Slow client inputs or approvals | Timeline slips | Timelines depend on timely inputs (proposal T&C). Agree response SLAs. |
 
 ## 13. Open questions for CIMP
@@ -367,3 +386,4 @@ Roughly 10–15% of the Phase 1 scope exists, at prototype quality.
 10. **Existing data:** is there current incubatee or mentor data to migrate?
 11. **Branding:** logo, colours, domain name.
 12. **Single incubation programme or several cohorts/programmes** in Phase 1?
+13. **Database:** we recommend PostgreSQL instead of the MongoDB in your spec and our proposal, for transactions, reporting and data integrity (see §9.4). Do you agree, or does your IT team require MongoDB or MySQL?

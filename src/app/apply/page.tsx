@@ -174,9 +174,10 @@ export default function ApplyPage() {
             <div className="p-4 bg-bg border border-border rounded-xl">
               <p className="text-xs font-mono text-muted uppercase tracking-wider mb-2">What happens next</p>
               <div className="flex items-center gap-2 text-xs font-body flex-wrap">
-                <span className="text-blue-600 font-medium">Submitted</span><span className="text-muted">→</span>
-                <span className="text-amber-600 font-medium">Manager Reviews</span><span className="text-muted">→</span>
-                <span className="text-green-600 font-medium">CEO Approves</span><span className="text-muted">→</span>
+                <span className="text-blue-600 font-medium">Executive Review</span><span className="text-muted">→</span>
+                <span className="text-indigo-600 font-medium">Due Diligence</span><span className="text-muted">→</span>
+                <span className="text-purple-600 font-medium">Sr. Manager Approval</span><span className="text-muted">→</span>
+                <span className="text-amber-600 font-medium">CEO Final Approval</span><span className="text-muted">→</span>
                 <span className="text-navy font-semibold">You're In! 🎉</span>
               </div>
             </div>
