@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { Application } from '@/models/Application';
 
+// Never cache at build time; the directory changes whenever an app is published.
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   await connectDB();
   const startups = await Application.find({ isPublic: true, status: 'approved' })

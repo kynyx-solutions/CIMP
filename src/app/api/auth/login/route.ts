@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/db";
 import { User } from "@/models/User";
 import { signToken } from "@/lib/auth";
+import { isCompanyEmail, isStaffRole } from "@/lib/roles";
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,11 +26,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!user.password) {
+      return NextResponse.json(
+        { error: "This account uses Google sign-in. Continue with Google." },
+        { status: 400 },
+      );
+    }
+
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 },
+      );
+    }
+
+    // Staff may only sign in with a company-domain email.
+    if (isStaffRole(user.role) && !isCompanyEmail(user.email)) {
+      return NextResponse.json(
+        { error: "Staff must sign in with a company email address." },
+        { status: 403 },
       );
     }
 

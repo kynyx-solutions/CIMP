@@ -4,7 +4,14 @@ import { cookies } from 'next/headers';
 const JWT_SECRET = process.env.JWT_SECRET!;
 const COOKIE_NAME = 'incubator_token';
 
-export type Role = 'incubatee' | 'manager' | 'ceo';
+export type Role =
+  | 'incubatee'
+  | 'admin_it'
+  | 'ceo'
+  | 'sr_manager'
+  | 'manager'
+  | 'executive'
+  | 'staff';
 
 export interface JWTPayload {
   userId: string;

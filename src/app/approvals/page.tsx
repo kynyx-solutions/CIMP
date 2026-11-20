@@ -3,11 +3,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import StageBadge from '@/components/StageBadge';
+import { STAGES, PIPELINE, ROLE_LABELS, ROLE_ICONS, APPROVAL_RANK, canAct, isOfficeRole, type Stage } from '@/lib/workflow';
 
+type Step = { fromStage: string; toStage: string; action: string; actorName: string; actorRole: string; remark?: string; signature?: string; at: string; };
 type App = {
   _id: string; applicantName: string; startupName: string; idea: string;
   industry: string; stage: string; status: string; isFastTracked: boolean;
-  isPublic: boolean; rejectionReason?: string; managerNote?: string;
+  isPublic: boolean; rejectionReason?: string; steps?: Step[];
   pitchDeckUrl?: string; pitchDeckName?: string; createdAt: string;
 };
 
@@ -24,9 +26,10 @@ export default function ApprovalsPage() {
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
   const [modal, setModal] = useState<{ type: string; app: App } | null>(null);
   const [inputText, setInputText] = useState('');
+  const [signature, setSignature] = useState('');
   // Side panel
   const [sideApp, setSideApp] = useState<App | null>(null);
-  const [sideTab, setSideTab] = useState<'timeline'|'messages'>('timeline');
+  const [sideTab, setSideTab] = useState<'trail'|'timeline'|'messages'>('trail');
   const [activities, setActivities] = useState<Activity[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [msgInput, setMsgInput] = useState('');
@@ -34,7 +37,7 @@ export default function ApprovalsPage() {
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
-      if (!d.user || d.user.role === 'incubatee') { router.push('/dashboard'); return; }
+      if (!d.user || !isOfficeRole(d.user.role)) { router.push('/dashboard'); return; }
       setUser(d.user);
     });
   }, [router]);
@@ -61,7 +64,7 @@ export default function ApprovalsPage() {
       const data = await res.json();
       if (!res.ok) { showToast('Error: ' + data.error, 'error'); return; }
       showToast('Done! Application updated.');
-      setModal(null); setInputText('');
+      setModal(null); setInputText(''); setSignature('');
       await fetchApps();
       if (sideApp?._id === applicationId) openSidePanel({ ...sideApp, ...data.application });
     } catch { showToast('Something went wrong', 'error'); }
@@ -69,7 +72,7 @@ export default function ApprovalsPage() {
   }
 
   async function openSidePanel(app: App) {
-    setSideApp(app); setSideTab('timeline');
+    setSideApp(app); setSideTab('trail');
     const [actRes, msgRes] = await Promise.all([
       fetch(`/api/activity?applicationId=${app._id}`),
       fetch(`/api/messages?applicationId=${app._id}`),
@@ -92,6 +95,8 @@ export default function ApprovalsPage() {
 
   const filtered = apps.filter(a => {
     if (filter === 'all') return true;
+    // Items waiting specifically on my role's stage
+    if (filter === 'queue') return !!user && STAGES[a.stage as Stage]?.requiredRank === APPROVAL_RANK[user.role];
     if (filter === 'pending') return a.status === 'pending';
     if (filter === 'approved') return a.status === 'approved';
     if (filter === 'rejected') return a.status === 'rejected';
@@ -102,6 +107,9 @@ export default function ApprovalsPage() {
   if (!user) return <div className="min-h-screen bg-bg flex items-center justify-center"><div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" /></div>;
 
   const isCEO = user.role === 'ceo';
+  // Open application that this user can see but not act on
+  const isOpenStageFor = (app: App) =>
+    !!STAGES[app.stage as Stage]?.next && !canAct(user.role, app.stage, 'advance') && !canAct(user.role, app.stage, 'reject');
 
   return (
     <div className="min-h-screen bg-bg">
@@ -119,24 +127,34 @@ export default function ApprovalsPage() {
         <div className="fixed inset-0 z-50 bg-navy/20 backdrop-blur-sm flex items-center justify-center px-4">
           <div className="bg-white border border-border rounded-2xl p-6 w-full max-w-md shadow-card-lg">
             <h3 className="font-display text-xl font-semibold text-navy mb-1">
-              {modal.type === 'reject' ? 'Reject Application' : 'Approve with Note'}
+              {modal.type === 'reject' ? 'Reject Application' : STAGES[modal.app.stage as Stage]?.actionLabel}
             </h3>
-            <p className="text-muted text-sm font-body mb-4">{modal.app.startupName}</p>
+            <p className="text-muted text-sm font-body mb-4">
+              {modal.app.startupName} · {STAGES[modal.app.stage as Stage]?.label}
+            </p>
             <textarea rows={3} value={inputText} onChange={e => setInputText(e.target.value)}
-              placeholder={modal.type === 'reject' ? 'Reason for rejection (shown to applicant)...' : 'Optional note for CEO...'}
+              placeholder={modal.type === 'reject' ? 'Reason for rejection (required, shown to applicant)...' : 'Remarks (recorded in the approval trail)...'}
               className="w-full bg-bg border border-border rounded-xl px-4 py-3 text-navy font-body text-sm focus:outline-none resize-none mb-4"
               onFocus={e => { e.target.style.borderColor='#3B82F6'; e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,0.12)'; }}
               onBlur={e => { e.target.style.borderColor=''; e.target.style.boxShadow=''; }} />
+            {modal.type === 'advance' && STAGES[modal.app.stage as Stage]?.needsSignature && (
+              <div className="mb-4">
+                <label className="block text-xs font-body font-semibold text-navy mb-1.5">✍️ Digital signature: type your full name</label>
+                <input value={signature} onChange={e => setSignature(e.target.value)} placeholder={user.name}
+                  className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-navy text-lg focus:outline-none"
+                  style={{ fontFamily: 'cursive' }} />
+                <p className="text-[11px] text-muted font-body mt-1">Recorded with your account and a timestamp. (Demo: typed signature. Phase 1: drawn/uploaded image.)</p>
+              </div>
+            )}
             <div className="flex gap-3">
-              <button onClick={() => { setModal(null); setInputText(''); }}
+              <button onClick={() => { setModal(null); setInputText(''); setSignature(''); }}
                 className="flex-1 py-2.5 border border-border text-secondary rounded-xl hover:text-navy hover:border-border-2 transition-colors font-body text-sm">Cancel</button>
-              <button onClick={() => {
-                  if (modal.type === 'reject') takeAction(modal.app._id, isCEO ? 'ceo_reject' : 'manager_reject', { reason: inputText });
-                  else takeAction(modal.app._id, 'manager_approve', { note: inputText });
-                }}
-                className={`flex-1 py-2.5 rounded-xl font-body text-sm font-semibold transition-colors ${modal.type === 'reject' ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100' : 'text-white hover:opacity-90'}`}
+              <button
+                disabled={!!actionLoading || (modal.type === 'reject' && !inputText.trim()) || (modal.type === 'advance' && !!STAGES[modal.app.stage as Stage]?.needsSignature && !signature.trim())}
+                onClick={() => takeAction(modal.app._id, modal.type, { remark: inputText, signature })}
+                className={`flex-1 py-2.5 rounded-xl font-body text-sm font-semibold transition-colors disabled:opacity-50 ${modal.type === 'reject' ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100' : 'text-white hover:opacity-90'}`}
                 style={modal.type !== 'reject' ? { background: '#1D4ED8' } : {}}>
-                {modal.type === 'reject' ? 'Confirm Reject' : 'Confirm Approve'}
+                {modal.type === 'reject' ? 'Confirm Reject' : 'Confirm'}
               </button>
             </div>
           </div>
@@ -148,10 +166,10 @@ export default function ApprovalsPage() {
         <div className="flex items-start justify-between mb-6">
           <div>
             <h1 className="font-display text-3xl font-semibold text-navy mb-1">
-              {isCEO ? <><span className="shimmer-blue">CEO</span> Command Center</> : 'Review Applications'}
+              {isCEO ? <><span className="shimmer-blue">CEO</span> Command Center</> : 'Applications'}
             </h1>
             <p className="text-secondary font-body text-sm">
-              {isCEO ? 'Approve, reject, fast-track, or publish startups' : 'Review applications for CEO consideration'}
+              {ROLE_LABELS[user.role]} · Executive Review → Due Diligence → Sr. Manager Approval → CEO Final Approval
             </p>
           </div>
           <div className="bg-white border border-border rounded-xl px-5 py-3 text-center shadow-card">
@@ -162,7 +180,7 @@ export default function ApprovalsPage() {
 
         {/* Filters */}
         <div className="flex gap-2 mb-6 flex-wrap">
-          {[{k:'all',l:'All'},{k:'pending',l:'Pending'},{k:'approved',l:'Approved'},{k:'rejected',l:'Rejected'},
+          {[{k:'all',l:'All'},...(APPROVAL_RANK[user.role]?[{k:'queue',l:'📥 My Queue'}]:[]),{k:'pending',l:'Pending'},{k:'approved',l:'Approved'},{k:'rejected',l:'Rejected'},
             ...(isCEO?[{k:'fasttracked',l:'⚡ Fast-Tracked'}]:[])].map(f=>(
             <button key={f.k} onClick={() => setFilter(f.k)}
               className={`px-4 py-2 rounded-lg text-sm font-body font-medium transition-all ${filter===f.k ? 'bg-brand text-white' : 'bg-white border border-border text-secondary hover:border-border-2 hover:text-navy'}`}>
@@ -200,44 +218,47 @@ export default function ApprovalsPage() {
                       <span>👤 {app.applicantName}</span><span>🏭 {app.industry}</span>
                       <span>📅 {new Date(app.createdAt).toLocaleDateString('en-IN')}</span>
                     </div>
-                    {app.managerNote && <p className="mt-2 text-xs text-amber-700 font-body bg-amber-50 px-3 py-1.5 rounded-lg">Note: {app.managerNote}</p>}
+                    {/* Pipeline progress */}
+                    <div className="flex items-center gap-1 mt-3">
+                      {PIPELINE.map((s, i) => {
+                        const cur = app.stage === 'rejected' ? -1 : PIPELINE.indexOf(app.stage as Stage);
+                        return <div key={s} title={STAGES[s].label}
+                          className={`h-1.5 flex-1 rounded-full ${app.stage === 'rejected' ? 'bg-red-200' : i <= cur ? 'bg-brand' : 'bg-slate-200'}`} />;
+                      })}
+                    </div>
+                    {STAGES[app.stage as Stage]?.waitingOn && <p className="mt-1 text-[11px] text-muted font-mono">Waiting on: {STAGES[app.stage as Stage].waitingOn}</p>}
+                    {(() => { const last = app.steps?.filter(s => s.remark).slice(-1)[0]; return last && app.stage !== 'rejected' ? (
+                      <p className="mt-2 text-xs text-amber-700 font-body bg-amber-50 px-3 py-1.5 rounded-lg">{ROLE_LABELS[last.actorRole]}: {last.remark}</p>) : null; })()}
                     {app.rejectionReason && <p className="mt-2 text-xs text-red-600 font-body bg-red-50 px-3 py-1.5 rounded-lg">Rejected: {app.rejectionReason}</p>}
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex-shrink-0 flex flex-col gap-2 min-w-[150px]" onClick={e => e.stopPropagation()}>
-                    {!isCEO && app.stage === 'submitted' && (<>
-                      <button onClick={() => setModal({ type: 'approve', app })} disabled={!!actionLoading}
+                  {/* Actions (role- and stage-aware) */}
+                  <div className="flex-shrink-0 flex flex-col gap-2 min-w-[170px]" onClick={e => e.stopPropagation()}>
+                    {canAct(user.role, app.stage, 'advance') && (
+                      <button onClick={() => setModal({ type: 'advance', app })} disabled={!!actionLoading}
                         className="px-4 py-2 text-white text-xs font-semibold rounded-lg hover:opacity-90 transition-all font-body"
-                        style={{ background: '#1D4ED8' }}>✓ Approve</button>
+                        style={{ background: '#1D4ED8' }}>
+                        ✓ {STAGES[app.stage as Stage].actionLabel}
+                      </button>
+                    )}
+                    {canAct(user.role, app.stage, 'fasttrack') && app.stage !== 'sr_manager_approved' && (
+                      <button onClick={() => takeAction(app._id, 'fasttrack')} disabled={!!actionLoading}
+                        className="px-4 py-2 text-amber-800 text-xs font-bold rounded-lg transition-all font-body animate-pulse-amber"
+                        style={{ background: '#FEF3C7', border: '1px solid #FCD34D' }}>⚡ Fast Track</button>
+                    )}
+                    {canAct(user.role, app.stage, 'reject') && (
                       <button onClick={() => setModal({ type: 'reject', app })} disabled={!!actionLoading}
                         className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg hover:bg-red-100 transition-colors font-body">✗ Reject</button>
-                    </>)}
-
-                    {isCEO && (<>
-                      {app.stage === 'submitted' && (
-                        <button onClick={() => takeAction(app._id, 'ceo_fasttrack')} disabled={!!actionLoading}
-                          className="px-4 py-2 text-amber-800 text-xs font-bold rounded-lg transition-all font-body animate-pulse-amber"
-                          style={{ background: '#FEF3C7', border: '1px solid #FCD34D' }}>⚡ Fast Track</button>
-                      )}
-                      {app.stage === 'manager_approved' && (
-                        <button onClick={() => takeAction(app._id, 'ceo_approve')} disabled={!!actionLoading}
-                          className="px-4 py-2 bg-green-50 border border-green-200 text-green-700 text-xs font-semibold rounded-lg hover:bg-green-100 transition-colors font-body">✓ CEO Approve</button>
-                      )}
-                      {!['ceo_approved','rejected'].includes(app.stage) && (
-                        <button onClick={() => setModal({ type: 'reject', app })} disabled={!!actionLoading}
-                          className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg hover:bg-red-100 transition-colors font-body">✗ Reject</button>
-                      )}
-                      {app.stage === 'ceo_approved' && (
-                        <button onClick={() => takeAction(app._id, 'ceo_toggle_public')} disabled={!!actionLoading}
-                          className={`px-4 py-2 text-xs rounded-lg transition-colors font-body border ${app.isPublic ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' : 'bg-bg border-border text-secondary hover:border-border-2 hover:text-navy'}`}>
-                          {app.isPublic ? '🌐 Unpublish' : '🌐 Publish'}
-                        </button>
-                      )}
-                    </>)}
-
-                    {app.stage === 'ceo_approved' && !isCEO && <span className="text-xs text-center text-green-600 font-mono py-1">CEO Approved ✓</span>}
+                    )}
+                    {canAct(user.role, app.stage, 'toggle_public', app.status) && (
+                      <button onClick={() => takeAction(app._id, 'toggle_public')} disabled={!!actionLoading}
+                        className={`px-4 py-2 text-xs rounded-lg transition-colors font-body border ${app.isPublic ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' : 'bg-bg border-border text-secondary hover:border-border-2 hover:text-navy'}`}>
+                        {app.isPublic ? '🌐 Unpublish' : '🌐 Publish'}
+                      </button>
+                    )}
+                    {app.stage === 'ceo_approved' && <span className="text-xs text-center text-green-600 font-mono py-1">Approved ✓</span>}
                     {app.stage === 'rejected' && <span className="text-xs text-center text-red-500 font-mono py-1">Rejected</span>}
+                    {isOpenStageFor(app) && <span className="text-[11px] text-center text-muted font-mono py-1">View only</span>}
                   </div>
                 </div>
               </div>
@@ -257,15 +278,35 @@ export default function ApprovalsPage() {
 
               {/* Tabs */}
               <div className="flex border-b border-border">
-                {(['timeline','messages'] as const).map(t => (
+                {(['trail','timeline','messages'] as const).map(t => (
                   <button key={t} onClick={() => setSideTab(t)}
                     className={`flex-1 py-2.5 text-xs font-body font-medium capitalize transition-colors ${sideTab===t ? 'text-brand border-b-2 border-brand bg-blue-50/50' : 'text-muted hover:text-navy'}`}>
-                    {t === 'timeline' ? '⏱ Timeline' : '💬 Messages'}
+                    {t === 'trail' ? '✍️ Approvals' : t === 'timeline' ? '⏱ Activity' : '💬 Messages'}
                   </button>
                 ))}
               </div>
 
               <div className="h-96 overflow-y-auto">
+                {sideTab === 'trail' && (
+                  <div className="p-4 space-y-3">
+                    {(sideApp.steps ?? []).length === 0 ? (
+                      <p className="text-muted text-xs font-body text-center py-8">No decisions yet. Waiting on {STAGES[sideApp.stage as Stage]?.waitingOn}.</p>
+                    ) : (sideApp.steps ?? []).map((s, i) => (
+                      <div key={i} className="border border-border rounded-xl p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-body font-semibold text-navy">{ROLE_ICONS[s.actorRole]} {s.actorName}</p>
+                          <span className="text-[10px] font-mono text-muted">{ROLE_LABELS[s.actorRole]}</span>
+                        </div>
+                        <p className="text-xs text-secondary font-body mt-1">
+                          {s.action} · <span className="text-muted">{STAGES[s.fromStage as Stage]?.label} → {STAGES[s.toStage as Stage]?.label}</span>
+                        </p>
+                        {s.remark && <p className="text-[11px] text-muted mt-1">&ldquo;{s.remark}&rdquo;</p>}
+                        {s.signature && <p className="text-base text-navy mt-1.5 border-t border-dashed border-border pt-1.5" style={{ fontFamily: 'cursive' }}>{s.signature}</p>}
+                        <p className="text-[10px] text-faint font-mono mt-1">{new Date(s.at).toLocaleString('en-IN')}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {sideTab === 'timeline' && (
                   <div className="p-4">
                     {activities.length === 0 ? (
@@ -276,7 +317,7 @@ export default function ApprovalsPage() {
                           <div key={act._id} className="flex gap-3">
                             <div className="flex flex-col items-center">
                               <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-xs flex-shrink-0">
-                                {act.actorRole==='ceo'?'👑':act.actorRole==='manager'?'🔍':'🚀'}
+                                {ROLE_ICONS[act.actorRole] ?? '•'}
                               </div>
                               {i < activities.length-1 && <div className="w-px flex-1 bg-border mt-1 min-h-[12px]" />}
                             </div>

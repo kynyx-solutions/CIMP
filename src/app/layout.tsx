@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Launchpad — Startup Incubator',
+  title: 'CIMP-BIIF — Incubation Management Platform',
   description: 'Where great ideas become funded companies',
 };
 

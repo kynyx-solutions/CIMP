@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
+import { OFFICE_ROLES, ROLE_LABELS } from "@/lib/workflow";
 
 // Icons (You can use lucide-react or heroicons, I'm using inline SVGs for zero dependencies)
 const SearchIcon = () => (
@@ -121,24 +122,14 @@ export default function Navbar({ user }: NavbarProps) {
     router.push("/login");
   }
 
+  const ALL = ["incubatee", ...OFFICE_ROLES];
   const links = [
-    {
-      href: "/dashboard",
-      label: "Dashboard",
-      roles: ["incubatee", "manager", "ceo"],
-    },
+    { href: "/dashboard", label: "Dashboard", roles: ALL },
     { href: "/apply", label: "Apply", roles: ["incubatee"] },
-    { href: "/approvals", label: "Approvals", roles: ["manager", "ceo"] },
-    {
-      href: "/messages",
-      label: "Messages",
-      roles: ["incubatee", "manager", "ceo"],
-    },
-    {
-      href: "/public-startups",
-      label: "Portfolio",
-      roles: ["incubatee", "manager", "ceo"],
-    },
+    { href: "/approvals", label: "Applications", roles: OFFICE_ROLES as string[] },
+    { href: "/staff", label: "Team", roles: ["ceo"] },
+    { href: "/messages", label: "Messages", roles: ALL },
+    { href: "/public-startups", label: "Directory", roles: ALL },
   ].filter((l) => l.roles.includes(user.role));
 
   // Generate Avatar URL based on name if user doesn't have one
@@ -155,11 +146,11 @@ export default function Navbar({ user }: NavbarProps) {
                 className="text-white font-bold text-lg"
                 style={{ fontFamily: "serif" }}
               >
-                L
+                C
               </span>
             </div>
             <span className="font-display text-lg font-bold text-slate-800 hidden sm:block tracking-tight">
-              Launchpad
+              CIMP-BIIF
             </span>
           </Link>
 
@@ -273,7 +264,7 @@ export default function Navbar({ user }: NavbarProps) {
                   {user.name.split(" ")[0]}
                 </p>
                 <p className="text-[10px] text-slate-500 uppercase font-semibold tracking-wide">
-                  {user.role}
+                  {ROLE_LABELS[user.role] ?? user.role}
                 </p>
               </div>
               <div className="relative">

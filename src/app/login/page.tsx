@@ -120,19 +120,9 @@ const IconUser = () => (
 );
 
 /* ─── Demo Accounts ─── */
+// Staff demo accounts are intentionally not listed: staff are created via
+// scripts/create-ceo.js (CEO) and the CEO's Team page (managers).
 const demoAccounts = [
-  {
-    email: "ceo@demo.com",
-    password: "demo123",
-    label: "CEO",
-    color: "#1D4ED8",
-  },
-  {
-    email: "manager@demo.com",
-    password: "demo123",
-    label: "Manager",
-    color: "#7C3AED",
-  },
   {
     email: "incubatee@demo.com",
     password: "demo123",
@@ -283,11 +273,11 @@ export default function LoginPage() {
                 className="text-white font-bold text-lg"
                 style={{ fontFamily: "Lora,serif" }}
               >
-                L
+                C
               </span>
             </div>
             <span className="font-display text-2xl font-semibold text-navy">
-              Launchpad
+              CIMP-BIIF
             </span>
           </Link>
           <p className="text-muted text-sm mt-3 font-body">
@@ -438,7 +428,11 @@ export default function LoginPage() {
             </div>
 
             {/* Google */}
-            <GoogleButton role="incubatee" />
+            <GoogleButton onError={setError} />
+            <p className="text-[11px] text-muted font-body text-center mt-2">
+              Staff: sign in above with your company email. Google sign-in is for
+              applicants only.
+            </p>
 
             {/* Demo Accounts */}
             <div className="mt-6 bg-slate-50/80 border border-slate-100 rounded-xl p-4">

@@ -92,11 +92,11 @@ export default function VerifyEmailPage() {
               style={{ background: "#1D4ED8" }}
             >
               <span className="text-white font-bold font-display text-lg">
-                L
+                C
               </span>
             </div>
             <span className="font-display text-2xl font-semibold text-navy">
-              Launchpad
+              CIMP-BIIF
             </span>
           </Link>
         </div>

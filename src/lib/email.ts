@@ -12,14 +12,14 @@ const transporter = nodemailer.createTransport({
 
 export async function sendOTPEmail(to: string, name: string, otp: string) {
   await transporter.sendMail({
-    from: `"Launchpad" <${process.env.GMAIL_USER}>`,
+    from: `"CIMP-BIIF" <${process.env.GMAIL_USER}>`,
     to,
-    subject: "Your Launchpad verification code",
+    subject: "Your CIMP-BIIF verification code",
     html: `
       <div style="font-family:'Segoe UI',sans-serif;max-width:480px;margin:0 auto;background:#F0F4F9;padding:32px;border-radius:16px;">
         <div style="text-align:center;margin-bottom:24px;">
           <div style="display:inline-block;background:#1D4ED8;color:#fff;font-size:20px;font-weight:700;
-                      padding:10px 20px;border-radius:10px;letter-spacing:1px;">LAUNCHPAD</div>
+                      padding:10px 20px;border-radius:10px;letter-spacing:1px;">CIMP-BIIF</div>
         </div>
         <div style="background:#fff;border-radius:12px;padding:32px;text-align:center;">
           <h2 style="color:#0F2144;margin:0 0 8px;">Verify your email</h2>
@@ -180,9 +180,10 @@ const ROLE_META: Record<
 export async function sendWelcomeEmail(
   to: string,
   name: string,
-  role: "incubatee" | "manager" | "ceo",
+  role: string,
 ) {
-  const meta = ROLE_META[role] ?? ROLE_META.incubatee;
+  // Office roles without their own template use the manager (office) template.
+  const meta = ROLE_META[role] ?? (role === "incubatee" ? ROLE_META.incubatee : ROLE_META.manager);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   const stepsHtml = meta.steps
@@ -245,7 +246,7 @@ export async function sendWelcomeEmail(
       <tr>
         <td align="center" style="padding-bottom:28px;">
           <div style="display:inline-block;background:#1D4ED8;color:#fff;font-size:18px;font-weight:800;
-                      padding:10px 22px;border-radius:10px;letter-spacing:2px;">LAUNCHPAD</div>
+                      padding:10px 22px;border-radius:10px;letter-spacing:2px;">CIMP-BIIF</div>
         </td>
       </tr>
 
@@ -330,7 +331,7 @@ export async function sendWelcomeEmail(
             </a>
           </p>
           <p style="margin:0;font-size:11px;color:#9BB3CC;">
-            © ${new Date().getFullYear()} Launchpad Incubator · You're receiving this because you just registered.
+            © ${new Date().getFullYear()} CIMP-BIIF · You're receiving this because you just registered.
           </p>
         </td>
       </tr>
@@ -344,9 +345,9 @@ export async function sendWelcomeEmail(
   `;
 
   await transporter.sendMail({
-    from: `"Launchpad" <${process.env.GMAIL_USER}>`,
+    from: `"CIMP-BIIF" <${process.env.GMAIL_USER}>`,
     to,
-    subject: `Welcome to Launchpad, ${name} — you're in. 🚀`,
+    subject: `Welcome to CIMP-BIIF, ${name} — you're in. 🚀`,
     html,
   });
 }
