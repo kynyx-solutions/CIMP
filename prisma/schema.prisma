@@ -32,9 +32,11 @@ model User {
   messages      Message[]
 
   mentorProfile          MentorProfile?
-  connectionsAsIncubatee Connection[]   @relation("ConnectionIncubatee")
-  connectionsAsMentor    Connection[]   @relation("ConnectionMentor")
+  connectionsAsIncubatee Connection[]         @relation("ConnectionIncubatee")
+  connectionsAsMentor    Connection[]         @relation("ConnectionMentor")
   chatMessages           ChatMessage[]
+  proposalsMade          InvestmentProposal[]
+  idCard                 IdCard?
 }
 
 // Mentor / investor profile and its two approvals (PRD MEN-1, MEN-2, workflow 6.2).
@@ -79,7 +81,9 @@ model Connection {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  steps ConnectionStep[]
+  steps       ConnectionStep[]
+  sessions    MentorSession[]
+  docRequests DocRequest[]
 
   @@index([incubateeId])
   @@index([mentorId])
@@ -150,6 +154,8 @@ model Application {
   messages      Message[]
   notifications Notification[]
   documents     ApplicationDocument[]
+  qprReports    QprReport[]
+  proposals     InvestmentProposal[]
 
   @@index([userId])
   @@index([stage])
@@ -291,4 +297,166 @@ model SiteConfig {
   value     Json
   updatedBy String?
   updatedAt DateTime @updatedAt
+}
+
+// ── Phase 2 (demo) ───────────────────────────────────────────────────────────
+
+// Quarterly progress report (PRD QPR-1). Answers follow the "qpr" form from the form builder.
+model QprReport {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  period        String // e.g. 2026-Q4
+  answers       Json
+  formVersion   Int
+  status        String      @default("draft") // draft | submitted | accepted | returned
+  submittedAt   DateTime?
+  reviewNote    String?     @db.Text
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([applicationId, period])
+  @@index([period])
+}
+
+// Mentor–mentee sessions on an accepted connection (PRD MEN-4)
+model MentorSession {
+  id           String            @id @default(cuid())
+  connectionId String
+  connection   Connection        @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  scheduledAt  DateTime
+  durationMin  Int               @default(60)
+  mode         String // physical | virtual
+  location     String? // address or meeting link
+  agenda       String            @db.Text
+  status       String            @default("scheduled") // scheduled | completed | cancelled
+  createdById  String
+  cancelReason String?           @db.Text
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  feedback     SessionFeedback[]
+
+  @@index([connectionId])
+}
+
+model SessionFeedback {
+  id         String        @id @default(cuid())
+  sessionId  String
+  session    MentorSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  authorId   String
+  authorRole String
+  rating     Int // 1–5
+  comment    String?       @db.Text
+  createdAt  DateTime      @default(now())
+
+  @@unique([sessionId, authorId])
+}
+
+// A mentor asks the mentee for a document (PRD MEN-4)
+model DocRequest {
+  id           String     @id @default(cuid())
+  connectionId String
+  connection   Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  title        String
+  note         String?    @db.Text
+  status       String     @default("requested") // requested | uploaded | closed
+  requestedBy  String
+  fileName     String?
+  storedName   String?
+  mimeType     String?
+  size         Int?
+  uploadedAt   DateTime?
+  createdAt    DateTime   @default(now())
+
+  @@index([connectionId])
+}
+
+// Excel exports run as background jobs (PRD XLS-1)
+model ExportJob {
+  id            String    @id @default(cuid())
+  requestedById String
+  requestedBy   String
+  dataset       String // applications | mentors | connections | qpr
+  columns       String[]
+  filters       Json?
+  status        String    @default("queued") // queued | running | done | failed
+  rowCount      Int?
+  storedName    String?
+  error         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  finishedAt    DateTime?
+
+  @@index([requestedById])
+}
+
+// An investor proposes to invest in an incubated startup; the office arranges the pitch (PRD INV-1)
+model InvestmentProposal {
+  id            String      @id @default(cuid())
+  investorId    String
+  investor      User        @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  amount        String
+  instrument    String // equity | convertible | grant | other
+  terms         String      @db.Text
+  status        String      @default("submitted") // submitted | pitch_scheduled | invested | declined | withdrawn
+  pitchAt       DateTime?
+  officeNote    String?     @db.Text
+  handledBy     String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([investorId])
+  @@index([applicationId])
+}
+
+// Blog: Office Staff write, Admin IT approves (PRD BLG-1)
+model BlogPost {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  excerpt     String
+  body        String    @db.Text
+  authorId    String
+  authorName  String
+  status      String    @default("draft") // draft | submitted | published | rejected
+  reviewNote  String?   @db.Text
+  reviewedBy  String?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+}
+
+// Virtual ID cards for incubatees and mentors (PRD IDC-1)
+model IdCard {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  number        String    @unique
+  holderName    String
+  role          String
+  organisation  String?
+  issuedAt      DateTime
+  expiresAt     DateTime
+  status        String    @default("active") // active | expired | revoked
+  lastEmailedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// History of scheduled jobs (reminders, ID-card expiry, exports)
+model JobRun {
+  id         String    @id @default(cuid())
+  job        String
+  trigger    String // cron | manual
+  status     String    @default("running") // running | ok | failed
+  summary    String?   @db.Text
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([job, startedAt])
 }

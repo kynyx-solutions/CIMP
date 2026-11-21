@@ -9,7 +9,8 @@ import { getSessionUser } from "@/lib/session";
 import { isId } from "@/lib/serialize";
 
 const PAGE = 50;
-const ENTITIES = ["application", "document", "mentor_profile", "connection", "user", "form", "site_config", "message", "auth"];
+const ENTITIES = ["application", "document", "mentor_profile", "connection", "user", "form", "site_config", "message", "auth",
+  "qpr", "session", "doc_request", "proposal", "blog", "id_card", "export", "notification", "job"];
 
 export async function GET(req: NextRequest) {
   const user = getSessionUser(req);

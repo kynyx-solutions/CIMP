@@ -162,6 +162,7 @@ function Inbox() {
                     <p className="text-xs text-muted font-body truncate">{current?.subtitle}</p>
                   </div>
                   {current?.stage && <StageBadge stage={current.stage} />}
+                  {msgs.length > 0 && <a href={`/api/chat/pdf?type=${active.type}&id=${active.id}`} className="text-xs font-body font-semibold text-brand hover:underline whitespace-nowrap" title="Download this conversation as PDF">⬇ PDF</a>}
                 </header>
 
                 <div className="flex-1 overflow-y-auto p-5 space-y-4" aria-live="polite">

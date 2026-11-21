@@ -56,7 +56,7 @@ export function normaliseForm(form: FormKey, input: { sections?: unknown; fields
     if (!KEY_RE.test(key)) return { error: `Invalid field key "${key}"` };
     if (seen.has(key)) return { error: `Duplicate field key "${key}"` };
     seen.add(key);
-    const core = baseByKey.get(key);
+    const core = baseByKey.get(key)?.core ? baseByKey.get(key) : undefined;
     const label = str(raw?.label, 120);
     if (!label) return { error: `Field "${key}" needs a label` };
     const section = str(raw?.section, 80);
@@ -89,7 +89,7 @@ export function normaliseForm(form: FormKey, input: { sections?: unknown; fields
     };
     fields.push(f);
   }
-  const missing = base.fields.filter((f) => !seen.has(f.key));
+  const missing = base.fields.filter((f) => f.core && !seen.has(f.key));
   if (missing.length) return { error: `Built-in fields cannot be removed: ${missing.map((f) => f.label).join(", ")}` };
   // A section that still holds fields cannot disappear (enforced above); empty sections are allowed.
   return { def: { sections, fields } };

@@ -1,0 +1,42 @@
+// Excel export jobs (PRD XLS-1, RBAC-5).
+//   GET                                   your recent jobs (poll while one is running)
+//   POST { dataset, columns, filters }    queue a job; it runs in the background
+import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/session";
+import { withId } from "@/lib/serialize";
+import { DATASETS, DATASET_KEYS, REPORT_ROLES, type DatasetKey } from "@/lib/exports";
+import { runExportJob } from "@/lib/exports-server";
+import { audit } from "@/lib/audit";
+
+export async function GET(req: NextRequest) {
+  const user = getSessionUser(req);
+  if (!user || !REPORT_ROLES.includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const jobs = await prisma.exportJob.findMany({ where: { requestedById: user.userId }, orderBy: { createdAt: "desc" }, take: 20 });
+  return NextResponse.json({ jobs: withId(jobs).map(({ storedName, ...j }: any) => ({ ...j, ready: !!storedName })) });
+}
+
+export async function POST(req: NextRequest) {
+  const user = getSessionUser(req);
+  if (!user || !REPORT_ROLES.includes(user.role)) return NextResponse.json({ error: "Your role cannot export data" }, { status: 403 });
+  const { dataset, columns, filters } = await req.json().catch(() => ({}));
+  if (!DATASET_KEYS.includes(dataset)) return NextResponse.json({ error: "Choose a dataset" }, { status: 400 });
+  const def = DATASETS[dataset as DatasetKey];
+  const cols = Array.isArray(columns) ? def.columns.map((c) => c.key).filter((k) => columns.includes(k)) : [];
+  if (!cols.length) return NextResponse.json({ error: "Choose at least one column" }, { status: 400 });
+  const cleanFilters: Record<string, string> = {};
+  for (const f of def.filters ?? []) {
+    const v = filters?.[f.key];
+    if (typeof v === "string" && f.options.includes(v)) cleanFilters[f.key] = v;
+  }
+  const running = await prisma.exportJob.count({ where: { requestedById: user.userId, status: { in: ["queued", "running"] } } });
+  if (running >= 3) return NextResponse.json({ error: "Wait for your running exports to finish" }, { status: 429 });
+
+  const job = await prisma.exportJob.create({
+    data: { requestedById: user.userId, requestedBy: user.name, dataset, columns: cols, filters: cleanFilters as Prisma.InputJsonValue },
+  });
+  await audit(req, user, "export.request", "export", job.id, `Requested an Excel export of ${def.label} (${cols.length} columns${Object.keys(cleanFilters).length ? `, ${JSON.stringify(cleanFilters)}` : ""})`);
+  void runExportJob(job.id); // background; the client polls GET
+  return NextResponse.json({ success: true, job: withId(job) }, { status: 202 });
+}

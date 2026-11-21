@@ -158,6 +158,7 @@ export default function NetworkPage() {
         <p className="text-sm text-secondary font-body mt-3 whitespace-pre-line">{c.message}</p>
         {stage?.waitingOn && <p className="text-xs text-muted font-mono mt-2">Waiting on: {stage.waitingOn}</p>}
         {st === "active" && <Link href={`/messages?type=connection&id=${c._id}`} className="inline-block mt-2 text-brand text-xs font-semibold hover:underline">View conversation (read-only) →</Link>}
+        {st === "active" && <Link href={`/mentorship/${c._id}`} className="inline-block mt-2 ml-4 text-brand text-xs font-semibold hover:underline">Sessions &amp; feedback →</Link>}
         {c.steps.length > 0 && (
           <ol className="mt-3 border-l-2 border-border pl-4 space-y-1.5">
             {c.steps.map((s) => (

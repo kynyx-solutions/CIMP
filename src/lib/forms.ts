@@ -7,9 +7,9 @@
 // a field needs no database migration (FORM-2). Every publish creates a new version.
 import { APPLICATION_SECTIONS, INDUSTRIES } from "@/lib/application-fields";
 
-export type FormKey = "application" | "mentor";
-export const FORM_KEYS: FormKey[] = ["application", "mentor"];
-export const FORM_LABELS: Record<FormKey, string> = { application: "Incubation application", mentor: "Mentor / investor profile" };
+export type FormKey = "application" | "mentor" | "qpr";
+export const FORM_KEYS: FormKey[] = ["application", "mentor", "qpr"];
+export const FORM_LABELS: Record<FormKey, string> = { application: "Incubation application", mentor: "Mentor / investor profile", qpr: "Quarterly progress report" };
 
 export type FieldType = "text" | "textarea" | "select" | "multiselect" | "number" | "date" | "url" | "tel" | "email";
 export const FIELD_TYPES: { value: FieldType; label: string }[] = [
@@ -78,6 +78,24 @@ export function defaultForm(form: FormKey): FormDef {
         locked: APP_LOCKED[f.key],
         neverPublic: f.key === "phone" || undefined,
       }))) as FieldDef[],
+    };
+  }
+  if (form === "qpr") {
+    // Quarterly progress report (PRD QPR-1). Every field is editable by Admin IT; answers live in QprReport.answers.
+    const n = "Numbers this quarter", s = "Progress and plans";
+    return {
+      form, version: 0,
+      sections: [{ title: n, desc: "Figures for this quarter only. Write 0 where nothing applies." }, { title: s, desc: "Be specific: what happened, what blocked you, what comes next." }],
+      fields: [
+        { key: "revenue", label: "Revenue this quarter (₹)", type: "number", section: n, required: true, isPublic: false },
+        { key: "customers", label: "Paying customers or active users", type: "number", section: n, required: true, isPublic: false },
+        { key: "teamSize", label: "Team size at quarter end", type: "number", section: n, required: true, isPublic: false },
+        { key: "fundsRaised", label: "Funds raised this quarter (₹)", type: "number", section: n, required: false, isPublic: false },
+        { key: "milestones", label: "Milestones achieved", type: "textarea", section: s, required: true, maxLength: 2000, isPublic: false, placeholder: "Product releases, pilots, partnerships, awards" },
+        { key: "challenges", label: "Challenges", type: "textarea", section: s, required: false, maxLength: 2000, isPublic: false },
+        { key: "supportNeeded", label: "Support needed from CIMP-BIIF", type: "textarea", section: s, required: false, maxLength: 1000, isPublic: false },
+        { key: "nextGoals", label: "Goals for next quarter", type: "textarea", section: s, required: true, maxLength: 1500, isPublic: false },
+      ],
     };
   }
   const p = "Profile", inv = "Investor details";

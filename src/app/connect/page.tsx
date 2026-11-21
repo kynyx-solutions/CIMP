@@ -126,6 +126,9 @@ export default function ConnectPage() {
                     {st === "active" && (
                       <Link href={`/messages?type=connection&id=${c._id}`} className="inline-flex mt-3 px-4 py-2 rounded-lg bg-brand text-white text-sm font-semibold font-body hover:opacity-90">💬 Message your mentor</Link>
                     )}
+                    {st === "active" && (
+                      <Link href={`/mentorship/${c._id}`} className="inline-flex mt-3 ml-2 px-4 py-2 rounded-lg border border-border bg-white text-sm font-semibold font-body text-navy hover:border-brand">📅 Sessions &amp; documents</Link>
+                    )}
                   </li>
                 );
               })}

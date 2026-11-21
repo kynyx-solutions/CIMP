@@ -90,6 +90,7 @@ export default function ApplyPage() {
             <h1 className="font-display text-3xl font-bold text-navy mb-1">
               {existingApp ? 'Your Application' : 'Apply for Incubation'}
             </h1>
+            {existingApp && <a href={`/api/applications/${existingApp._id}/pdf`} className="inline-block text-sm font-body font-semibold text-brand hover:underline mb-1">⬇ Download as PDF</a>}
             <p className="text-secondary font-body text-sm">
               {isLocked ? 'Your application is under review and cannot be edited.' : 'Takes about 15 minutes. Fields marked * are required.'}
             </p>

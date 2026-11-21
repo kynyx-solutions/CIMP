@@ -10,10 +10,12 @@ const transporter = nodemailer.createTransport({
 
 // Local development without Gmail credentials: log instead of sending,
 // so registration and OTP flows still work.
+export type MailAttachment = { filename: string; content: Buffer; contentType: string };
+
 const mailer = {
-  async sendMail(opts: { from: string; to: string; subject: string; html: string }) {
+  async sendMail(opts: { from: string; to: string; subject: string; html: string; attachments?: MailAttachment[] }) {
     if (!process.env.GMAIL_USER && process.env.NODE_ENV !== "production") {
-      console.log(`[email:dev] to=${opts.to} subject="${opts.subject}" (not sent: GMAIL_USER not set)`);
+      console.log(`[email:dev] to=${opts.to} subject="${opts.subject}"${opts.attachments?.length ? ` attachments=${opts.attachments.map((a) => a.filename).join(",")}` : ""} (not sent: GMAIL_USER not set)`);
       return;
     }
     await transporter.sendMail(opts);
@@ -403,7 +405,7 @@ const TONE: Record<string, { bar: string; chip: string; label: string }> = {
  */
 export async function sendEventEmail(opts: {
   to: string; name: string; title: string; message: string;
-  type?: "info" | "success" | "warning" | "error"; ctaLabel?: string; ctaPath?: string;
+  type?: "info" | "success" | "warning" | "error"; ctaLabel?: string; ctaPath?: string; attachments?: MailAttachment[];
 }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const tone = TONE[opts.type ?? "info"];
@@ -430,5 +432,5 @@ export async function sendEventEmail(opts: {
     </td></tr>
   </table>
 </td></tr></table></body></html>`;
-  await mailer.sendMail({ from: `"CIMP-BIIF" <${process.env.GMAIL_USER}>`, to: opts.to, subject: `${opts.title} · CIMP-BIIF`, html });
+  await mailer.sendMail({ from: `"CIMP-BIIF" <${process.env.GMAIL_USER}>`, to: opts.to, subject: `${opts.title} · CIMP-BIIF`, html, attachments: opts.attachments });
 }
