@@ -40,6 +40,7 @@ model User {
   proposalsMade          InvestmentProposal[]
   idCard                 IdCard?
   passwordResets         PasswordReset[]
+  refreshTokens          RefreshToken[]
 }
 
 // Mentor / investor profile and its two approvals (PRD MEN-1, MEN-2, workflow 6.2).
@@ -689,4 +690,28 @@ model PasswordReset {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+}
+
+// Refresh tokens (PRD AUTH-3). The access token lives 15 minutes; the browser trades this
+// 7-day token for a new pair, and each token works once (rotation). Presenting a used token
+// again means it was copied, so every session of the account is signed out.
+// Only a SHA-256 hash is stored. A family is one sign-in; it ends 30 days after it started.
+model RefreshToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  familyId   String
+  familyFrom DateTime
+  /// User.sessionVersion when issued; a higher version in the DB revokes it
+  sv         Int
+  expiresAt  DateTime
+  usedAt     DateTime?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
 }

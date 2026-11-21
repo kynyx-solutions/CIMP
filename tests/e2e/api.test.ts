@@ -16,9 +16,14 @@ async function call(path: string, init: RequestInit & { cookie?: string; json?: 
   const res = await fetch(BASE + path, { ...init, headers, body: init.json !== undefined ? JSON.stringify(init.json) : init.body, redirect: "manual" });
   const setCookie = res.headers.get("set-cookie") ?? "";
   const token = /incubator_token=([^;]*)/.exec(setCookie)?.[1];
+  const refresh = /incubator_refresh=([^;]*)/.exec(setCookie)?.[1];
   let body: any = null;
   try { body = await res.json(); } catch { /* not JSON */ }
-  return { res, body, cookie: token ? `incubator_token=${token}` : undefined };
+  return {
+    res, body, setCookie,
+    cookie: token ? `incubator_token=${token}` : undefined,
+    refresh: refresh ? `incubator_refresh=${refresh}` : undefined,
+  };
 }
 
 const login = (email: string, password = "Demo@1234") => call("/api/auth/login", { method: "POST", json: { email, password } });
@@ -113,6 +118,66 @@ run("password reset", () => {
     const r = await call("/api/auth/reset-password", { method: "POST", json: { token: "not-a-real-token-1234567890", password: "whatever123" } });
     expect(r.res.status).toBe(400);
   });
+});
+
+run("refresh tokens (AUTH-3)", () => {
+  const refreshWith = (cookie?: string) => call("/api/auth/refresh", { method: "POST", cookie });
+
+  it("issues a 15-minute access token and a refresh token at sign-in", async () => {
+    const a = await login("exec@cimp.local");
+    expect(a.refresh).toBeDefined();
+    const exp = JSON.parse(Buffer.from(a.cookie!.split(".")[1], "base64url").toString()).exp;
+    const ttl = exp - Math.floor(Date.now() / 1000);
+    expect(ttl).toBeGreaterThan(14 * 60);
+    expect(ttl).toBeLessThanOrEqual(15 * 60 + 5);
+  });
+
+  it("rotates: the new pair works and the old refresh token is used up", async () => {
+    const a = await login("exec@cimp.local");
+    const r = await refreshWith(a.refresh);
+    expect(r.res.status).toBe(200);
+    expect(r.refresh).toBeDefined();
+    expect(r.refresh).not.toBe(a.refresh);
+    expect((await call("/api/auth/me", { cookie: r.cookie })).body.user.email).toBe("exec@cimp.local");
+    // A second tab using the same token a moment later is a race, not theft
+    expect((await refreshWith(a.refresh)).res.status).toBe(409);
+    expect((await refreshWith(r.refresh)).res.status).toBe(200);
+  });
+
+  it("rejects a missing or unknown refresh token", async () => {
+    expect((await refreshWith()).res.status).toBe(401);
+    expect((await refreshWith("incubator_refresh=not-a-real-refresh-token-0123456789")).res.status).toBe(401);
+  });
+
+  it("ends the sign-in on sign-out", async () => {
+    const a = await login("exec@cimp.local");
+    expect((await call("/api/auth/logout", { method: "POST", cookie: `${a.cookie}; ${a.refresh}` })).res.status).toBe(200);
+    expect((await refreshWith(a.refresh)).res.status).toBe(401);
+  });
+
+  it("sends an expired page load through refresh and back", async () => {
+    const a = await login("exec@cimp.local");
+    const page = await call("/dashboard", { cookie: a.refresh });
+    expect(page.res.status).toBe(307);
+    expect(page.res.headers.get("location")).toContain("/api/auth/refresh?next=%2Fdashboard");
+    const back = await call("/api/auth/refresh?next=%2Fdashboard", { cookie: a.refresh });
+    expect(back.res.status).toBe(303);
+    expect(new URL(back.res.headers.get("location")!).pathname).toBe("/dashboard");
+    expect(back.cookie).toBeDefined();
+    // Never redirects off the site
+    const evil = await call("/api/auth/refresh?next=%2F%2Fevil.example", { cookie: back.refresh });
+    expect(new URL(evil.res.headers.get("location")!).pathname).toBe("/dashboard");
+  });
+
+  it("signs out everywhere when a used refresh token comes back", async () => {
+    const a = await login("exec@cimp.local");
+    const r = await refreshWith(a.refresh);
+    expect(r.res.status).toBe(200);
+    await new Promise((ok) => setTimeout(ok, 31_000)); // past the two-tab grace period
+    expect((await refreshWith(a.refresh)).res.status).toBe(401);
+    expect((await refreshWith(r.refresh)).res.status).toBe(401);
+    expect((await call("/api/auth/me", { cookie: r.cookie })).res.status).toBe(401);
+  }, 90_000);
 });
 
 run("partner API", () => {

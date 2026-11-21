@@ -1,7 +1,7 @@
 import { audit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { signToken, type Role } from "@/lib/auth";
+import { startSession } from "@/lib/auth";
 import { verifyFirebaseIdToken } from "@/lib/firebase-verify";
 import { isCompanyEmail, isPublicRole, isStaffRole } from "@/lib/roles";
 import { limitRequest } from "@/lib/ratelimit";
@@ -62,14 +62,6 @@ export async function POST(req: NextRequest) {
 
     await audit(req, { userId: user.id, name: user.name, role: user.role }, "auth.login", "auth", user.id, "Signed in with Google");
 
-    const token = signToken({
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role as Role,
-      sv: user.sessionVersion,
-    });
-
     const response = NextResponse.json({
       success: true,
       user: {
@@ -79,14 +71,7 @@ export async function POST(req: NextRequest) {
         role: user.role,
       },
     });
-
-    response.cookies.set("incubator_token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7,
-      path: "/",
-    });
+    await startSession(response, req, user);
 
     return response;
   } catch (err) {
