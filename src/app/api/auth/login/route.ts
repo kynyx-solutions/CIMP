@@ -2,7 +2,7 @@ import { audit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { signToken, type Role } from "@/lib/auth";
+import { startSession } from "@/lib/auth";
 import { isCompanyEmail, isStaffRole } from "@/lib/roles";
 import { limitRequest, resetLimit } from "@/lib/ratelimit";
 
@@ -65,14 +65,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const token = signToken({
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role as Role,
-      sv: user.sessionVersion,
-    });
-
     resetLimit(acct);
     await audit(req, { userId: user.id, name: user.name, role: user.role }, "auth.login", "auth", user.id, "Signed in with email and password");
 
@@ -85,14 +77,7 @@ export async function POST(req: NextRequest) {
         role: user.role,
       },
     });
-
-    response.cookies.set("incubator_token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7,
-      path: "/",
-    });
+    await startSession(response, req, user);
 
     return response;
   } catch (err) {

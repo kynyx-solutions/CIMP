@@ -1,19 +1,15 @@
 // The signed-in user's own account (profile and settings pages).
 //   GET                              account details + role-specific summary
-//   PATCH { name }                   rename (re-issues the session cookie so the new name shows everywhere)
+//   PATCH { name }                   rename (re-issues the access token so the new name shows everywhere)
 //   POST  { currentPassword, newPassword }   change password
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
-import { signToken, revokeSessions, type Role } from "@/lib/auth";
+import { revokeSessions, setAccessCookie, startSession } from "@/lib/auth";
 import { isStaffRole } from "@/lib/roles";
 import { audit } from "@/lib/audit";
 
-const COOKIE = {
-  httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const,
-  maxAge: 60 * 60 * 24 * 7, path: "/",
-};
 
 export async function GET(req: NextRequest) {
   const session = await getSessionUser(req);
@@ -54,9 +50,7 @@ export async function PATCH(req: NextRequest) {
     { name: { from: before.name, to: clean } });
 
   const res = NextResponse.json({ success: true, name: clean });
-  res.cookies.set("incubator_token", signToken({
-    userId: session.userId, email: before.email, name: clean, role: before.role as Role, sv: before.sessionVersion, ...(before.image ? { image: before.image } : {}),
-  }), COOKIE);
+  setAccessCookie(res, { id: session.userId, email: before.email, name: clean, role: before.role, image: before.image, sessionVersion: before.sessionVersion });
   return res;
 }
 
@@ -85,6 +79,6 @@ export async function POST(req: NextRequest) {
   const sv = await revokeSessions(session.userId);
   await audit(req, session, "user.password_change", "user", session.userId, "Changed account password (other sessions signed out)");
   const res = NextResponse.json({ success: true });
-  res.cookies.set("incubator_token", signToken({ userId: session.userId, email: user.email, name: user.name, role: user.role as Role, sv, ...(user.image ? { image: user.image } : {}) }), COOKIE);
+  await startSession(res, req, { id: session.userId, email: user.email, name: user.name, role: user.role, image: user.image, sessionVersion: sv });
   return res;
 }

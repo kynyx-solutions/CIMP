@@ -107,6 +107,7 @@ What the portal does:
 - **HTTPS only.** Caddy redirects HTTP to HTTPS and renews certificates. The app sends `Strict-Transport-Security`, and session cookies are `Secure`, `HttpOnly` and `SameSite=Lax`.
 - **Security headers** on every page: Content-Security-Policy, `X-Frame-Options: DENY`, `nosniff`, a strict referrer policy and Permissions-Policy. API responses are `Cache-Control: no-store`.
 - **Revocable sessions.** Every request checks the session against the database (cached for 15 seconds). Removing an office user, changing a role, changing a password, or **Settings → Sign out on all devices** ends the affected sessions at once.
+- **Short-lived sign-ins.** The access token lasts 15 minutes. The browser renews it with a refresh token that works once and lasts 7 days; a sign-in ends 30 days after it started, however active. If a used refresh token is presented again, it was copied, so every session of the account is signed out and the event is audited. The **Expired sign-in cleanup** job deletes old tokens daily at 3:00 AM.
 - **Brute-force limits.** 10 sign-in attempts per account and 30 per network address in 15 minutes; 5 wrong email codes cancel the code; limits on sign-ups and code resends; 30 AI requests per user per hour; 60 partner-API requests per key per minute. The limits count in memory, which is correct for one app container. With several, move them to Redis.
 - **Audit log** of every change, append-only, in **Admin → Audit log**.
 
