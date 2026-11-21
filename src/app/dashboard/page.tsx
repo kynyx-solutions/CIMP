@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { verifyToken } from '@/lib/auth';
+import { verifySession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Navbar from '@/components/Navbar';
 import StageBadge from '@/components/StageBadge';
+import DashboardTasks from '@/components/DashboardTasks';
 import Link from 'next/link';
 import {
   PIPELINE, STAGES, ROLE_ICONS, ROLE_LABELS, APPROVAL_RANK, isOfficeRole,
@@ -15,7 +16,7 @@ async function getUser() {
   const cookieStore = cookies();
   const token = cookieStore.get('incubator_token')?.value;
   if (!token) return null;
-  return verifyToken(token);
+  return verifySession(token);
 }
 
 export const metadata: Metadata = { title: "Dashboard", robots: { index: false } };
@@ -24,6 +25,7 @@ export default async function DashboardPage() {
   const user = await getUser();
   
   if (!user) redirect('/login');
+  if (user.role === 'mentor') redirect('/mentor');
 
   const isCEO = user.role === 'ceo';
   // Any office role gets the office dashboard (stats, activity).
@@ -101,6 +103,9 @@ export default async function DashboardPage() {
             {isManager && ` · ${ROLE_LABELS[user.role]}`}
           </p>
         </div>
+
+        {/* Phase 2 to-dos: progress reports, mentoring, proposals, blog, ID cards */}
+        <DashboardTasks user={user} />
 
         {/* My queue (office roles with approval authority) */}
         {myRank && (

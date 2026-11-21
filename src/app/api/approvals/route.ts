@@ -1,28 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import { verifySession } from '@/lib/auth';
 import { withId, isId } from '@/lib/serialize';
 import {
   STAGES, PIPELINE, ROLE_LABELS,
   canAct, isOfficeRole, type Stage, type WorkflowAction,
 } from '@/lib/workflow';
 import { notify, notifyReviewers } from '@/lib/notify';
+import { audit, diffOf } from '@/lib/audit';
+import { emitEvent } from '@/lib/integrations';
 
-function getUser(req: NextRequest) {
+// Applicants get an email for every decision on their application (PRD NOT-1).
+const APPLICANT_EMAIL = { ctaPath: '/dashboard', ctaLabel: 'Open your dashboard' };
+
+async function getUser(req: NextRequest) {
   const token = req.cookies.get('incubator_token')?.value;
   if (!token) return null;
-  return verifyToken(token);
+  return verifySession(token);
 }
 
 
 const ACTIONS: WorkflowAction[] = ['advance', 'reject', 'send_back', 'fasttrack', 'toggle_public'];
 
 export async function POST(req: NextRequest) {
-  const user = getUser(req);
+  const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!isOfficeRole(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { applicationId, action, remark, signature } = await req.json();
+  const { applicationId, action, remark, signature, signatureImage } = await req.json();
   if (!isId(applicationId) || !ACTIONS.includes(action))
     return NextResponse.json({ error: 'Valid applicationId and action required' }, { status: 400 });
 
@@ -35,13 +40,22 @@ export async function POST(req: NextRequest) {
   const fromStage = app.stage as Stage;
   const roleLabel = ROLE_LABELS[user.role] ?? user.role;
   const cleanRemark = typeof remark === 'string' ? remark.trim() : '';
-  const cleanSignature = typeof signature === 'string' ? signature.trim() : '';
+  const cleanSignature = typeof signature === 'string' ? signature.trim().slice(0, 120) : '';
+  // Drawn signature: a PNG data URL of at most 100 KB, checked by its bytes
+  let cleanImage: string | null = null;
+  if (typeof signatureImage === 'string' && signatureImage) {
+    const m = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(signatureImage);
+    const bytes = m ? Buffer.from(m[1], 'base64') : null;
+    if (!bytes || bytes.length > 100_000 || bytes.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a')
+      return NextResponse.json({ error: 'The drawn signature could not be read; clear it and sign again' }, { status: 400 });
+    cleanImage = signatureImage;
+  }
 
   const step = (toStage: string, stepAction: string) => ({
     create: {
       fromStage, toStage, action: stepAction,
       actorId: user.userId, actorName: user.name, actorRole: user.role,
-      remark: cleanRemark || null, signature: cleanSignature || null,
+      remark: cleanRemark || null, signature: cleanSignature || null, signatureImage: cleanImage,
     },
   });
   const log = (actionText: string, detail?: string) =>
@@ -49,8 +63,8 @@ export async function POST(req: NextRequest) {
 
   if (action === 'advance') {
     const def = STAGES[fromStage];
-    if (def.needsSignature && !cleanSignature)
-      return NextResponse.json({ error: 'Signature is required at this stage' }, { status: 400 });
+    if (def.needsSignature && (!cleanSignature || !cleanImage))
+      return NextResponse.json({ error: 'Draw your signature and type your name to sign at this stage' }, { status: 400 });
 
     const toStage = def.next!;
     await prisma.application.update({
@@ -65,9 +79,9 @@ export async function POST(req: NextRequest) {
     await log(`${def.actionLabel} (${roleLabel})`, cleanRemark);
 
     if (toStage === 'ceo_approved') {
-      await notify(app.userId, '🎉 Application Approved!', `Congratulations! "${app.startupName}" has received final CEO approval. Welcome to CIMP-BIIF!`, 'success', app.id);
+      await notify(app.userId, '🎉 Application Approved!', `Congratulations! "${app.startupName}" has received final CEO approval. Welcome to CIMP-BIIF!`, 'success', app.id, APPLICANT_EMAIL);
     } else {
-      await notify(app.userId, 'Application Progressed ✅', `"${app.startupName}" cleared ${def.label} and moved to ${STAGES[toStage].label}.`, 'success', app.id);
+      await notify(app.userId, 'Application Progressed ✅', `"${app.startupName}" cleared ${def.label} and moved to ${STAGES[toStage].label}.`, 'success', app.id, APPLICANT_EMAIL);
       await notifyReviewers(toStage, app.startupName, app.id);
     }
   }
@@ -82,7 +96,7 @@ export async function POST(req: NextRequest) {
       },
     });
     await log(`rejected at ${STAGES[fromStage].label} (${roleLabel})`, cleanRemark);
-    await notify(app.userId, 'Application Rejected', `"${app.startupName}" was not approved at ${STAGES[fromStage].label}. Reason: ${cleanRemark}`, 'error', app.id);
+    await notify(app.userId, 'Application Rejected', `"${app.startupName}" was not approved at ${STAGES[fromStage].label}. Reason: ${cleanRemark}`, 'error', app.id, APPLICANT_EMAIL);
   }
 
   else if (action === 'send_back') {
@@ -96,7 +110,7 @@ export async function POST(req: NextRequest) {
       },
     });
     await log(`sent back for changes at ${STAGES[fromStage].label} (${roleLabel})`, cleanRemark);
-    await notify(app.userId, 'Changes requested ✏️', `The reviewer asked for changes to "${app.startupName}": ${cleanRemark}`, 'warning', app.id);
+    await notify(app.userId, 'Changes requested ✏️', `The reviewer asked for changes to "${app.startupName}": ${cleanRemark}`, 'warning', app.id, APPLICANT_EMAIL);
   }
 
   else if (action === 'fasttrack') {
@@ -108,7 +122,7 @@ export async function POST(req: NextRequest) {
       },
     });
     await log('⚡ fast-tracked application', `Skipped from ${STAGES[fromStage].label}`);
-    await notify(app.userId, '⚡ Fast-Tracked by CEO!', `"${app.startupName}" was personally fast-tracked and approved by the CEO.`, 'success', app.id);
+    await notify(app.userId, '⚡ Fast-Tracked by CEO!', `"${app.startupName}" was personally fast-tracked and approved by the CEO.`, 'success', app.id, APPLICANT_EMAIL);
   }
 
   else if (action === 'toggle_public') {
@@ -124,12 +138,22 @@ export async function POST(req: NextRequest) {
   const application = await prisma.application.findUnique({
     where: { id: app.id }, include: { steps: { orderBy: { at: 'asc' } } },
   });
+  if (application) {
+    // Partner webhooks (BIIF 2.0): public, non-sensitive fields only
+    const pub = { id: application.id, startupName: application.startupName, industry: application.industry, city: application.city, state: application.state };
+    if (application.status === 'approved' && app.status !== 'approved') emitEvent('application.approved', { ...pub, fastTracked: application.isFastTracked });
+    if (application.isPublic && !app.isPublic) emitEvent('startup.published', { ...pub, idea: application.idea, website: application.website });
+    const changed = diffOf(app, application, ['stage', 'status', 'isPublic', 'isFastTracked']);
+    const what = `${roleLabel}: ${action.replace('_', ' ')} "${app.startupName}"`;
+    await audit(req, user, `application.${action}`, 'application', app.id,
+      `${what}${cleanRemark ? ` (remark: ${cleanRemark})` : ''}${cleanSignature ? ' [signed]' : ''}`, changed);
+  }
   return NextResponse.json({ success: true, application: withId(application) });
 }
 
 // GET — pipeline stats (count per stage)
 export async function GET(req: NextRequest) {
-  const user = getUser(req);
+  const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!isOfficeRole(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 

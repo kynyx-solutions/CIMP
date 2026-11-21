@@ -1,26 +1,21 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
-import { APPLICATION_SECTIONS, APPLICATION_FIELDS, type AppField } from '@/lib/application-fields';
+import DocumentsPanel from '@/components/DocumentsPanel';
+import FieldInput, { toFieldValue, isFilled, type FieldValue } from '@/components/FieldInput';
+import { valueOf, type FormDef } from '@/lib/forms';
 import { PIPELINE, STAGES } from '@/lib/workflow';
-
-const emptyForm = () => Object.fromEntries(APPLICATION_FIELDS.map(f => [f.key, ''])) as Record<string, string>;
-
-const inputCls =
-  'w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-navy font-body text-sm focus:outline-none focus:border-brand-2 focus:ring-2 focus:ring-leaf-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors placeholder:text-faint';
 
 export default function ApplyPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [schema, setSchema] = useState<FormDef | null>(null);
   const [existingApp, setExistingApp] = useState<any>(null);
-  const [form, setForm] = useState<Record<string, string>>(emptyForm);
+  const [form, setForm] = useState<Record<string, FieldValue>>({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [uploadLoading, setUploadLoading] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
@@ -28,13 +23,16 @@ export default function ApplyPage() {
       if (d.user.role !== 'incubatee') { router.push('/dashboard'); return; }
       setUser(d.user);
     });
-    fetch('/api/applications').then(r => r.json()).then(d => {
-      const app = d.applications?.[0];
-      if (app) {
-        setExistingApp(app);
-        setForm(Object.fromEntries(APPLICATION_FIELDS.map(f => [f.key, app[f.key] == null ? '' : String(app[f.key])])));
-        if (app.pitchDeckName) setUploadedFile(app.pitchDeckName);
-      }
+    // The live form version from the Admin IT form builder (PRD FORM-1), then any saved answers
+    Promise.all([
+      fetch('/api/forms/application').then(r => r.json()),
+      fetch('/api/applications').then(r => r.json()),
+    ]).then(([f, a]) => {
+      const def: FormDef = f.form;
+      const app = a.applications?.[0];
+      setSchema(def);
+      if (app) setExistingApp(app);
+      setForm(Object.fromEntries(def.fields.map(fd => [fd.key, toFieldValue(fd, valueOf(app, fd))])));
     });
   }, [router]);
 
@@ -55,23 +53,7 @@ export default function ApplyPage() {
     finally { setLoading(false); }
   }
 
-  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !existingApp) return;
-    setUploadLoading(true);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('applicationId', existingApp._id);
-      const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error); return; }
-      setUploadedFile(data.name);
-    } catch { setError('Upload failed'); }
-    finally { setUploadLoading(false); }
-  }
-
-  if (!user) return (
+  if (!user || !schema) return (
     <div className="min-h-screen bg-bg flex items-center justify-center">
       <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
     </div>
@@ -91,25 +73,13 @@ export default function ApplyPage() {
 
   const isLocked = existingApp && !existingApp.isEditable;
   const isReturned = existingApp?.stage === 'returned';
-  const requiredCount = APPLICATION_FIELDS.filter(f => f.required).length;
-  const filledRequired = APPLICATION_FIELDS.filter(f => f.required && form[f.key]?.trim()).length;
-
-  function renderField(f: AppField) {
-    const common = {
-      id: f.key, required: f.required, disabled: isLocked, value: form[f.key] ?? '',
-      maxLength: f.maxLength, placeholder: f.placeholder,
-      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-        setForm(p => ({ ...p, [f.key]: e.target.value })),
-    };
-    if (f.type === 'textarea') return <textarea {...common} rows={4} className={`${inputCls} resize-y`} />;
-    if (f.type === 'select') return (
-      <select {...common} className={inputCls}>
-        <option value="">Select…</option>
-        {f.options!.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-    );
-    return <input {...common} type={f.type === 'number' ? 'number' : f.type} min={f.type === 'number' ? 1 : undefined} className={inputCls} />;
-  }
+  const required = schema.fields.filter(f => f.required);
+  const requiredCount = required.length;
+  const filledRequired = required.filter(f => isFilled(form[f.key])).length;
+  const sections = schema.sections
+    .map(s => ({ ...s, fields: schema.fields.filter(f => f.section === s.title) }))
+    .filter(s => s.fields.length > 0);
+  const wide = (type: string, key: string) => type === 'textarea' || type === 'multiselect' || key === 'idea';
 
   return (
     <div className="min-h-screen bg-bg">
@@ -120,6 +90,7 @@ export default function ApplyPage() {
             <h1 className="font-display text-3xl font-bold text-navy mb-1">
               {existingApp ? 'Your Application' : 'Apply for Incubation'}
             </h1>
+            {existingApp && <a href={`/api/applications/${existingApp._id}/pdf`} className="inline-block text-sm font-body font-semibold text-brand hover:underline mb-1">⬇ Download as PDF</a>}
             <p className="text-secondary font-body text-sm">
               {isLocked ? 'Your application is under review and cannot be edited.' : 'Takes about 15 minutes. Fields marked * are required.'}
             </p>
@@ -129,6 +100,12 @@ export default function ApplyPage() {
             <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
               <span className="text-lg" aria-hidden="true">🔒</span>
               <p className="text-sm text-amber-700 font-body">Application locked: currently under review by our team. Track progress on your dashboard.</p>
+            </div>
+          )}
+
+          {existingApp?.officeEdited && (
+            <div role="note" className="mb-6 px-4 py-3 bg-sky-50 border border-sky-200 rounded-xl text-sm text-sky-800 font-body">
+              ✎ The CIMP-BIIF office corrected some details on this application. The old and new values are in your application history on the dashboard.
             </div>
           )}
 
@@ -143,25 +120,26 @@ export default function ApplyPage() {
           {error && <div role="alert" className="mb-6 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-body">{error}</div>}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {APPLICATION_SECTIONS.map((section, si) => (
+            {sections.map((section, si) => (
               <fieldset key={section.title} className="bg-white border border-border rounded-2xl p-6 sm:p-8 shadow-card">
                 <legend className="sr-only">{section.title}</legend>
                 <div className="mb-5">
-                  <p className="text-xs font-mono text-brand uppercase tracking-wider font-semibold">Step {si + 1} of {APPLICATION_SECTIONS.length}</p>
+                  <p className="text-xs font-mono text-brand uppercase tracking-wider font-semibold">Step {si + 1} of {sections.length}</p>
                   <h2 className="font-display text-xl font-bold text-navy mt-1">{section.title}</h2>
-                  <p className="text-sm text-muted font-body">{section.desc}</p>
+                  {section.desc && <p className="text-sm text-muted font-body">{section.desc}</p>}
                 </div>
                 <div className="grid sm:grid-cols-2 gap-5">
                   {section.fields.map(f => (
-                    <div key={f.key} className={f.type === 'textarea' || f.key === 'idea' ? 'sm:col-span-2' : ''}>
-                      <label htmlFor={f.key} className="block text-sm font-body font-medium text-navy mb-1.5">
+                    <div key={f.key} className={wide(f.type, f.key) ? 'sm:col-span-2' : ''}>
+                      <label id={`${f.key}-label`} htmlFor={f.key} className="block text-sm font-body font-medium text-navy mb-1.5">
                         {f.label}{f.required && <span className="text-red-500"> *</span>}
+                        {f.isPublic && !f.neverPublic && <span className="ml-2 text-[10px] font-mono text-brand bg-leaf-50 border border-leaf-200 px-1.5 py-0.5 rounded-full align-middle">public if approved</span>}
                       </label>
-                      {renderField(f)}
+                      <FieldInput f={f} value={form[f.key]} disabled={isLocked} onChange={v => setForm(p => ({ ...p, [f.key]: v }))} />
                       <div className="flex justify-between gap-3 mt-1">
-                        <p className="text-xs text-muted font-body">{f.help}</p>
+                        <p id={`${f.key}-help`} className="text-xs text-muted font-body">{f.help}</p>
                         {f.maxLength && (f.type === 'textarea' || f.key === 'idea') && (
-                          <p className="text-[11px] text-faint font-mono flex-shrink-0">{(form[f.key] ?? '').length}/{f.maxLength}</p>
+                          <p className="text-[11px] text-faint font-mono flex-shrink-0">{String(form[f.key] ?? '').length}/{f.maxLength}</p>
                         )}
                       </div>
                     </div>
@@ -170,26 +148,18 @@ export default function ApplyPage() {
               </fieldset>
             ))}
 
-            {/* Pitch Deck Upload (after the application exists) */}
+            {/* Documents (after the application exists): PRD DOC-1 */}
             <fieldset className="bg-white border border-border rounded-2xl p-6 sm:p-8 shadow-card">
-              <h2 className="font-display text-xl font-bold text-navy">Pitch deck</h2>
-              <p className="text-sm text-muted font-body mb-4">PDF or PowerPoint, max 5 MB. Strongly recommended.</p>
+              <h2 className="font-display text-xl font-bold text-navy">Documents</h2>
+              <p className="text-sm text-muted font-body mb-4">
+                {isLocked
+                  ? 'Your documents are locked while the application is under review. You can still update your logo.'
+                  : 'Only you and the CIMP-BIIF review team can open these files, except the logo, which appears on your public profile if you are published.'}
+              </p>
               {existingApp ? (
-                <>
-                  <button type="button" disabled={isLocked} onClick={() => fileRef.current?.click()}
-                    className={`w-full border-2 border-dashed rounded-xl p-5 text-center transition-colors ${isLocked ? 'border-border opacity-60' : 'border-border hover:border-brand'}`}>
-                    {uploadedFile ? (
-                      <span className="inline-flex items-center gap-2 text-sm font-body text-navy font-medium">
-                        📎 {uploadedFile} {!isLocked && <span className="text-xs text-brand">(click to replace)</span>}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-secondary font-body">{uploadLoading ? 'Uploading…' : 'Click to upload your pitch deck'}</span>
-                    )}
-                  </button>
-                  <input ref={fileRef} type="file" accept=".pdf,.ppt,.pptx" className="hidden" onChange={handleFileUpload} disabled={isLocked} />
-                </>
+                <DocumentsPanel applicationId={existingApp._id} editable={!isLocked} logoEditable />
               ) : (
-                <p className="text-sm text-secondary font-body bg-bg border border-border rounded-xl px-4 py-3">You can upload your deck right after submitting.</p>
+                <p className="text-sm text-secondary font-body bg-bg border border-border rounded-xl px-4 py-3">You can upload your pitch deck, ID proof, registration certificate and logo right after submitting.</p>
               )}
             </fieldset>
 
@@ -232,7 +202,9 @@ export default function ApplyPage() {
               <li>Founder backgrounds and LinkedIn links</li>
               <li>Registration (CIN) and DPIIT numbers, if any</li>
               <li>Traction numbers: users, revenue, pilots</li>
-              <li>Pitch deck (PDF)</li>
+              <li>Pitch deck (PDF) and founder ID proof</li>
+              <li>Incorporation or DPIIT certificate, if registered</li>
+              <li>Square logo (PNG or JPG)</li>
             </ul>
           </div>
         </aside>

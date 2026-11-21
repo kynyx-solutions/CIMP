@@ -6,8 +6,8 @@ import { OFFICE_ROLES } from "@/lib/workflow";
 export const STAFF_ROLES: Role[] = OFFICE_ROLES;
 
 // Roles anyone can sign up for (email/password or Google).
-// Add new non-staff roles (e.g. "mentor") here once they exist in the app.
-export const PUBLIC_ROLES: Role[] = ["incubatee"];
+// Mentors become investors through an extra approval on their profile (PRD MEN-2).
+export const PUBLIC_ROLES: Role[] = ["incubatee", "mentor"];
 
 export function isStaffRole(role: string | undefined | null): boolean {
   return !!role && (STAFF_ROLES as string[]).includes(role);

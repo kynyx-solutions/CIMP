@@ -1,0 +1,14 @@
+node_modules
+.next
+.next-*
+.git
+.env
+.env.*
+!.env.example
+storage
+public/uploads
+coverage
+*.log
+tsconfig.tsbuildinfo
+docker-compose.override.yml
+backups

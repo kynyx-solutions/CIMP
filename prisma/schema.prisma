@@ -15,7 +15,8 @@ model User {
   name         String
   email        String    @unique
   password     String?
-  // incubatee | admin_it | ceo | sr_manager | manager | executive | staff (validated in app code)
+  // incubatee | mentor | admin_it | ceo | sr_manager | manager | executive | staff (validated in app code).
+  // A mentor becomes an investor too via MentorProfile.investorStatus (one record, two user types: PRD §4.1).
   role         String    @default("incubatee")
   image        String?   @db.Text
   isVerified   Boolean   @default(false)
@@ -23,22 +24,98 @@ model User {
   otpExpiresAt DateTime?
   // When the user accepted the Terms and Privacy Policy (DPDP Act consent, PRD WEB-10)
   consentAt    DateTime?
+  // Raised to revoke every session of this user (password change, sign out everywhere, role change)
+  sessionVersion Int     @default(0)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
   applications  Application[]
   notifications Notification[]
   messages      Message[]
+
+  mentorProfile          MentorProfile?
+  connectionsAsIncubatee Connection[]         @relation("ConnectionIncubatee")
+  connectionsAsMentor    Connection[]         @relation("ConnectionMentor")
+  chatMessages           ChatMessage[]
+  proposalsMade          InvestmentProposal[]
+  idCard                 IdCard?
+}
+
+// Mentor / investor profile and its two approvals (PRD MEN-1, MEN-2, workflow 6.2).
+model MentorProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  headline        String // e.g. "Former CXO, FinTech"
+  organisation    String?
+  expertise       String   @db.Text
+  sectors         String[]
+  bio             String?  @db.Text
+  linkedin        String?
+  yearsExperience Int?
+  status          String   @default("draft") // draft | submitted | approved | rejected
+  reviewNote      String?  @db.Text
+  reviewedBy      String?
+  isPublic        Boolean  @default(true) // listed in the public directory once approved
+  investorStatus  String   @default("none") // none | submitted | approved | rejected
+  investorThesis  String?  @db.Text
+  ticketSize      String?
+  investorNote    String?  @db.Text
+  // Answers to custom fields Admin IT adds to the mentor form (PRD FORM-1, FORM-2)
+  answers         Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+}
+
+// Incubatee ↔ mentor/investor connection request (PRD MEN-3, workflow 6.3).
+model Connection {
+  id            String   @id @default(cuid())
+  incubateeId   String
+  incubatee     User     @relation("ConnectionIncubatee", fields: [incubateeId], references: [id], onDelete: Cascade)
+  mentorId      String
+  mentor        User     @relation("ConnectionMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  applicationId String?
+  type          String   @default("mentorship") // mentorship | investment
+  message       String   @db.Text
+  status        String   @default("requested") // see src/lib/network.ts
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  steps       ConnectionStep[]
+  sessions    MentorSession[]
+  docRequests DocRequest[]
+
+  @@index([incubateeId])
+  @@index([mentorId])
+  @@index([status])
+}
+
+model ConnectionStep {
+  id           String     @id @default(cuid())
+  connectionId String
+  connection   Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  fromStatus   String
+  toStatus     String
+  action       String
+  actorId      String
+  actorName    String
+  actorRole    String
+  remark       String?    @db.Text
+  at           DateTime   @default(now())
+
+  @@index([connectionId])
 }
 
 model Application {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  applicantName   String
-  startupName     String
-  idea            String   @db.Text
-  industry        String
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applicantName      String
+  startupName        String
+  idea               String   @db.Text
+  industry           String
   // Application form fields (src/lib/application-fields.ts)
   ventureStage       String?
   city               String?
@@ -54,25 +131,35 @@ model Application {
   cin                String?
   dpiitNumber        String?
   fundingRaised      String?
-  pitchDeckUrl    String?
-  pitchDeckName   String?
-  status          String   @default("pending")   // pending | approved | rejected
-  stage           String   @default("submitted") // see src/lib/workflow.ts
-  rejectedBy      String?
-  rejectionReason String?  @db.Text
+  pitchDeckUrl       String?
+  pitchDeckName      String?
+  status             String   @default("pending") // pending | approved | rejected
+  stage              String   @default("submitted") // see src/lib/workflow.ts
+  rejectedBy         String?
+  rejectionReason    String?  @db.Text
   // Send back for changes (PRD WF-3): the stage it was returned from, and what the applicant must change
-  returnedFrom    String?
-  changeRequest   String?  @db.Text
-  isFastTracked   Boolean  @default(false)
-  isPublic        Boolean  @default(false)
-  isEditable      Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  returnedFrom       String?
+  changeRequest      String?  @db.Text
+  isFastTracked      Boolean  @default(false)
+  isPublic           Boolean  @default(false)
+  isEditable         Boolean  @default(true)
+  // Custom fields from the form builder, keyed by field key (PRD FORM-1, FORM-2)
+  answers            Json?
+  formVersion        Int?
+  // Set when an office user corrects a field (PRD RBAC-4); details are in the audit log
+  officeEdited       Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  steps         ApprovalStep[]
-  activities    Activity[]
-  messages      Message[]
-  notifications Notification[]
+  steps           ApprovalStep[]
+  activities      Activity[]
+  messages        Message[]
+  notifications   Notification[]
+  documents       ApplicationDocument[]
+  qprReports      QprReport[]
+  proposals       InvestmentProposal[]
+  financeRequests FinanceRequest[]
+  seedFund        SeedFund?
 
   @@index([userId])
   @@index([stage])
@@ -80,18 +167,20 @@ model Application {
 
 // One row per workflow decision (PRD WF-1).
 model ApprovalStep {
-  id            String      @id @default(cuid())
-  applicationId String
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  fromStage     String
-  toStage       String
-  action        String
-  actorId       String
-  actorName     String
-  actorRole     String
-  remark        String?     @db.Text
-  signature     String?
-  at            DateTime    @default(now())
+  id             String      @id @default(cuid())
+  applicationId  String
+  application    Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fromStage      String
+  toStage        String
+  action         String
+  actorId        String
+  actorName      String
+  actorRole      String
+  remark         String?     @db.Text
+  signature      String?
+  // Drawn signature (PNG data URL, at most ~100 KB) alongside the typed name
+  signatureImage String?     @db.Text
+  at             DateTime    @default(now())
 
   @@index([applicationId])
 }
@@ -137,4 +226,451 @@ model Notification {
   createdAt     DateTime     @default(now())
 
   @@index([userId])
+}
+
+// Conversations outside an application (PRD MSG-1, MSG-2):
+//   connection    — incubatee ↔ mentor, threadId = Connection.id (open while the connection is active)
+//   mentor_office — a mentor/investor ↔ the incubation office, threadId = the mentor's User.id
+// Application threads (incubatee ↔ office) stay in `Message`.
+model ChatMessage {
+  id         String   @id @default(cuid())
+  threadType String
+  threadId   String
+  senderId   String
+  sender     User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderName String
+  senderRole String
+  content    String   @db.Text
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([threadType, threadId])
+}
+
+// Application documents (PRD DOC-1, DOC-2). Files live in private storage, outside
+// the web root, and are served only through /api/documents/[id] after an access check.
+// Demo: local disk (UPLOAD_DIR). Phase 1: S3 with presigned URLs.
+model ApplicationDocument {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  kind          String // pitch_deck | id_proof | registration | logo
+  fileName      String // original name, for display
+  storedName    String // random name on disk
+  mimeType      String // detected from the file bytes, not the browser
+  size          Int
+  uploadedBy    String
+  createdAt     DateTime    @default(now())
+
+  @@unique([applicationId, kind])
+}
+
+// Immutable audit trail of every mutating action (PRD AUD-1). Rows are never updated or
+// deleted: a database trigger (see the migration) rejects UPDATE and DELETE.
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actorName String
+  actorRole String
+  action    String // e.g. application.advance, document.upload, form.publish
+  entity    String // application | document | mentor_profile | connection | user | form | site_config | message
+  entityId  String?
+  summary   String   @db.Text
+  diff      Json? // { field: { from, to } } for edits
+  ip        String?
+  at        DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([at])
+}
+
+// Versioned form definitions built by Admin IT (PRD FORM-1…3). The newest version is live.
+model FormSchema {
+  id        String   @id @default(cuid())
+  form      String // application | mentor
+  version   Int
+  fields    Json // FieldDef[]
+  note      String?
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@unique([form, version])
+}
+
+// Website content Admin IT edits from the admin panel (PRD WEB-6). Missing keys fall back to src/content/site.ts.
+model SiteConfig {
+  key       String   @id
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+}
+
+// ── Phase 2 (demo) ───────────────────────────────────────────────────────────
+
+// Quarterly progress report (PRD QPR-1). Answers follow the "qpr" form from the form builder.
+model QprReport {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  period        String // e.g. 2026-Q4
+  answers       Json
+  formVersion   Int
+  status        String      @default("draft") // draft | submitted | accepted | returned
+  submittedAt   DateTime?
+  reviewNote    String?     @db.Text
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([applicationId, period])
+  @@index([period])
+}
+
+// Mentor–mentee sessions on an accepted connection (PRD MEN-4)
+model MentorSession {
+  id           String            @id @default(cuid())
+  connectionId String
+  connection   Connection        @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  scheduledAt  DateTime
+  durationMin  Int               @default(60)
+  mode         String // physical | virtual
+  location     String? // address or meeting link
+  agenda       String            @db.Text
+  status       String            @default("scheduled") // scheduled | completed | cancelled
+  createdById  String
+  cancelReason String?           @db.Text
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  feedback     SessionFeedback[]
+
+  @@index([connectionId])
+}
+
+model SessionFeedback {
+  id         String        @id @default(cuid())
+  sessionId  String
+  session    MentorSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  authorId   String
+  authorRole String
+  rating     Int // 1–5
+  comment    String?       @db.Text
+  createdAt  DateTime      @default(now())
+
+  @@unique([sessionId, authorId])
+}
+
+// A mentor asks the mentee for a document (PRD MEN-4)
+model DocRequest {
+  id           String     @id @default(cuid())
+  connectionId String
+  connection   Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  title        String
+  note         String?    @db.Text
+  status       String     @default("requested") // requested | uploaded | closed
+  requestedBy  String
+  fileName     String?
+  storedName   String?
+  mimeType     String?
+  size         Int?
+  uploadedAt   DateTime?
+  createdAt    DateTime   @default(now())
+
+  @@index([connectionId])
+}
+
+// Excel exports run as background jobs (PRD XLS-1)
+model ExportJob {
+  id            String    @id @default(cuid())
+  requestedById String
+  requestedBy   String
+  dataset       String // applications | mentors | connections | qpr
+  columns       String[]
+  filters       Json?
+  status        String    @default("queued") // queued | running | done | failed
+  rowCount      Int?
+  storedName    String?
+  error         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  finishedAt    DateTime?
+
+  @@index([requestedById])
+}
+
+// An investor proposes to invest in an incubated startup; the office arranges the pitch (PRD INV-1)
+model InvestmentProposal {
+  id            String      @id @default(cuid())
+  investorId    String
+  investor      User        @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  amount        String
+  instrument    String // equity | convertible | grant | other
+  terms         String      @db.Text
+  status        String      @default("submitted") // submitted | pitch_scheduled | invested | declined | withdrawn
+  pitchAt       DateTime?
+  officeNote    String?     @db.Text
+  handledBy     String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([investorId])
+  @@index([applicationId])
+}
+
+// Blog: Office Staff write, Admin IT approves (PRD BLG-1)
+model BlogPost {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  excerpt     String
+  body        String    @db.Text
+  authorId    String
+  authorName  String
+  status      String    @default("draft") // draft | submitted | published | rejected
+  reviewNote  String?   @db.Text
+  reviewedBy  String?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+}
+
+// Virtual ID cards for incubatees and mentors (PRD IDC-1)
+model IdCard {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  number        String    @unique
+  holderName    String
+  role          String
+  organisation  String?
+  issuedAt      DateTime
+  expiresAt     DateTime
+  status        String    @default("active") // active | expired | revoked
+  lastEmailedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// History of scheduled jobs (reminders, ID-card expiry, exports)
+model JobRun {
+  id         String    @id @default(cuid())
+  job        String
+  trigger    String // cron | manual
+  // Scheduled slot (e.g. 2026-11-23T09:00 IST); unique per job so two servers never run the same slot
+  slot       String?
+  status     String    @default("running") // running | ok | failed
+  summary    String?   @db.Text
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@unique([job, slot])
+  @@index([job, startedAt])
+}
+
+// ── Phase 3 (BIIF 2.0, demo) ────────────────────────────────────────────────
+
+// Accounts: payment requests with multi-level approval
+model FinanceRequest {
+  id            String        @id @default(cuid())
+  kind          String // disbursement | reimbursement | vendor_invoice | grant_tranche
+  title         String
+  description   String        @db.Text
+  amountInr     Int
+  payee         String
+  applicationId String?
+  application   Application?  @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  requestedById String
+  requestedBy   String
+  status        String        @default("submitted") // submitted | verified | approved | final_approved | paid | rejected | returned
+  invoiceName   String?
+  invoiceStored String?
+  invoiceMime   String?
+  invoiceSize   Int?
+  paymentRef    String?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  steps         FinanceStep[]
+
+  @@index([status])
+  @@index([applicationId])
+}
+
+model FinanceStep {
+  id         String         @id @default(cuid())
+  requestId  String
+  request    FinanceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fromStatus String
+  toStatus   String
+  action     String
+  actorId    String
+  actorName  String
+  actorRole  String
+  remark     String?        @db.Text
+  at         DateTime       @default(now())
+}
+
+// Seed fund sanctioned to a startup; tranches are grant_tranche finance requests
+model SeedFund {
+  id            String      @id @default(cuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  scheme        String
+  sanctionedInr Int
+  sanctionedOn  DateTime
+  note          String?     @db.Text
+  createdBy     String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+// CRM: partners, sponsors, CSR, government and academic relationships
+model Partner {
+  id               String            @id @default(cuid())
+  name             String
+  type             String // corporate | csr | government | academic | investor_network | incubator | other
+  stage            String            @default("lead") // lead | contacted | proposal | mou_signed | active | dormant
+  ownerId          String?
+  ownerName        String?
+  contactName      String?
+  contactEmail     String?
+  contactPhone     String?
+  website          String?
+  expectedValueInr Int?
+  notes            String?           @db.Text
+  mouSignedOn      DateTime?
+  mouExpiresOn     DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  activities       PartnerActivity[]
+
+  @@index([stage])
+}
+
+model PartnerActivity {
+  id        String    @id @default(cuid())
+  partnerId String
+  partner   Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  kind      String // call | meeting | email | note | follow_up
+  summary   String    @db.Text
+  dueAt     DateTime?
+  done      Boolean   @default(false)
+  byId      String
+  byName    String
+  createdAt DateTime  @default(now())
+
+  @@index([partnerId])
+}
+
+// Partner integrations: API keys for the read-only partner API, and signed webhooks
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  prefix      String // first characters, shown in the admin list
+  keyHash     String    @unique // SHA-256 of the key; the key itself is shown once
+  scopes      String[]
+  createdById String
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Webhook {
+  id              String            @id @default(cuid())
+  url             String
+  secret          String
+  events          String[]
+  active          Boolean           @default(true)
+  createdById     String
+  lastStatus      Int?
+  lastError       String?
+  lastDeliveredAt DateTime?
+  createdAt       DateTime          @default(now())
+  deliveries      WebhookDelivery[]
+}
+
+model WebhookDelivery {
+  id         String   @id @default(cuid())
+  webhookId  String
+  webhook    Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event      String
+  status     Int?
+  error      String?
+  durationMs Int?
+  createdAt  DateTime @default(now())
+
+  @@index([webhookId, createdAt])
+}
+
+// HR: attendance and leave for office users
+model Attendance {
+  id       String    @id @default(cuid())
+  userId   String
+  userName String
+  date     String // YYYY-MM-DD (IST)
+  checkIn  DateTime
+  checkOut DateTime?
+  mode     String // office | wfh | field
+  note     String?
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+model LeaveRequest {
+  id           String    @id @default(cuid())
+  userId       String
+  userName     String
+  userRole     String
+  type         String // casual | sick | earned | unpaid
+  fromDate     String // YYYY-MM-DD
+  toDate       String
+  days         Float
+  reason       String    @db.Text
+  status       String    @default("pending") // pending | approved | rejected | cancelled
+  approverId   String?
+  approverName String?
+  decisionNote String?   @db.Text
+  decidedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+// Social media manager: content calendar
+model SocialPost {
+  id             String    @id @default(cuid())
+  platforms      String[] // linkedin | x | facebook | instagram
+  content        String    @db.Text
+  scheduledFor   DateTime?
+  status         String    @default("draft") // draft | scheduled | published
+  publishedLinks Json?
+  createdById    String
+  createdBy      String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, scheduledFor])
+}
+
+// AI assistant usage (cost and audit)
+model AiRun {
+  id           String   @id @default(cuid())
+  userId       String
+  userName     String
+  feature      String // application_review | qpr_insight | draft
+  entityId     String?
+  model        String
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  status       String // ok | failed
+  error        String?
+  createdAt    DateTime @default(now())
+
+  @@index([feature, createdAt])
 }

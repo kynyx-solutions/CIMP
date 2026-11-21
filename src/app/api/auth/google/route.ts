@@ -1,8 +1,10 @@
+import { audit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { signToken, type Role } from "@/lib/auth";
 import { verifyFirebaseIdToken } from "@/lib/firebase-verify";
 import { isCompanyEmail, isPublicRole, isStaffRole } from "@/lib/roles";
+import { limitRequest } from "@/lib/ratelimit";
 
 const STAFF_BLOCKED =
   "Google sign-in is not available for staff. Sign in with your company email and password.";
@@ -10,6 +12,8 @@ const STAFF_BLOCKED =
 export async function POST(req: NextRequest) {
   try {
     const { idToken, role } = await req.json();
+    const limited = limitRequest(req, [{ key: "google-ip:{ip}", limit: 30, windowMs: 900000 }], "sign-in attempts");
+    if (limited) return limited;
 
     if (!idToken) {
       return NextResponse.json({ error: "ID token required" }, { status: 400 });
@@ -53,13 +57,17 @@ export async function POST(req: NextRequest) {
           consentAt: new Date(),
         },
       });
+      await audit(req, { userId: user.id, name: user.name, role: user.role }, "auth.signup", "user", user.id, `Signed up with Google as ${user.role} (consent recorded)`);
     }
+
+    await audit(req, { userId: user.id, name: user.name, role: user.role }, "auth.login", "auth", user.id, "Signed in with Google");
 
     const token = signToken({
       userId: user.id,
       email: user.email,
       name: user.name,
       role: user.role as Role,
+      sv: user.sessionVersion,
     });
 
     const response = NextResponse.json({

@@ -3,10 +3,17 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import StageBadge from '@/components/StageBadge';
+import DocumentsPanel from '@/components/DocumentsPanel';
+import SignaturePad from '@/components/SignaturePad';
+import { AiApplicationReview } from '@/components/AiTools';
 import { STAGES, PIPELINE, ROLE_LABELS, ROLE_ICONS, APPROVAL_RANK, canAct, isOfficeRole, stageEnteredAt, daysSince, daysLabel, progressStage, type Stage } from '@/lib/workflow';
-import { APPLICATION_SECTIONS } from '@/lib/application-fields';
+import FieldInput, { toFieldValue, type FieldValue } from '@/components/FieldInput';
+import { valueOf, displayValue, type FormDef } from '@/lib/forms';
 
-type Step = { fromStage: string; toStage: string; action: string; actorName: string; actorRole: string; remark?: string; signature?: string; at: string; };
+// Office roles that may correct application fields (PRD RBAC-4); enforced again by the API.
+const OFFICE_EDITORS = ['staff', 'executive', 'manager', 'sr_manager', 'ceo'];
+
+type Step = { fromStage: string; toStage: string; action: string; actorName: string; actorRole: string; remark?: string; signature?: string; signatureImage?: string | null; at: string; };
 type App = {
   _id: string; applicantName: string; startupName: string; idea: string;
   industry: string; stage: string; status: string; isFastTracked: boolean;
@@ -29,6 +36,7 @@ export default function ApprovalsPage() {
   const [modal, setModal] = useState<{ type: string; app: App } | null>(null);
   const [inputText, setInputText] = useState('');
   const [signature, setSignature] = useState('');
+  const [signatureImage, setSignatureImage] = useState('');
   // Side panel
   const [sideApp, setSideApp] = useState<App | null>(null);
   const [sideTab, setSideTab] = useState<'details'|'trail'|'timeline'|'messages'>('details');
@@ -37,13 +45,44 @@ export default function ApprovalsPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [msgInput, setMsgInput] = useState('');
   const [msgLoading, setMsgLoading] = useState(false);
+  // Live application form (PRD FORM-1) and office corrections (PRD RBAC-4)
+  const [schema, setSchema] = useState<FormDef | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<Record<string, FieldValue>>({});
+  const [editReason, setEditReason] = useState('');
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
       if (!d.user || !isOfficeRole(d.user.role)) { router.push('/dashboard'); return; }
       setUser(d.user);
     });
+    fetch('/api/forms/application').then(r => r.json()).then(d => setSchema(d.form ?? null));
   }, [router]);
+
+  function startEdit() {
+    if (!schema || !sideApp) return;
+    setEditForm(Object.fromEntries(schema.fields.map(f => [f.key, toFieldValue(f, valueOf(sideApp, f))])));
+    setEditReason(''); setEditing(true);
+  }
+
+  async function saveEdit() {
+    if (!schema || !sideApp) return;
+    // Send only the fields that changed
+    const changes = Object.fromEntries(schema.fields
+      .filter(f => JSON.stringify(toFieldValue(f, valueOf(sideApp, f))) !== JSON.stringify(editForm[f.key]))
+      .map(f => [f.key, editForm[f.key]]));
+    if (!Object.keys(changes).length) { showToast('Nothing changed', 'error'); return; }
+    setActionLoading('edit');
+    try {
+      const res = await fetch('/api/applications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ applicationId: sideApp._id, changes, reason: editReason }) });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error, 'error'); return; }
+      showToast('Corrections saved and the applicant notified', 'success');
+      setEditing(false);
+      setSideApp(prev => prev ? { ...prev, ...data.application } : prev);
+      await fetchApps();
+    } finally { setActionLoading(null); }
+  }
 
   useEffect(() => { if (user) fetchApps(); }, [user]);
 
@@ -67,7 +106,7 @@ export default function ApprovalsPage() {
       const data = await res.json();
       if (!res.ok) { showToast('Error: ' + data.error, 'error'); return; }
       showToast('Done! Application updated.');
-      setModal(null); setInputText(''); setSignature('');
+      setModal(null); setInputText(''); setSignature(''); setSignatureImage('');
       await fetchApps();
       if (sideApp?._id === applicationId) openSidePanel({ ...sideApp, ...data.application });
     } catch { showToast('Something went wrong', 'error'); }
@@ -75,7 +114,7 @@ export default function ApprovalsPage() {
   }
 
   async function openSidePanel(app: App) {
-    setSideApp(app); setSideTab('details');
+    setSideApp(app); setSideTab('details'); setEditing(false);
     const [actRes, msgRes] = await Promise.all([
       fetch(`/api/activity?applicationId=${app._id}`),
       fetch(`/api/messages?applicationId=${app._id}`),
@@ -144,19 +183,20 @@ export default function ApprovalsPage() {
               onBlur={e => { e.target.style.borderColor=''; e.target.style.boxShadow=''; }} />
             {modal.type === 'advance' && STAGES[modal.app.stage as Stage]?.needsSignature && (
               <div className="mb-4">
-                <label className="block text-xs font-body font-semibold text-navy mb-1.5">✍️ Digital signature: type your full name</label>
-                <input value={signature} onChange={e => setSignature(e.target.value)} placeholder={user.name}
-                  className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-navy text-lg focus:outline-none"
-                  style={{ fontFamily: 'cursive' }} />
-                <p className="text-[11px] text-muted font-body mt-1">Recorded with your account and a timestamp. (Demo: typed signature. Phase 1: drawn/uploaded image.)</p>
+                <p className="block text-xs font-body font-semibold text-navy mb-1.5">✍️ Sign with your finger, pen or mouse</p>
+                <SignaturePad key={modal.app._id} onChange={setSignatureImage} label={`Sign as ${user.name}`} />
+                <label className="block text-xs font-body font-semibold text-navy mt-3 mb-1.5" htmlFor="sig-name">Type your full name</label>
+                <input id="sig-name" value={signature} onChange={e => setSignature(e.target.value)} placeholder={user.name}
+                  className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-navy text-sm focus:outline-none" />
+                <p className="text-[11px] text-muted font-body mt-1">The drawn signature and your name are recorded with your account, the date and time, and appear on the signed PDF. Legally valid eSign (Aadhaar / DSC) is a separate decision for CIMP.</p>
               </div>
             )}
             <div className="flex gap-3">
-              <button onClick={() => { setModal(null); setInputText(''); setSignature(''); }}
+              <button onClick={() => { setModal(null); setInputText(''); setSignature(''); setSignatureImage(''); }}
                 className="flex-1 py-2.5 border border-border text-secondary rounded-xl hover:text-navy hover:border-border-2 transition-colors font-body text-sm">Cancel</button>
               <button
-                disabled={!!actionLoading || ((modal.type === 'reject' || modal.type === 'send_back') && !inputText.trim()) || (modal.type === 'advance' && !!STAGES[modal.app.stage as Stage]?.needsSignature && !signature.trim())}
-                onClick={() => takeAction(modal.app._id, modal.type, { remark: inputText, signature })}
+                disabled={!!actionLoading || ((modal.type === 'reject' || modal.type === 'send_back') && !inputText.trim()) || (modal.type === 'advance' && !!STAGES[modal.app.stage as Stage]?.needsSignature && (!signature.trim() || !signatureImage))}
+                onClick={() => takeAction(modal.app._id, modal.type, { remark: inputText, signature, signatureImage })}
                 className={`flex-1 py-2.5 rounded-xl font-body text-sm font-semibold transition-colors disabled:opacity-50 ${modal.type === 'reject' ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100' : 'text-white hover:opacity-90'}`}
                 style={modal.type !== 'reject' ? { background: '#3F7A16' } : {}}>
                 {modal.type === 'reject' ? 'Confirm Reject' : modal.type === 'send_back' ? 'Send back' : 'Confirm'}
@@ -307,29 +347,66 @@ export default function ApprovalsPage() {
               <div className="h-96 overflow-y-auto">
                 {sideTab === 'details' && (
                   <div className="p-4 space-y-4">
-                    {APPLICATION_SECTIONS.map(sec => (
-                      <div key={sec.title}>
-                        <p className="text-[10px] font-mono uppercase tracking-wider text-muted mb-1.5">{sec.title}</p>
-                        <dl className="space-y-1.5">
-                          {sec.fields.map(f => (
-                            <div key={f.key}>
-                              <dt className="text-[11px] text-muted font-body">{f.label}</dt>
-                              <dd className="text-xs text-navy font-body whitespace-pre-line break-words">
-                                {sideApp[f.key] == null || sideApp[f.key] === ''
-                                  ? <span className="text-faint">Not provided</span>
-                                  : f.type === 'url'
-                                    ? <a href={sideApp[f.key]} target="_blank" rel="noopener noreferrer" className="text-brand underline">{sideApp[f.key]}</a>
-                                    : String(sideApp[f.key])}
-                              </dd>
-                            </div>
-                          ))}
-                        </dl>
+                    <div className="flex items-center justify-between gap-2">
+                      {sideApp.officeEdited
+                        ? <span className="text-[10px] font-mono text-sky-800 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-full" title="Corrected by the office; see Activity for old and new values">✎ Edited by office</span>
+                        : <span />}
+                      <a href={`/api/applications/${sideApp._id}/pdf`} className="ml-auto mr-3 text-[11px] font-body font-semibold text-brand hover:underline" title="Application with approval trail and signatures">⬇ PDF</a>
+                      {schema && OFFICE_EDITORS.includes(user.role) && !editing && (
+                        <button onClick={startEdit} className="text-[11px] font-body font-semibold text-brand hover:underline">✎ Correct fields</button>
+                      )}
+                    </div>
+                    {schema && editing ? (
+                      <div className="space-y-3">
+                        <p className="text-[11px] text-muted font-body">Corrections are flagged on the application, recorded with old and new values in the audit log, and the applicant is notified.</p>
+                        {schema.fields.map(f => (
+                          <div key={f.key}>
+                            <label id={`edit-${f.key}-label`} htmlFor={`edit-${f.key}`} className="block text-[11px] text-muted font-body mb-1">{f.label}</label>
+                            <FieldInput f={f} idPrefix="edit-" value={editForm[f.key]} onChange={v => setEditForm(p => ({ ...p, [f.key]: v }))} />
+                          </div>
+                        ))}
+                        <label className="block">
+                          <span className="block text-[11px] text-navy font-body font-semibold mb-1">Reason for the correction *</span>
+                          <textarea value={editReason} onChange={e => setEditReason(e.target.value)} rows={2} maxLength={500}
+                            placeholder="e.g. Applicant confirmed the correct CIN on a call" className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-xs font-body resize-none" />
+                        </label>
+                        <div className="flex gap-2">
+                          <button onClick={() => setEditing(false)} className="flex-1 py-2 border border-border rounded-lg text-xs font-body text-secondary">Cancel</button>
+                          <button onClick={saveEdit} disabled={!editReason.trim() || actionLoading === 'edit'} className="flex-1 py-2 rounded-lg bg-brand text-white text-xs font-semibold font-body disabled:opacity-50">
+                            {actionLoading === 'edit' ? 'Saving…' : 'Save corrections'}
+                          </button>
+                        </div>
                       </div>
-                    ))}
-                    {sideApp.pitchDeckUrl && (
-                      <a href={sideApp.pitchDeckUrl} target="_blank" rel="noopener noreferrer"
-                        className="block text-center text-xs font-body font-semibold text-brand border border-leaf-200 bg-leaf-50 rounded-lg py-2">📎 Open pitch deck</a>
-                    )}
+                    ) : (schema?.sections ?? []).map(sec => {
+                      const fields = schema!.fields.filter(f => f.section === sec.title);
+                      if (!fields.length) return null;
+                      return (
+                        <div key={sec.title}>
+                          <p className="text-[10px] font-mono uppercase tracking-wider text-muted mb-1.5">{sec.title}</p>
+                          <dl className="space-y-1.5">
+                            {fields.map(f => {
+                              const v = displayValue(valueOf(sideApp, f));
+                              return (
+                                <div key={f.key}>
+                                  <dt className="text-[11px] text-muted font-body">{f.label}{!f.core && <span className="ml-1 text-[9px] font-mono text-faint">custom</span>}</dt>
+                                  <dd className="text-xs text-navy font-body whitespace-pre-line break-words">
+                                    {!v ? <span className="text-faint">Not provided</span>
+                                      : f.type === 'url' && /^https?:\/\//.test(v)
+                                        ? <a href={v} target="_blank" rel="noopener noreferrer" className="text-brand underline">{v}</a>
+                                        : v}
+                                  </dd>
+                                </div>
+                              );
+                            })}
+                          </dl>
+                        </div>
+                      );
+                    })}
+                    {(APPROVAL_RANK[user.role] ?? 0) >= 1 && !editing && <AiApplicationReview key={'ai-' + sideApp._id} applicationId={sideApp._id} />}
+                    <div>
+                      <p className="text-[11px] font-mono text-muted uppercase tracking-wider mb-2">Documents</p>
+                      <DocumentsPanel key={sideApp._id} applicationId={sideApp._id} editable={false} logoEditable={false} compact />
+                    </div>
                   </div>
                 )}
                 {sideTab === 'trail' && (
@@ -346,7 +423,13 @@ export default function ApprovalsPage() {
                           {s.action} · <span className="text-muted">{STAGES[s.fromStage as Stage]?.label} → {STAGES[s.toStage as Stage]?.label}</span>
                         </p>
                         {s.remark && <p className="text-[11px] text-muted mt-1">&ldquo;{s.remark}&rdquo;</p>}
-                        {s.signature && <p className="text-base text-navy mt-1.5 border-t border-dashed border-border pt-1.5" style={{ fontFamily: 'cursive' }}>{s.signature}</p>}
+                        {s.signature && (
+                          <div className="mt-1.5 border-t border-dashed border-border pt-1.5">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            {s.signatureImage && <img src={s.signatureImage} alt={`Signature of ${s.actorName}`} className="h-12 w-auto" />}
+                            <p className="text-xs text-navy font-body">Signed: {s.signature}</p>
+                          </div>
+                        )}
                         <p className="text-[10px] text-faint font-mono mt-1">{new Date(s.at).toLocaleString('en-IN')}</p>
                       </div>
                     ))}

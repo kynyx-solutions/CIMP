@@ -4,9 +4,10 @@ import BodhiTree from "@/components/public/BodhiTree";
 import FireflyField from "@/components/public/FireflyField";
 import { prisma } from "@/lib/prisma";
 import {
-  IS_SAMPLE, STATS, OPEN_CALLS, PROGRAMS, APPLY_STEPS, ELIGIBILITY,
+  IS_SAMPLE, PROGRAMS, APPLY_STEPS,
   RESPONSE_TIME, SCHEMES, MENTORS, PARTNERS,
 } from "@/content/site";
+import { getContent } from "@/lib/content";
 
 // Server-rendered on every request: numbers are in the HTML (no "0+" counters)
 // and the featured startups reflect the live public directory.
@@ -33,6 +34,8 @@ async function getFeaturedStartups(): Promise<Featured[]> {
 
 
 export default async function HomePage() {
+  // Admin IT edits these from the admin panel (PRD WEB-6)
+  const { stats: STATS, openCalls: OPEN_CALLS, eligibility: ELIGIBILITY } = await getContent();
   const featured = await getFeaturedStartups();
 
   return (

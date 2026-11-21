@@ -1,34 +1,64 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+// Mail delivery (PRD NOT-1). Configure ONE of these in .env.local:
+//   SMTP_HOST, SMTP_PORT (587 or 465), SMTP_USER, SMTP_PASS    any SMTP provider (SES, Zoho, cPanel…)
+//   GMAIL_USER, GMAIL_APP_PASSWORD                            a Google account with an app password
+// MAIL_FROM sets the sender, e.g. "CIMP-BIIF <startup@cimp.ac.in>". With neither configured,
+// development logs every email to the terminal instead of sending it.
+export type MailAttachment = { filename: string; content: Buffer; contentType: string };
+export type MailMode = "smtp" | "gmail" | "log";
 
-// Local development without Gmail credentials: log instead of sending,
-// so registration and OTP flows still work.
+export function mailMode(): MailMode {
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) return "smtp";
+  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) return "gmail";
+  return "log";
+}
+
+export function fromAddress() {
+  return process.env.MAIL_FROM || `"CIMP-BIIF" <${process.env.SMTP_USER || process.env.GMAIL_USER || "no-reply@localhost"}>`;
+}
+
+let cached: { key: string; t: nodemailer.Transporter } | null = null;
+function transporter() {
+  const mode = mailMode();
+  const key = `${mode}:${process.env.SMTP_HOST}:${process.env.SMTP_USER}:${process.env.GMAIL_USER}`;
+  if (cached?.key === key) return cached.t;
+  const port = Number(process.env.SMTP_PORT || 587);
+  const t = mode === "smtp"
+    ? nodemailer.createTransport({ host: process.env.SMTP_HOST, port, secure: port === 465, auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } })
+    : nodemailer.createTransport({ service: "gmail", auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD } });
+  cached = { key, t };
+  return t;
+}
+
+/** Check the connection and login with the mail server (used by the admin "send test email"). */
+export async function verifyMail() {
+  if (mailMode() === "log") return false;
+  await transporter().verify();
+  return true;
+}
+
 const mailer = {
-  async sendMail(opts: { from: string; to: string; subject: string; html: string }) {
-    if (!process.env.GMAIL_USER && process.env.NODE_ENV !== "production") {
-      console.log(`[email:dev] to=${opts.to} subject="${opts.subject}" (not sent: GMAIL_USER not set)`);
+  async sendMail(opts: { from: string; to: string; subject: string; html: string; attachments?: MailAttachment[] }) {
+    if (mailMode() === "log") {
+      // Production must send real email, unless MAIL_TRANSPORT=log is set on purpose (CI, staging).
+      if (process.env.NODE_ENV === "production" && process.env.MAIL_TRANSPORT !== "log") throw new Error("Email is not configured (set SMTP_* or GMAIL_* in the environment)");
+      console.log(`[email:dev] to=${opts.to} subject="${opts.subject}"${opts.attachments?.length ? ` attachments=${opts.attachments.map((a) => a.filename).join(",")}` : ""} (not sent: no mail server configured)`);
       return;
     }
-    await transporter.sendMail(opts);
+    await transporter().sendMail(opts);
   },
 };
 
 // ─── OTP Email (already working) ──────────────────────────────────────────────
 
 export async function sendOTPEmail(to: string, name: string, otp: string) {
-  if (!process.env.GMAIL_USER && process.env.NODE_ENV !== "production") {
+  if (mailMode() === "log" && process.env.NODE_ENV !== "production") {
     console.log(`[email:dev] OTP for ${to}: ${otp}`);
     return;
   }
   await mailer.sendMail({
-    from: `"CIMP-BIIF" <${process.env.GMAIL_USER}>`,
+    from: fromAddress(),
     to,
     subject: "Your CIMP-BIIF verification code",
     html: `
@@ -104,6 +134,23 @@ const ROLE_META: Record<
     ],
     ctaLabel: "Submit My Application",
     ctaUrl: "/apply",
+  },
+  mentor: {
+    headline: "Welcome to the CIMP-BIIF network. 🧭",
+    subline: "Your account is verified. Complete your mentor profile so the team can review it.",
+    steps: [
+      { icon: "📝", title: "Complete Your Profile", desc: "Add your headline, expertise and the sectors you know best." },
+      { icon: "🔍", title: "Office Review", desc: "The incubation team reviews your profile before it is listed." },
+      { icon: "🤝", title: "Receive Requests", desc: "Startups request a connection; the office routes suitable ones to you to accept or decline." },
+      { icon: "💼", title: "Join as an Investor (optional)", desc: "Once approved as a mentor, you can also apply to be listed as an investor." },
+    ],
+    tips: [
+      { icon: "🎯", text: "Be specific about the problems you can help with." },
+      { icon: "🌐", text: "Keep your profile public so founders can find you." },
+      { icon: "⏱️", text: "Respond to routed requests quickly; founders are waiting." },
+    ],
+    ctaLabel: "Open Mentor Hub",
+    ctaUrl: "/mentor",
   },
   manager: {
     headline: "Access granted. Let's evaluate. 🔍",
@@ -342,8 +389,8 @@ export async function sendWelcomeEmail(
         <td style="background:#F5F8F0;border-radius:0 0 20px 20px;padding:28px 48px;text-align:center;">
           <p style="margin:0 0 6px;font-size:13px;color:#6A7860;">
             Questions? Reply to this email or reach out at
-            <a href="mailto:${process.env.GMAIL_USER}" style="color:#3F7A16;text-decoration:none;">
-              ${process.env.GMAIL_USER}
+            <a href="mailto:${process.env.SUPPORT_EMAIL || "startup@cimp.ac.in"}" style="color:#3F7A16;text-decoration:none;">
+              ${process.env.SUPPORT_EMAIL || "startup@cimp.ac.in"}
             </a>
           </p>
           <p style="margin:0;font-size:11px;color:#A3B096;">
@@ -361,9 +408,57 @@ export async function sendWelcomeEmail(
   `;
 
   await mailer.sendMail({
-    from: `"CIMP-BIIF" <${process.env.GMAIL_USER}>`,
+    from: fromAddress(),
     to,
     subject: `Welcome to CIMP-BIIF, ${name} — you're in. 🚀`,
     html,
   });
+}
+
+// ─── Event emails (PRD NOT-1): one short template for workflow updates ────────
+
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+const TONE: Record<string, { bar: string; chip: string; label: string }> = {
+  success: { bar: "#3F7A16", chip: "#F2F8EA", label: "Update" },
+  info: { bar: "#3F7A16", chip: "#F2F8EA", label: "Update" },
+  warning: { bar: "#E8891B", chip: "#FFF5E8", label: "Action needed" },
+  error: { bar: "#B42318", chip: "#FEF3F2", label: "Decision" },
+};
+
+/**
+ * Short transactional email. `title` and `message` may contain user input
+ * (startup names, reviewer remarks) and are escaped here.
+ */
+export async function sendEventEmail(opts: {
+  to: string; name: string; title: string; message: string;
+  type?: "info" | "success" | "warning" | "error"; ctaLabel?: string; ctaPath?: string; attachments?: MailAttachment[];
+}) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const tone = TONE[opts.type ?? "info"];
+  const cta = opts.ctaPath
+    ? `<a href="${esc(appUrl + opts.ctaPath)}" style="display:inline-block;background:#3F7A16;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 24px;border-radius:10px;">${esc(opts.ctaLabel ?? "Open the portal")}</a>`
+    : "";
+  const html = `
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#EAF2DF;font-family:'Montserrat','Segoe UI',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#EAF2DF;padding:32px 16px;"><tr><td align="center">
+  <table width="540" cellpadding="0" cellspacing="0" style="max-width:540px;width:100%;">
+    <tr><td align="center" style="padding-bottom:20px;">
+      <div style="display:inline-block;background:#3F7A16;color:#fff;font-size:16px;font-weight:800;padding:8px 18px;border-radius:10px;letter-spacing:2px;">CIMP-BIIF</div>
+    </td></tr>
+    <tr><td style="background:#fff;border-radius:16px;border-top:4px solid ${tone.bar};padding:32px;">
+      <div style="display:inline-block;background:${tone.chip};color:${tone.bar};font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:999px;">${tone.label}</div>
+      <h1 style="margin:14px 0 8px;font-size:22px;line-height:1.3;color:#1C3510;">${esc(opts.title)}</h1>
+      <p style="margin:0 0 6px;font-size:14px;color:#4A5A3F;">Hi ${esc(opts.name)},</p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#4A5A3F;white-space:pre-line;">${esc(opts.message)}</p>
+      ${cta}
+    </td></tr>
+    <tr><td style="padding:18px 8px;text-align:center;font-size:11px;color:#6A7860;line-height:1.6;">
+      CIMP Business Incubation and Innovation Foundation, Patna.<br>You receive this because you have an account on the CIMP-BIIF portal.
+    </td></tr>
+  </table>
+</td></tr></table></body></html>`;
+  await mailer.sendMail({ from: fromAddress(), to: opts.to, subject: `${opts.title} · CIMP-BIIF`, html, attachments: opts.attachments });
 }
