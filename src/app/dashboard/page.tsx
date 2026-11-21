@@ -24,6 +24,7 @@ export default async function DashboardPage() {
   const user = await getUser();
   
   if (!user) redirect('/login');
+  if (user.role === 'mentor') redirect('/mentor');
 
   const isCEO = user.role === 'ceo';
   // Any office role gets the office dashboard (stats, activity).

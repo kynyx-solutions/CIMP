@@ -29,8 +29,11 @@ const IconGoogle = () => (
 // Staff are rejected server-side and must use company email + password.
 export default function GoogleButton({
   onError,
+  role,
   disabled = false,
 }: {
+  /** public role for new Google sign-ups (incubatee or mentor); ignored for existing users */
+  role?: "incubatee" | "mentor";
   onError?: (message: string) => void;
   /** e.g. until the user ticks the Terms/Privacy consent box on the register page */
   disabled?: boolean;
@@ -46,7 +49,7 @@ export default function GoogleButton({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ idToken }),
+        body: JSON.stringify({ idToken, role }),
       });
 
       const data = await res.json();

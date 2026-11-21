@@ -15,7 +15,8 @@ model User {
   name         String
   email        String    @unique
   password     String?
-  // incubatee | admin_it | ceo | sr_manager | manager | executive | staff (validated in app code)
+  // incubatee | mentor | admin_it | ceo | sr_manager | manager | executive | staff (validated in app code).
+  // A mentor becomes an investor too via MentorProfile.investorStatus (one record, two user types: PRD §4.1).
   role         String    @default("incubatee")
   image        String?   @db.Text
   isVerified   Boolean   @default(false)
@@ -29,16 +30,86 @@ model User {
   applications  Application[]
   notifications Notification[]
   messages      Message[]
+
+  mentorProfile          MentorProfile?
+  connectionsAsIncubatee Connection[]   @relation("ConnectionIncubatee")
+  connectionsAsMentor    Connection[]   @relation("ConnectionMentor")
+  chatMessages           ChatMessage[]
+}
+
+// Mentor / investor profile and its two approvals (PRD MEN-1, MEN-2, workflow 6.2).
+model MentorProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  headline        String // e.g. "Former CXO, FinTech"
+  organisation    String?
+  expertise       String   @db.Text
+  sectors         String[]
+  bio             String?  @db.Text
+  linkedin        String?
+  yearsExperience Int?
+  status          String   @default("draft") // draft | submitted | approved | rejected
+  reviewNote      String?  @db.Text
+  reviewedBy      String?
+  isPublic        Boolean  @default(true) // listed in the public directory once approved
+  investorStatus  String   @default("none") // none | submitted | approved | rejected
+  investorThesis  String?  @db.Text
+  ticketSize      String?
+  investorNote    String?  @db.Text
+  // Answers to custom fields Admin IT adds to the mentor form (PRD FORM-1, FORM-2)
+  answers         Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+}
+
+// Incubatee ↔ mentor/investor connection request (PRD MEN-3, workflow 6.3).
+model Connection {
+  id            String   @id @default(cuid())
+  incubateeId   String
+  incubatee     User     @relation("ConnectionIncubatee", fields: [incubateeId], references: [id], onDelete: Cascade)
+  mentorId      String
+  mentor        User     @relation("ConnectionMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  applicationId String?
+  type          String   @default("mentorship") // mentorship | investment
+  message       String   @db.Text
+  status        String   @default("requested") // see src/lib/network.ts
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  steps ConnectionStep[]
+
+  @@index([incubateeId])
+  @@index([mentorId])
+  @@index([status])
+}
+
+model ConnectionStep {
+  id           String     @id @default(cuid())
+  connectionId String
+  connection   Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  fromStatus   String
+  toStatus     String
+  action       String
+  actorId      String
+  actorName    String
+  actorRole    String
+  remark       String?    @db.Text
+  at           DateTime   @default(now())
+
+  @@index([connectionId])
 }
 
 model Application {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  applicantName   String
-  startupName     String
-  idea            String   @db.Text
-  industry        String
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applicantName      String
+  startupName        String
+  idea               String   @db.Text
+  industry           String
   // Application form fields (src/lib/application-fields.ts)
   ventureStage       String?
   city               String?
@@ -54,25 +125,31 @@ model Application {
   cin                String?
   dpiitNumber        String?
   fundingRaised      String?
-  pitchDeckUrl    String?
-  pitchDeckName   String?
-  status          String   @default("pending")   // pending | approved | rejected
-  stage           String   @default("submitted") // see src/lib/workflow.ts
-  rejectedBy      String?
-  rejectionReason String?  @db.Text
+  pitchDeckUrl       String?
+  pitchDeckName      String?
+  status             String   @default("pending") // pending | approved | rejected
+  stage              String   @default("submitted") // see src/lib/workflow.ts
+  rejectedBy         String?
+  rejectionReason    String?  @db.Text
   // Send back for changes (PRD WF-3): the stage it was returned from, and what the applicant must change
-  returnedFrom    String?
-  changeRequest   String?  @db.Text
-  isFastTracked   Boolean  @default(false)
-  isPublic        Boolean  @default(false)
-  isEditable      Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  returnedFrom       String?
+  changeRequest      String?  @db.Text
+  isFastTracked      Boolean  @default(false)
+  isPublic           Boolean  @default(false)
+  isEditable         Boolean  @default(true)
+  // Custom fields from the form builder, keyed by field key (PRD FORM-1, FORM-2)
+  answers            Json?
+  formVersion        Int?
+  // Set when an office user corrects a field (PRD RBAC-4); details are in the audit log
+  officeEdited       Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   steps         ApprovalStep[]
   activities    Activity[]
   messages      Message[]
   notifications Notification[]
+  documents     ApplicationDocument[]
 
   @@index([userId])
   @@index([stage])
@@ -137,4 +214,81 @@ model Notification {
   createdAt     DateTime     @default(now())
 
   @@index([userId])
+}
+
+// Conversations outside an application (PRD MSG-1, MSG-2):
+//   connection    — incubatee ↔ mentor, threadId = Connection.id (open while the connection is active)
+//   mentor_office — a mentor/investor ↔ the incubation office, threadId = the mentor's User.id
+// Application threads (incubatee ↔ office) stay in `Message`.
+model ChatMessage {
+  id         String   @id @default(cuid())
+  threadType String
+  threadId   String
+  senderId   String
+  sender     User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderName String
+  senderRole String
+  content    String   @db.Text
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([threadType, threadId])
+}
+
+// Application documents (PRD DOC-1, DOC-2). Files live in private storage, outside
+// the web root, and are served only through /api/documents/[id] after an access check.
+// Demo: local disk (UPLOAD_DIR). Phase 1: S3 with presigned URLs.
+model ApplicationDocument {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  kind          String // pitch_deck | id_proof | registration | logo
+  fileName      String // original name, for display
+  storedName    String // random name on disk
+  mimeType      String // detected from the file bytes, not the browser
+  size          Int
+  uploadedBy    String
+  createdAt     DateTime    @default(now())
+
+  @@unique([applicationId, kind])
+}
+
+// Immutable audit trail of every mutating action (PRD AUD-1). Rows are never updated or
+// deleted: a database trigger (see the migration) rejects UPDATE and DELETE.
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actorName String
+  actorRole String
+  action    String // e.g. application.advance, document.upload, form.publish
+  entity    String // application | document | mentor_profile | connection | user | form | site_config | message
+  entityId  String?
+  summary   String   @db.Text
+  diff      Json? // { field: { from, to } } for edits
+  ip        String?
+  at        DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([at])
+}
+
+// Versioned form definitions built by Admin IT (PRD FORM-1…3). The newest version is live.
+model FormSchema {
+  id        String   @id @default(cuid())
+  form      String // application | mentor
+  version   Int
+  fields    Json // FieldDef[]
+  note      String?
+  createdBy String
+  createdAt DateTime @default(now())
+
+  @@unique([form, version])
+}
+
+// Website content Admin IT edits from the admin panel (PRD WEB-6). Missing keys fall back to src/content/site.ts.
+model SiteConfig {
+  key       String   @id
+  value     Json
+  updatedBy String?
+  updatedAt DateTime @updatedAt
 }

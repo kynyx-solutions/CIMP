@@ -65,3 +65,7 @@ docker-compose.override.yml
 *.tmp
 # Secondary Next.js build dir (testing)
 /.next-test/
+
+# Uploaded documents (private, never served directly)
+/storage/
+/public/uploads/

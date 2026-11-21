@@ -1,3 +1,4 @@
+import { audit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { signToken, type Role } from "@/lib/auth";
@@ -53,7 +54,10 @@ export async function POST(req: NextRequest) {
           consentAt: new Date(),
         },
       });
+      await audit(req, { userId: user.id, name: user.name, role: user.role }, "auth.signup", "user", user.id, `Signed up with Google as ${user.role} (consent recorded)`);
     }
+
+    await audit(req, { userId: user.id, name: user.name, role: user.role }, "auth.login", "auth", user.id, "Signed in with Google");
 
     const token = signToken({
       userId: user.id,

@@ -3,8 +3,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import StageBadge from '@/components/StageBadge';
+import DocumentsPanel from '@/components/DocumentsPanel';
 import { STAGES, PIPELINE, ROLE_LABELS, ROLE_ICONS, APPROVAL_RANK, canAct, isOfficeRole, stageEnteredAt, daysSince, daysLabel, progressStage, type Stage } from '@/lib/workflow';
-import { APPLICATION_SECTIONS } from '@/lib/application-fields';
+import FieldInput, { toFieldValue, type FieldValue } from '@/components/FieldInput';
+import { valueOf, displayValue, type FormDef } from '@/lib/forms';
+
+// Office roles that may correct application fields (PRD RBAC-4); enforced again by the API.
+const OFFICE_EDITORS = ['staff', 'executive', 'manager', 'sr_manager', 'ceo'];
 
 type Step = { fromStage: string; toStage: string; action: string; actorName: string; actorRole: string; remark?: string; signature?: string; at: string; };
 type App = {
@@ -37,13 +42,44 @@ export default function ApprovalsPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [msgInput, setMsgInput] = useState('');
   const [msgLoading, setMsgLoading] = useState(false);
+  // Live application form (PRD FORM-1) and office corrections (PRD RBAC-4)
+  const [schema, setSchema] = useState<FormDef | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<Record<string, FieldValue>>({});
+  const [editReason, setEditReason] = useState('');
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
       if (!d.user || !isOfficeRole(d.user.role)) { router.push('/dashboard'); return; }
       setUser(d.user);
     });
+    fetch('/api/forms/application').then(r => r.json()).then(d => setSchema(d.form ?? null));
   }, [router]);
+
+  function startEdit() {
+    if (!schema || !sideApp) return;
+    setEditForm(Object.fromEntries(schema.fields.map(f => [f.key, toFieldValue(f, valueOf(sideApp, f))])));
+    setEditReason(''); setEditing(true);
+  }
+
+  async function saveEdit() {
+    if (!schema || !sideApp) return;
+    // Send only the fields that changed
+    const changes = Object.fromEntries(schema.fields
+      .filter(f => JSON.stringify(toFieldValue(f, valueOf(sideApp, f))) !== JSON.stringify(editForm[f.key]))
+      .map(f => [f.key, editForm[f.key]]));
+    if (!Object.keys(changes).length) { showToast('Nothing changed', 'error'); return; }
+    setActionLoading('edit');
+    try {
+      const res = await fetch('/api/applications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ applicationId: sideApp._id, changes, reason: editReason }) });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error, 'error'); return; }
+      showToast('Corrections saved and the applicant notified', 'success');
+      setEditing(false);
+      setSideApp(prev => prev ? { ...prev, ...data.application } : prev);
+      await fetchApps();
+    } finally { setActionLoading(null); }
+  }
 
   useEffect(() => { if (user) fetchApps(); }, [user]);
 
@@ -75,7 +111,7 @@ export default function ApprovalsPage() {
   }
 
   async function openSidePanel(app: App) {
-    setSideApp(app); setSideTab('details');
+    setSideApp(app); setSideTab('details'); setEditing(false);
     const [actRes, msgRes] = await Promise.all([
       fetch(`/api/activity?applicationId=${app._id}`),
       fetch(`/api/messages?applicationId=${app._id}`),
@@ -307,29 +343,64 @@ export default function ApprovalsPage() {
               <div className="h-96 overflow-y-auto">
                 {sideTab === 'details' && (
                   <div className="p-4 space-y-4">
-                    {APPLICATION_SECTIONS.map(sec => (
-                      <div key={sec.title}>
-                        <p className="text-[10px] font-mono uppercase tracking-wider text-muted mb-1.5">{sec.title}</p>
-                        <dl className="space-y-1.5">
-                          {sec.fields.map(f => (
-                            <div key={f.key}>
-                              <dt className="text-[11px] text-muted font-body">{f.label}</dt>
-                              <dd className="text-xs text-navy font-body whitespace-pre-line break-words">
-                                {sideApp[f.key] == null || sideApp[f.key] === ''
-                                  ? <span className="text-faint">Not provided</span>
-                                  : f.type === 'url'
-                                    ? <a href={sideApp[f.key]} target="_blank" rel="noopener noreferrer" className="text-brand underline">{sideApp[f.key]}</a>
-                                    : String(sideApp[f.key])}
-                              </dd>
-                            </div>
-                          ))}
-                        </dl>
+                    <div className="flex items-center justify-between gap-2">
+                      {sideApp.officeEdited
+                        ? <span className="text-[10px] font-mono text-sky-800 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-full" title="Corrected by the office; see Activity for old and new values">✎ Edited by office</span>
+                        : <span />}
+                      {schema && OFFICE_EDITORS.includes(user.role) && !editing && (
+                        <button onClick={startEdit} className="text-[11px] font-body font-semibold text-brand hover:underline">✎ Correct fields</button>
+                      )}
+                    </div>
+                    {schema && editing ? (
+                      <div className="space-y-3">
+                        <p className="text-[11px] text-muted font-body">Corrections are flagged on the application, recorded with old and new values in the audit log, and the applicant is notified.</p>
+                        {schema.fields.map(f => (
+                          <div key={f.key}>
+                            <label id={`edit-${f.key}-label`} htmlFor={`edit-${f.key}`} className="block text-[11px] text-muted font-body mb-1">{f.label}</label>
+                            <FieldInput f={f} idPrefix="edit-" value={editForm[f.key]} onChange={v => setEditForm(p => ({ ...p, [f.key]: v }))} />
+                          </div>
+                        ))}
+                        <label className="block">
+                          <span className="block text-[11px] text-navy font-body font-semibold mb-1">Reason for the correction *</span>
+                          <textarea value={editReason} onChange={e => setEditReason(e.target.value)} rows={2} maxLength={500}
+                            placeholder="e.g. Applicant confirmed the correct CIN on a call" className="w-full bg-bg border border-border rounded-xl px-3 py-2 text-xs font-body resize-none" />
+                        </label>
+                        <div className="flex gap-2">
+                          <button onClick={() => setEditing(false)} className="flex-1 py-2 border border-border rounded-lg text-xs font-body text-secondary">Cancel</button>
+                          <button onClick={saveEdit} disabled={!editReason.trim() || actionLoading === 'edit'} className="flex-1 py-2 rounded-lg bg-brand text-white text-xs font-semibold font-body disabled:opacity-50">
+                            {actionLoading === 'edit' ? 'Saving…' : 'Save corrections'}
+                          </button>
+                        </div>
                       </div>
-                    ))}
-                    {sideApp.pitchDeckUrl && (
-                      <a href={sideApp.pitchDeckUrl} target="_blank" rel="noopener noreferrer"
-                        className="block text-center text-xs font-body font-semibold text-brand border border-leaf-200 bg-leaf-50 rounded-lg py-2">📎 Open pitch deck</a>
-                    )}
+                    ) : (schema?.sections ?? []).map(sec => {
+                      const fields = schema!.fields.filter(f => f.section === sec.title);
+                      if (!fields.length) return null;
+                      return (
+                        <div key={sec.title}>
+                          <p className="text-[10px] font-mono uppercase tracking-wider text-muted mb-1.5">{sec.title}</p>
+                          <dl className="space-y-1.5">
+                            {fields.map(f => {
+                              const v = displayValue(valueOf(sideApp, f));
+                              return (
+                                <div key={f.key}>
+                                  <dt className="text-[11px] text-muted font-body">{f.label}{!f.core && <span className="ml-1 text-[9px] font-mono text-faint">custom</span>}</dt>
+                                  <dd className="text-xs text-navy font-body whitespace-pre-line break-words">
+                                    {!v ? <span className="text-faint">Not provided</span>
+                                      : f.type === 'url' && /^https?:\/\//.test(v)
+                                        ? <a href={v} target="_blank" rel="noopener noreferrer" className="text-brand underline">{v}</a>
+                                        : v}
+                                  </dd>
+                                </div>
+                              );
+                            })}
+                          </dl>
+                        </div>
+                      );
+                    })}
+                    <div>
+                      <p className="text-[11px] font-mono text-muted uppercase tracking-wider mb-2">Documents</p>
+                      <DocumentsPanel key={sideApp._id} applicationId={sideApp._id} editable={false} logoEditable={false} compact />
+                    </div>
                   </div>
                 )}
                 {sideTab === 'trail' && (

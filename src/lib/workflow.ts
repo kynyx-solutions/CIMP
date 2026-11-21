@@ -21,6 +21,7 @@ export const OFFICE_ROLES: OfficeRole[] = [
 
 export const ROLE_LABELS: Record<string, string> = {
   incubatee: "Incubatee",
+  mentor: "Mentor",
   admin_it: "Admin (IT)",
   ceo: "CEO",
   sr_manager: "Senior Manager",
@@ -31,6 +32,7 @@ export const ROLE_LABELS: Record<string, string> = {
 
 export const ROLE_ICONS: Record<string, string> = {
   incubatee: "🚀",
+  mentor: "🧭",
   admin_it: "🛠️",
   ceo: "👑",
   sr_manager: "🏛️",

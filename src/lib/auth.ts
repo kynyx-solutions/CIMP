@@ -6,6 +6,7 @@ const COOKIE_NAME = 'incubator_token';
 
 export type Role =
   | 'incubatee'
+  | 'mentor'
   | 'admin_it'
   | 'ceo'
   | 'sr_manager'

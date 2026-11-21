@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicHeader, PublicFooter, PageHero, SampleTag, Arrow } from "@/components/public/Site";
-import { FAQS, SITE } from "@/content/site";
+import { SITE } from "@/content/site";
+import { getContent } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "FAQ",
   description: `Answers about eligibility, the review process, terms and support at ${SITE.name}.`,
 };
 
-export default function FaqPage() {
+export default async function FaqPage() {
+  const { faqs: FAQS } = await getContent();
   return (
     <main className="min-h-screen bg-bg antialiased">
       <PublicHeader />

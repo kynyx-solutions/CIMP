@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicHeader, PublicFooter, PageHero, CtaBand, SectionHeading, SampleTag, Check, Arrow } from "@/components/public/Site";
-import { APPLY_STEPS, ELIGIBILITY, APPLY_GUIDE, OPEN_CALLS, RESPONSE_TIME } from "@/content/site";
+import { APPLY_STEPS, APPLY_GUIDE, RESPONSE_TIME } from "@/content/site";
+import { getContent } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "How to Apply",
@@ -11,7 +12,8 @@ export const metadata: Metadata = {
 // Who acts at each step, shown next to the step (mirrors src/lib/workflow.ts).
 const STEP_OWNER = ["You", "Executive", "Incubation Manager", "Senior Manager & CEO"];
 
-export default function HowToApplyPage() {
+export default async function HowToApplyPage() {
+  const { eligibility: ELIGIBILITY, openCalls: OPEN_CALLS } = await getContent();
   return (
     <main className="min-h-screen bg-bg antialiased">
       <PublicHeader />
