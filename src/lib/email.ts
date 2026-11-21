@@ -462,3 +462,20 @@ export async function sendEventEmail(opts: {
 </td></tr></table></body></html>`;
   await mailer.sendMail({ from: fromAddress(), to: opts.to, subject: `${opts.title} · CIMP-BIIF`, html, attachments: opts.attachments });
 }
+
+// ─── Password reset (PRD AUTH-4) ──────────────────────────────────────────────
+
+export async function sendPasswordResetEmail(to: string, name: string, link: string) {
+  if (mailMode() === "log" && process.env.NODE_ENV !== "production") {
+    console.log(`[email:dev] Password reset link for ${to}: ${link}`);
+    return;
+  }
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  await sendEventEmail({
+    to, name, type: "warning",
+    title: "Reset your password",
+    message: "Someone (we hope you) asked to reset the password of your CIMP-BIIF account. The link below works once, for 30 minutes.\n\nIf you did not ask for this, ignore this email: your password stays the same.",
+    ctaLabel: "Choose a new password",
+    ctaPath: link.startsWith(appUrl) ? link.slice(appUrl.length) : link,
+  });
+}

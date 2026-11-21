@@ -39,6 +39,7 @@ model User {
   chatMessages           ChatMessage[]
   proposalsMade          InvestmentProposal[]
   idCard                 IdCard?
+  passwordResets         PasswordReset[]
 }
 
 // Mentor / investor profile and its two approvals (PRD MEN-1, MEN-2, workflow 6.2).
@@ -673,4 +674,19 @@ model AiRun {
   createdAt    DateTime @default(now())
 
   @@index([feature, createdAt])
+}
+
+// Password reset links (PRD AUTH-4). Only a SHA-256 hash of the token is stored; a link works
+// once and for 30 minutes.
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  ip        String?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }

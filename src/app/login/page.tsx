@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import GoogleButton from "@/components/GoogleButton";
@@ -16,6 +16,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
+  const [notice, setNotice] = useState("");
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("reset") === "1") setNotice("Password changed. Sign in with your new password.");
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,7 +62,10 @@ export default function LoginPage() {
           <p className="text-xs text-muted font-body mt-1.5">Office staff: use your company email.</p>
         </div>
         <div>
-          <label htmlFor="password" className="block text-sm font-body font-medium text-navy mb-1.5">Password</label>
+          <div className="flex items-baseline justify-between mb-1.5">
+            <label htmlFor="password" className="block text-sm font-body font-medium text-navy">Password</label>
+            <Link href="/forgot-password" className="text-xs font-body font-semibold text-brand hover:text-navy">Forgot password?</Link>
+          </div>
           <div className="relative">
             <input id="password" type={showPw ? "text" : "password"} required autoComplete="current-password" value={form.password}
               onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
@@ -71,6 +78,7 @@ export default function LoginPage() {
           </div>
         </div>
 
+        {notice && !error && <div role="status" className="px-4 py-3 bg-leaf-50 border border-leaf-200 rounded-xl text-brand text-sm font-body">{notice}</div>}
         {error && <div role="alert" className="px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-body">{error}</div>}
 
         <button type="submit" disabled={loading} className={primaryBtn}>

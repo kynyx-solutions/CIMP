@@ -303,7 +303,7 @@ Phase 4 turns the demo into something that can run CIMP's live portal: deploymen
 | SEC-3 | Security headers: Content-Security-Policy, HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy; API responses not cached. | ✅ |
 | SEC-4 | File storage on any S3-compatible store (AWS S3 Mumbai, Cloudflare R2, MinIO) or local disk, chosen by environment. Files stay private; downloads go through access-checked routes. | ✅ local tested; S3 driver written, to be tested against CIMP's bucket |
 
-Still open before go-live: refresh-token rotation and password reset (AUTH-3, AUTH-4), Redis for multi-server limits, CSP nonces in place of `'unsafe-inline'`, and a load test on the chosen server.
+Password reset (AUTH-4) is done: a single-use emailed link, valid 30 minutes, stored only as a hash, rate limited, and it signs out every session. Still open before go-live: refresh-token rotation (AUTH-3), Redis for multi-server limits, CSP nonces in place of `'unsafe-inline'`, and a load test on the chosen server.
 
 ## 8. Non-functional requirements
 
@@ -542,23 +542,23 @@ Every item in *CIMP-BIIF 1.0 High-Level Overview (v1.0, 2025)* mapped to this PR
 | 3 | JWT + bcrypt + OAuth 2.0 | AUTH-1…3 | 🟡 7-day JWT revocable per user (SEC-1), bcrypt, Google; no refresh-token rotation yet |
 | 3 | AWS S3 | DOC-2 | ✅ S3-compatible driver or local disk (SEC-4) |
 | 3 | Nodemailer + Handlebars | NOT-1 | 🟡 Nodemailer, inline HTML |
-| 3 | Puppeteer, ExcelJS | PDF-1, XLS-1 | ❌ |
+| 3 | Puppeteer, ExcelJS | PDF-1, XLS-1 | ✅ pdf-lib for PDFs (lighter than Puppeteer: no browser on the server), ExcelJS for exports |
 | 3 | Zod validation | §8 | 🟡 hand-written request validation; environment checked at start-up (OPS-2) |
-| 3 | node-cron | REM-1, QPR-2, XLS-1, IDC-1 | ❌ |
+| 3 | node-cron | REM-1, QPR-2, XLS-1, IDC-1 | ✅ in-app scheduler with IST cron and run history (Admin → Scheduled jobs); external cron endpoint optional |
 | 3 | Docker + Docker Compose | §8 | ✅ OPS-1 |
 | 4.2 | Middleware chain (authenticate → resolveRole → requireRole → validate) and audit logger | RBAC-1, AUD-1 | 🟡 checks per route |
 | 4.2 | Response envelope `{ success, data, meta }` | §8 | ❌ |
 | 4.3 | Presigned S3 upload flow with confirm step | DOC-2 | 🔄 files go through access-checked API routes, so every download is checked and logged |
-| 4.4 | Monthly profile reminder (1st, 9 AM) | REM-1 | ❌ |
-| 4.4 | Weekly QPR reminder (Mondays, quarter-end weeks) | QPR-2 | ❌ |
-| 4.4 | Export processor (every 30 s) | XLS-1 | ❌ |
-| 4.4 | ID card expiry (daily, 2 AM) | IDC-1 | ❌ |
+| 4.4 | Monthly profile reminder (1st, 9 AM) | REM-1 | ✅ |
+| 4.4 | Weekly QPR reminder (Mondays, quarter-end weeks) | QPR-2 | ✅ |
+| 4.4 | Export processor (every 30 s) | XLS-1 | ✅ |
+| 4.4 | ID card expiry (daily, 2 AM) | IDC-1 | ✅ renews eligible cards, expires the rest |
 | 5 | 13 collections | §9.2 | 🟡 users, applications, approval steps, activity, messages, notifications |
-| 5.3 | One users record with `userType[]` (mentor + investor) | §4.1 | ❌ single role per user |
+| 5.3 | One users record with `userType[]` (mentor + investor) | §4.1 | 🔄 same outcome another way: one mentor account becomes an investor too through a second approval (MentorProfile.investorStatus) |
 | 5.3 | Dynamic answers without migrations | FORM-2 | ✅ answers JSONB |
 | 6.2 | Route groups `/auth` `/profiles` `/approvals` `/connections` `/messages` `/notifications` `/reports` `/mentorship` `/dashboard` `/exports` `/blogs` `/admin/*` `/public/*` `/upload` | §9.3 | 🟡 auth, approvals, messages, notifications, public, upload, staff |
 | 6.3 | 15-min access token, 7-day refresh token in httpOnly cookie, rotation on refresh | AUTH-3 | ❌ |
-| 6.3 | Password reset | AUTH-4 | ❌ |
+| 6.3 | Password reset | AUTH-4 | ✅ single-use emailed link (30 min, hashed), signs out every session |
 | 6.4 | BIIF 2.0 APIs (accounts, social media, CRM, attendance, leave, partner APIs, AI tools) | Phase 3: FIN-1…3, CRM-1…2, API-1…2, HR-1…2, SOC-1, AI-1…2 | ✅ demo; separate scope |
 
 ### 14.3 Where this PRD differs from the overview (to confirm with CIMP)
