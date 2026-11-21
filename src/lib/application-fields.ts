@@ -1,6 +1,5 @@
-// Application form definition (shared by the form, the API and the review panel).
-// In Phase 1 this comes from the Admin IT form builder (PRD FORM-1, `form_schemas`);
-// for the demo it is defined here.
+// Built-in application form (version 0). Admin IT edits it with the form builder
+// (PRD FORM-1, src/lib/forms.ts); these fields stay the "core" fields stored in columns.
 
 export type FieldType = "text" | "textarea" | "select" | "number" | "url" | "tel";
 
@@ -68,31 +67,3 @@ export const APPLICATION_SECTIONS: AppSection[] = [
 ];
 
 export const APPLICATION_FIELDS: AppField[] = APPLICATION_SECTIONS.flatMap((s) => s.fields);
-
-// Validate and normalise a request body against the field definitions.
-// Returns the clean data (only known keys) or an error message.
-export function parseApplication(body: Record<string, unknown>, opts: { partial?: boolean } = {}):
-  { data: Record<string, string | number | null>; error?: undefined } | { data?: undefined; error: string } {
-  const data: Record<string, string | number | null> = {};
-  for (const f of APPLICATION_FIELDS) {
-    const raw = body[f.key];
-    if (raw === undefined && opts.partial) continue;
-    const value = typeof raw === "number" ? String(raw) : typeof raw === "string" ? raw.trim() : "";
-    if (!value) {
-      if (f.required) return { error: `${f.label} is required` };
-      data[f.key] = null;
-      continue;
-    }
-    if (f.maxLength && value.length > f.maxLength) return { error: `${f.label} is too long (max ${f.maxLength} characters)` };
-    if (f.type === "select" && f.options && !f.options.includes(value)) return { error: `Choose a valid ${f.label.toLowerCase()}` };
-    if (f.type === "number") {
-      const n = Number.parseInt(value, 10);
-      if (!Number.isFinite(n) || n < 1 || n > 10000) return { error: `${f.label} must be a positive number` };
-      data[f.key] = n;
-      continue;
-    }
-    if (f.type === "url" && !/^https?:\/\/\S+\.\S+/.test(value)) return { error: `${f.label} must start with http:// or https://` };
-    data[f.key] = value;
-  }
-  return { data };
-}

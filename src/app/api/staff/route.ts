@@ -6,6 +6,7 @@ import { verifyToken } from "@/lib/auth";
 import { getCompanyDomains, isCompanyEmail } from "@/lib/roles";
 import { OFFICE_ROLES, ROLE_LABELS } from "@/lib/workflow";
 import { sendWelcomeEmail } from "@/lib/email";
+import { audit } from "@/lib/audit";
 
 // Roles the CEO can assign. The CEO account itself is CLI-only (PRD ACC-2).
 const ASSIGNABLE_ROLES = OFFICE_ROLES.filter((r) => r !== "ceo");
@@ -38,7 +39,8 @@ export async function GET(req: NextRequest) {
 
 // POST — create an office user { name, email, password, role }
 export async function POST(req: NextRequest) {
-  if (!getCEO(req))
+  const ceo = getCEO(req);
+  if (!ceo)
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { name, email, password, role } = await req.json();
@@ -82,6 +84,8 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  await audit(req, ceo, "user.create", "user", member.id, `Created office user ${member.name} (${ROLE_LABELS[role] ?? role}, ${member.email})`);
+
   // Best-effort onboarding email; creation succeeds even if mail fails.
   try {
     await sendWelcomeEmail(member.email, member.name, role);
@@ -106,16 +110,19 @@ export async function POST(req: NextRequest) {
 
 // DELETE — remove an office user ?userId=xxx
 export async function DELETE(req: NextRequest) {
-  if (!getCEO(req))
+  const ceo = getCEO(req);
+  if (!ceo)
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const userId = req.nextUrl.searchParams.get("userId");
   if (!isId(userId))
     return NextResponse.json({ error: "Valid userId required" }, { status: 400 });
 
-  const result = await prisma.user.deleteMany({ where: { id: userId, role: { in: ASSIGNABLE_ROLES } } });
-  if (result.count === 0)
+  const target = await prisma.user.findFirst({ where: { id: userId, role: { in: ASSIGNABLE_ROLES } }, select: { name: true, email: true, role: true } });
+  if (!target)
     return NextResponse.json({ error: "Office user not found" }, { status: 404 });
+  await prisma.user.delete({ where: { id: userId } });
+  await audit(req, ceo, "user.delete", "user", userId, `Removed office user ${target.name} (${ROLE_LABELS[target.role] ?? target.role}, ${target.email})`);
 
   return NextResponse.json({ success: true });
 }

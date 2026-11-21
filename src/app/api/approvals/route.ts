@@ -7,6 +7,10 @@ import {
   canAct, isOfficeRole, type Stage, type WorkflowAction,
 } from '@/lib/workflow';
 import { notify, notifyReviewers } from '@/lib/notify';
+import { audit, diffOf } from '@/lib/audit';
+
+// Applicants get an email for every decision on their application (PRD NOT-1).
+const APPLICANT_EMAIL = { ctaPath: '/dashboard', ctaLabel: 'Open your dashboard' };
 
 function getUser(req: NextRequest) {
   const token = req.cookies.get('incubator_token')?.value;
@@ -65,9 +69,9 @@ export async function POST(req: NextRequest) {
     await log(`${def.actionLabel} (${roleLabel})`, cleanRemark);
 
     if (toStage === 'ceo_approved') {
-      await notify(app.userId, '🎉 Application Approved!', `Congratulations! "${app.startupName}" has received final CEO approval. Welcome to CIMP-BIIF!`, 'success', app.id);
+      await notify(app.userId, '🎉 Application Approved!', `Congratulations! "${app.startupName}" has received final CEO approval. Welcome to CIMP-BIIF!`, 'success', app.id, APPLICANT_EMAIL);
     } else {
-      await notify(app.userId, 'Application Progressed ✅', `"${app.startupName}" cleared ${def.label} and moved to ${STAGES[toStage].label}.`, 'success', app.id);
+      await notify(app.userId, 'Application Progressed ✅', `"${app.startupName}" cleared ${def.label} and moved to ${STAGES[toStage].label}.`, 'success', app.id, APPLICANT_EMAIL);
       await notifyReviewers(toStage, app.startupName, app.id);
     }
   }
@@ -82,7 +86,7 @@ export async function POST(req: NextRequest) {
       },
     });
     await log(`rejected at ${STAGES[fromStage].label} (${roleLabel})`, cleanRemark);
-    await notify(app.userId, 'Application Rejected', `"${app.startupName}" was not approved at ${STAGES[fromStage].label}. Reason: ${cleanRemark}`, 'error', app.id);
+    await notify(app.userId, 'Application Rejected', `"${app.startupName}" was not approved at ${STAGES[fromStage].label}. Reason: ${cleanRemark}`, 'error', app.id, APPLICANT_EMAIL);
   }
 
   else if (action === 'send_back') {
@@ -96,7 +100,7 @@ export async function POST(req: NextRequest) {
       },
     });
     await log(`sent back for changes at ${STAGES[fromStage].label} (${roleLabel})`, cleanRemark);
-    await notify(app.userId, 'Changes requested ✏️', `The reviewer asked for changes to "${app.startupName}": ${cleanRemark}`, 'warning', app.id);
+    await notify(app.userId, 'Changes requested ✏️', `The reviewer asked for changes to "${app.startupName}": ${cleanRemark}`, 'warning', app.id, APPLICANT_EMAIL);
   }
 
   else if (action === 'fasttrack') {
@@ -108,7 +112,7 @@ export async function POST(req: NextRequest) {
       },
     });
     await log('⚡ fast-tracked application', `Skipped from ${STAGES[fromStage].label}`);
-    await notify(app.userId, '⚡ Fast-Tracked by CEO!', `"${app.startupName}" was personally fast-tracked and approved by the CEO.`, 'success', app.id);
+    await notify(app.userId, '⚡ Fast-Tracked by CEO!', `"${app.startupName}" was personally fast-tracked and approved by the CEO.`, 'success', app.id, APPLICANT_EMAIL);
   }
 
   else if (action === 'toggle_public') {
@@ -124,6 +128,12 @@ export async function POST(req: NextRequest) {
   const application = await prisma.application.findUnique({
     where: { id: app.id }, include: { steps: { orderBy: { at: 'asc' } } },
   });
+  if (application) {
+    const changed = diffOf(app, application, ['stage', 'status', 'isPublic', 'isFastTracked']);
+    const what = `${roleLabel}: ${action.replace('_', ' ')} "${app.startupName}"`;
+    await audit(req, user, `application.${action}`, 'application', app.id,
+      `${what}${cleanRemark ? ` (remark: ${cleanRemark})` : ''}${cleanSignature ? ' [signed]' : ''}`, changed);
+  }
   return NextResponse.json({ success: true, application: withId(application) });
 }
 

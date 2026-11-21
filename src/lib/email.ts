@@ -105,6 +105,23 @@ const ROLE_META: Record<
     ctaLabel: "Submit My Application",
     ctaUrl: "/apply",
   },
+  mentor: {
+    headline: "Welcome to the CIMP-BIIF network. 🧭",
+    subline: "Your account is verified. Complete your mentor profile so the team can review it.",
+    steps: [
+      { icon: "📝", title: "Complete Your Profile", desc: "Add your headline, expertise and the sectors you know best." },
+      { icon: "🔍", title: "Office Review", desc: "The incubation team reviews your profile before it is listed." },
+      { icon: "🤝", title: "Receive Requests", desc: "Startups request a connection; the office routes suitable ones to you to accept or decline." },
+      { icon: "💼", title: "Join as an Investor (optional)", desc: "Once approved as a mentor, you can also apply to be listed as an investor." },
+    ],
+    tips: [
+      { icon: "🎯", text: "Be specific about the problems you can help with." },
+      { icon: "🌐", text: "Keep your profile public so founders can find you." },
+      { icon: "⏱️", text: "Respond to routed requests quickly; founders are waiting." },
+    ],
+    ctaLabel: "Open Mentor Hub",
+    ctaUrl: "/mentor",
+  },
   manager: {
     headline: "Access granted. Let's evaluate. 🔍",
     subline:
@@ -366,4 +383,52 @@ export async function sendWelcomeEmail(
     subject: `Welcome to CIMP-BIIF, ${name} — you're in. 🚀`,
     html,
   });
+}
+
+// ─── Event emails (PRD NOT-1): one short template for workflow updates ────────
+
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+const TONE: Record<string, { bar: string; chip: string; label: string }> = {
+  success: { bar: "#3F7A16", chip: "#F2F8EA", label: "Update" },
+  info: { bar: "#3F7A16", chip: "#F2F8EA", label: "Update" },
+  warning: { bar: "#E8891B", chip: "#FFF5E8", label: "Action needed" },
+  error: { bar: "#B42318", chip: "#FEF3F2", label: "Decision" },
+};
+
+/**
+ * Short transactional email. `title` and `message` may contain user input
+ * (startup names, reviewer remarks) and are escaped here.
+ */
+export async function sendEventEmail(opts: {
+  to: string; name: string; title: string; message: string;
+  type?: "info" | "success" | "warning" | "error"; ctaLabel?: string; ctaPath?: string;
+}) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const tone = TONE[opts.type ?? "info"];
+  const cta = opts.ctaPath
+    ? `<a href="${esc(appUrl + opts.ctaPath)}" style="display:inline-block;background:#3F7A16;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 24px;border-radius:10px;">${esc(opts.ctaLabel ?? "Open the portal")}</a>`
+    : "";
+  const html = `
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#EAF2DF;font-family:'Montserrat','Segoe UI',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#EAF2DF;padding:32px 16px;"><tr><td align="center">
+  <table width="540" cellpadding="0" cellspacing="0" style="max-width:540px;width:100%;">
+    <tr><td align="center" style="padding-bottom:20px;">
+      <div style="display:inline-block;background:#3F7A16;color:#fff;font-size:16px;font-weight:800;padding:8px 18px;border-radius:10px;letter-spacing:2px;">CIMP-BIIF</div>
+    </td></tr>
+    <tr><td style="background:#fff;border-radius:16px;border-top:4px solid ${tone.bar};padding:32px;">
+      <div style="display:inline-block;background:${tone.chip};color:${tone.bar};font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:999px;">${tone.label}</div>
+      <h1 style="margin:14px 0 8px;font-size:22px;line-height:1.3;color:#1C3510;">${esc(opts.title)}</h1>
+      <p style="margin:0 0 6px;font-size:14px;color:#4A5A3F;">Hi ${esc(opts.name)},</p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#4A5A3F;white-space:pre-line;">${esc(opts.message)}</p>
+      ${cta}
+    </td></tr>
+    <tr><td style="padding:18px 8px;text-align:center;font-size:11px;color:#6A7860;line-height:1.6;">
+      CIMP Business Incubation and Innovation Foundation, Patna.<br>You receive this because you have an account on the CIMP-BIIF portal.
+    </td></tr>
+  </table>
+</td></tr></table></body></html>`;
+  await mailer.sendMail({ from: `"CIMP-BIIF" <${process.env.GMAIL_USER}>`, to: opts.to, subject: `${opts.title} · CIMP-BIIF`, html });
 }

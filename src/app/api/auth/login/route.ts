@@ -1,3 +1,4 @@
+import { audit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
+      await audit(req, { userId: user.id, name: user.name, role: user.role }, "auth.login_failed", "auth", user.id, "Failed sign-in (wrong password)");
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 },
@@ -64,6 +66,8 @@ export async function POST(req: NextRequest) {
       name: user.name,
       role: user.role as Role,
     });
+
+    await audit(req, { userId: user.id, name: user.name, role: user.role }, "auth.login", "auth", user.id, "Signed in with email and password");
 
     const response = NextResponse.json({
       success: true,

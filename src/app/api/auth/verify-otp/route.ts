@@ -1,3 +1,4 @@
+import { audit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { signToken, type Role } from "@/lib/auth";
@@ -34,6 +35,8 @@ export async function POST(req: NextRequest) {
     where: { id: user.id },
     data: { isVerified: true, otp: null, otpExpiresAt: null },
   });
+
+  await audit(req, { userId: user.id, name: user.name, role: user.role }, "auth.verify_email", "user", user.id, "Verified email with OTP");
 
   await sendWelcomeEmail(user.email, user.name, user.role);
 

@@ -122,12 +122,16 @@ export default function Navbar({ user }: NavbarProps) {
     router.push("/login");
   }
 
-  const ALL = ["incubatee", ...OFFICE_ROLES];
+  const ALL = ["incubatee", "mentor", ...OFFICE_ROLES];
   const links = [
-    { href: "/dashboard", label: "Dashboard", roles: ALL },
+    { href: "/dashboard", label: "Dashboard", roles: ["incubatee", ...OFFICE_ROLES] },
+    { href: "/mentor", label: "Mentor hub", roles: ["mentor"] },
     { href: "/apply", label: "Apply", roles: ["incubatee"] },
+    { href: "/connect", label: "Find a mentor", roles: ["incubatee"] },
     { href: "/approvals", label: "Applications", roles: OFFICE_ROLES as string[] },
+    { href: "/network", label: "Network", roles: OFFICE_ROLES as string[] },
     { href: "/staff", label: "Team", roles: ["ceo"] },
+    { href: "/admin", label: "Admin", roles: ["ceo", "admin_it"] },
     { href: "/messages", label: "Messages", roles: ALL },
     { href: "/startups", label: "Directory", roles: ALL },
   ].filter((l) => l.roles.includes(user.role));

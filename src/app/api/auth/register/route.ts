@@ -1,3 +1,4 @@
+import { audit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
   const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
   // Create user — unverified
-  await prisma.user.create({
+  const created = await prisma.user.create({
     data: {
       name: name.trim(),
       email: email.trim().toLowerCase(),
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
       consentAt: new Date(),
     },
   });
+  await audit(req, { userId: created.id, name: created.name, role: created.role }, "auth.signup", "user", created.id, `Registered as ${created.role} with email (consent recorded, awaiting OTP)`);
 
   // Send OTP email
   await sendOTPEmail(email, name, otp);
