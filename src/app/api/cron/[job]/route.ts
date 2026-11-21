@@ -16,7 +16,10 @@ export async function POST(req: NextRequest, { params }: { params: { job: string
   if (!process.env.CRON_SECRET) return NextResponse.json({ error: "Scheduler not configured" }, { status: 503 });
   if (!authorised(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!JOB_KEYS.includes(params.job as JobKey)) return NextResponse.json({ error: "Unknown job" }, { status: 404 });
-  const run = await runJob(params.job as JobKey, "cron");
+  // External schedulers call this at the job's time; the minute is the slot, so retries do not double-run
+  const { istParts } = await import("@/lib/cron");
+  const run = await runJob(params.job as JobKey, "cron", istParts().key);
+  if (!run) return NextResponse.json({ status: "skipped", summary: "This slot already ran" });
   await audit(req, null, "job.run", "job", run.id, `Scheduled run of ${params.job}: ${run.status}${run.summary ? ` — ${run.summary}` : ""}`);
   return NextResponse.json({ status: run.status, summary: run.summary });
 }

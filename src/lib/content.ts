@@ -14,14 +14,34 @@ export const CONTENT_DEFAULTS = {
   faqs: FAQS,
   // Virtual ID card template (PRD IDC-1)
   idCardTemplate: {
-    cardTitle: "Member ID card",
     validityMonths: 12,
     signatoryName: "Kumod Kumar",
     signatoryTitle: "Chief Executive Officer, CIMP-BIIF",
     issuerLine: "CIMP-BIIF, Mithapur Institutional Area, Patna 800001",
     terms: "This card identifies the holder as a member of the CIMP-BIIF incubation network. It is not transferable. Verify it at the link on this card.",
+    // One template per member type (PRD IDC-1: "templates Admin IT controls")
+    incubatee: { cardTitle: "Incubatee ID card", accent: "green" },
+    mentor: { cardTitle: "Mentor ID card", accent: "saffron" },
   },
 };
+
+/** Text fields that must be one of a fixed set (shown as a dropdown in the editor). */
+export const CONTENT_CHOICES: Record<string, string[]> = {
+  "idCardTemplate.incubatee.accent": ["green", "saffron", "blue"],
+  "idCardTemplate.mentor.accent": ["green", "saffron", "blue"],
+};
+
+/** Check every fixed-choice field of `key`'s value. Returns an error or null. */
+export function checkChoices(key: string, value: unknown): string | null {
+  for (const [path, options] of Object.entries(CONTENT_CHOICES)) {
+    const [k, ...rest] = path.split(".");
+    if (k !== key) continue;
+    let v: any = value;
+    for (const p of rest) v = v?.[p];
+    if (!options.includes(v)) return `${rest.join(".")} must be one of: ${options.join(", ")}`;
+  }
+  return null;
+}
 
 export type ContentKey = keyof typeof CONTENT_DEFAULTS;
 export type SiteContent = { [K in ContentKey]: (typeof CONTENT_DEFAULTS)[K] };

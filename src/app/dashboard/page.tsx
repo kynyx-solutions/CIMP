@@ -5,6 +5,7 @@ import { verifyToken } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Navbar from '@/components/Navbar';
 import StageBadge from '@/components/StageBadge';
+import DashboardTasks from '@/components/DashboardTasks';
 import Link from 'next/link';
 import {
   PIPELINE, STAGES, ROLE_ICONS, ROLE_LABELS, APPROVAL_RANK, isOfficeRole,
@@ -102,6 +103,9 @@ export default async function DashboardPage() {
             {isManager && ` · ${ROLE_LABELS[user.role]}`}
           </p>
         </div>
+
+        {/* Phase 2 to-dos: progress reports, mentoring, proposals, blog, ID cards */}
+        <DashboardTasks user={user} />
 
         {/* My queue (office roles with approval authority) */}
         {myRank && (

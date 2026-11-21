@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { audit } from "@/lib/audit";
-import { CONTENT_DEFAULTS, CONTENT_KEYS, CONTENT_META, checkShape, trimDeep, saveContent, resetContent, type ContentKey } from "@/lib/content";
+import { CONTENT_CHOICES, CONTENT_DEFAULTS, CONTENT_KEYS, CONTENT_META, checkChoices, checkShape, trimDeep, saveContent, resetContent, type ContentKey } from "@/lib/content";
 
 const canView = (role: string) => role === "admin_it" || role === "ceo";
 const canEdit = (role: string) => role === "admin_it"; // PRD §5: site config = Admin IT
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
       customised: !!row, updatedBy: row?.updatedBy ?? null, updatedAt: row?.updatedAt ?? null,
     };
   });
-  return NextResponse.json({ items, canEdit: canEdit(user.role) });
+  return NextResponse.json({ items, canEdit: canEdit(user.role), choices: CONTENT_CHOICES });
 }
 
 export async function PUT(req: NextRequest) {
@@ -36,7 +36,7 @@ export async function PUT(req: NextRequest) {
   if (!CONTENT_KEYS.includes(key)) return NextResponse.json({ error: "Unknown content key" }, { status: 400 });
 
   const clean = trimDeep(value);
-  const err = checkShape(CONTENT_DEFAULTS[key as ContentKey], clean, CONTENT_META[key as ContentKey].label);
+  const err = checkShape(CONTENT_DEFAULTS[key as ContentKey], clean, CONTENT_META[key as ContentKey].label) ?? checkChoices(key, clean);
   if (err) return NextResponse.json({ error: err }, { status: 400 });
 
   const before = await prisma.siteConfig.findUnique({ where: { key } });

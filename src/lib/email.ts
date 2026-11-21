@@ -1,36 +1,63 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
-
-// Local development without Gmail credentials: log instead of sending,
-// so registration and OTP flows still work.
+// Mail delivery (PRD NOT-1). Configure ONE of these in .env.local:
+//   SMTP_HOST, SMTP_PORT (587 or 465), SMTP_USER, SMTP_PASS    any SMTP provider (SES, Zoho, cPanel…)
+//   GMAIL_USER, GMAIL_APP_PASSWORD                            a Google account with an app password
+// MAIL_FROM sets the sender, e.g. "CIMP-BIIF <startup@cimp.ac.in>". With neither configured,
+// development logs every email to the terminal instead of sending it.
 export type MailAttachment = { filename: string; content: Buffer; contentType: string };
+export type MailMode = "smtp" | "gmail" | "log";
+
+export function mailMode(): MailMode {
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) return "smtp";
+  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) return "gmail";
+  return "log";
+}
+
+export function fromAddress() {
+  return process.env.MAIL_FROM || `"CIMP-BIIF" <${process.env.SMTP_USER || process.env.GMAIL_USER || "no-reply@localhost"}>`;
+}
+
+let cached: { key: string; t: nodemailer.Transporter } | null = null;
+function transporter() {
+  const mode = mailMode();
+  const key = `${mode}:${process.env.SMTP_HOST}:${process.env.SMTP_USER}:${process.env.GMAIL_USER}`;
+  if (cached?.key === key) return cached.t;
+  const port = Number(process.env.SMTP_PORT || 587);
+  const t = mode === "smtp"
+    ? nodemailer.createTransport({ host: process.env.SMTP_HOST, port, secure: port === 465, auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } })
+    : nodemailer.createTransport({ service: "gmail", auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD } });
+  cached = { key, t };
+  return t;
+}
+
+/** Check the connection and login with the mail server (used by the admin "send test email"). */
+export async function verifyMail() {
+  if (mailMode() === "log") return false;
+  await transporter().verify();
+  return true;
+}
 
 const mailer = {
   async sendMail(opts: { from: string; to: string; subject: string; html: string; attachments?: MailAttachment[] }) {
-    if (!process.env.GMAIL_USER && process.env.NODE_ENV !== "production") {
-      console.log(`[email:dev] to=${opts.to} subject="${opts.subject}"${opts.attachments?.length ? ` attachments=${opts.attachments.map((a) => a.filename).join(",")}` : ""} (not sent: GMAIL_USER not set)`);
+    if (mailMode() === "log") {
+      if (process.env.NODE_ENV === "production") throw new Error("Email is not configured (set SMTP_* or GMAIL_* in the environment)");
+      console.log(`[email:dev] to=${opts.to} subject="${opts.subject}"${opts.attachments?.length ? ` attachments=${opts.attachments.map((a) => a.filename).join(",")}` : ""} (not sent: no mail server configured)`);
       return;
     }
-    await transporter.sendMail(opts);
+    await transporter().sendMail(opts);
   },
 };
 
 // ─── OTP Email (already working) ──────────────────────────────────────────────
 
 export async function sendOTPEmail(to: string, name: string, otp: string) {
-  if (!process.env.GMAIL_USER && process.env.NODE_ENV !== "production") {
+  if (mailMode() === "log" && process.env.NODE_ENV !== "production") {
     console.log(`[email:dev] OTP for ${to}: ${otp}`);
     return;
   }
   await mailer.sendMail({
-    from: `"CIMP-BIIF" <${process.env.GMAIL_USER}>`,
+    from: fromAddress(),
     to,
     subject: "Your CIMP-BIIF verification code",
     html: `
@@ -361,8 +388,8 @@ export async function sendWelcomeEmail(
         <td style="background:#F5F8F0;border-radius:0 0 20px 20px;padding:28px 48px;text-align:center;">
           <p style="margin:0 0 6px;font-size:13px;color:#6A7860;">
             Questions? Reply to this email or reach out at
-            <a href="mailto:${process.env.GMAIL_USER}" style="color:#3F7A16;text-decoration:none;">
-              ${process.env.GMAIL_USER}
+            <a href="mailto:${process.env.SUPPORT_EMAIL || "startup@cimp.ac.in"}" style="color:#3F7A16;text-decoration:none;">
+              ${process.env.SUPPORT_EMAIL || "startup@cimp.ac.in"}
             </a>
           </p>
           <p style="margin:0;font-size:11px;color:#A3B096;">
@@ -380,7 +407,7 @@ export async function sendWelcomeEmail(
   `;
 
   await mailer.sendMail({
-    from: `"CIMP-BIIF" <${process.env.GMAIL_USER}>`,
+    from: fromAddress(),
     to,
     subject: `Welcome to CIMP-BIIF, ${name} — you're in. 🚀`,
     html,
@@ -432,5 +459,5 @@ export async function sendEventEmail(opts: {
     </td></tr>
   </table>
 </td></tr></table></body></html>`;
-  await mailer.sendMail({ from: `"CIMP-BIIF" <${process.env.GMAIL_USER}>`, to: opts.to, subject: `${opts.title} · CIMP-BIIF`, html, attachments: opts.attachments });
+  await mailer.sendMail({ from: fromAddress(), to: opts.to, subject: `${opts.title} · CIMP-BIIF`, html, attachments: opts.attachments });
 }

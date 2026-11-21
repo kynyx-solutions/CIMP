@@ -163,18 +163,20 @@ model Application {
 
 // One row per workflow decision (PRD WF-1).
 model ApprovalStep {
-  id            String      @id @default(cuid())
-  applicationId String
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  fromStage     String
-  toStage       String
-  action        String
-  actorId       String
-  actorName     String
-  actorRole     String
-  remark        String?     @db.Text
-  signature     String?
-  at            DateTime    @default(now())
+  id             String      @id @default(cuid())
+  applicationId  String
+  application    Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fromStage      String
+  toStage        String
+  action         String
+  actorId        String
+  actorName      String
+  actorRole      String
+  remark         String?     @db.Text
+  signature      String?
+  // Drawn signature (PNG data URL, at most ~100 KB) alongside the typed name
+  signatureImage String?     @db.Text
+  at             DateTime    @default(now())
 
   @@index([applicationId])
 }
@@ -453,10 +455,13 @@ model JobRun {
   id         String    @id @default(cuid())
   job        String
   trigger    String // cron | manual
+  // Scheduled slot (e.g. 2026-11-23T09:00 IST); unique per job so two servers never run the same slot
+  slot       String?
   status     String    @default("running") // running | ok | failed
   summary    String?   @db.Text
   startedAt  DateTime  @default(now())
   finishedAt DateTime?
 
+  @@unique([job, slot])
   @@index([job, startedAt])
 }

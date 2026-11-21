@@ -460,7 +460,7 @@ Every item in *CIMP-BIIF 1.0 High-Level Overview (v1.0, 2025)* mapped to this PR
 | 2.3 | View and message invested startups | INV-1 | 2 | ✅ demo: portfolio with latest QPR |
 | 2.4 | Admin IT: form fields, site config, public visibility | FORM-1…3, WEB-6 | 1 | ✅ stats, calls, eligibility, contacts, FAQ, sample mode |
 | 2.4 | Admin IT: blog approvals | BLG-1 | 2 | ✅ demo |
-| 2.4 | Admin IT: ID card templates | IDC-1 | 2 | ✅ demo: text and validity editable |
+| 2.4 | Admin IT: ID card templates | IDC-1 | 2 | ✅ demo: per member type, title and colour, validity |
 | 2.4 | Admin IT: audit logs | AUD-1 | 1 | ✅ append-only (DB trigger), filters, CSV |
 | 2.4 | CEO: final approval and signing, fast-track, all statistics | APR-1, APR-2, RBAC-3 | 1 | ✅ |
 | 2.4 | Sr. Manager: approval and signing | APR-1, APR-2 | 1 | ✅ |
@@ -480,12 +480,12 @@ Every item in *CIMP-BIIF 1.0 High-Level Overview (v1.0, 2025)* mapped to this PR
 | 2.5 | Digital signatures at Sr. Manager and CEO | APR-2, SIG-2 [Q1] | 1 / 2 | ✅ typed |
 | 2.5 | Separate track for connection requests | 6.3, MEN-3 | 1 | ✅ |
 | 2.6 | Dashboard notifications | NOT-1, NOT-2 | 1 | ✅ |
-| 2.6 | Automatic emails for key events | NOT-1 | 1 | ✅ application, mentor and connection events (SMTP needed to send) |
-| 2.6 | Reminders: incomplete profiles, pending QPR | REM-1, QPR-2 | 2 | ✅ demo: run from admin; scheduler needs CRON_SECRET |
+| 2.6 | Automatic emails for key events | NOT-1 | 1 | ✅ SMTP or Gmail via settings; Admin → Email test |
+| 2.6 | Reminders: incomplete profiles, pending QPR | REM-1, QPR-2 | 2 | ✅ demo: in-app scheduler (IST), one run per slot; optional external cron |
 | 2.6 | Custom notification blast by CEO, Manager, Admin IT | NOT-3 | 2 | ✅ demo |
 | 2.6 | Deduplication within a cooldown window | NOT-4 | 2 | ✅ demo: 10 min, database (Redis in production) |
-| 2.7 | Configurable Excel exports | XLS-1 | 2 | ✅ demo: background job, polled |
-| 2.7 | Signed PDF of approved applications | PDF-1 | 2 | ✅ demo: typed signatures (legal eSign: SIG-2 open) |
+| 2.7 | Configurable Excel exports | XLS-1 | 2 | ✅ demo: background jobs, 30 s processor |
+| 2.7 | Signed PDF of approved applications | PDF-1 | 2 | ✅ demo: drawn + typed signatures (legal eSign: SIG-2 open) |
 | 2.7 | QPR PDF download | PDF-1 | 2 | ✅ demo |
 | 2.7 | Chat history PDF export | PDF-1 | 2 | ✅ demo |
 | 2.7 | Virtual ID card PDF by email | IDC-1 | 2 | ✅ demo: emailed, verify page, daily renewal job |

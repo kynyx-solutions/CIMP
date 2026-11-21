@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
   });
   // Internal review remarks are for the office only (the rejection reason is shared separately).
   const visible = user.role === 'incubatee'
-    ? applications.map(a => ({ ...a, steps: a.steps.map(({ remark, ...s }) => s) }))
+    ? applications.map(a => ({ ...a, steps: a.steps.map(({ remark, signatureImage, ...s }) => s) }))
     : applications;
   return NextResponse.json({ applications: withId(visible) });
 }

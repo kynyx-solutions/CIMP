@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { JOBS, JOB_KEYS, runJob, type JobKey } from "@/lib/jobs";
 import { audit } from "@/lib/audit";
+import { schedulerStatus } from "@/lib/scheduler";
 
 const ALLOWED = ["admin_it", "ceo"];
 
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
     key, ...JOBS[key],
     runs: await prisma.jobRun.findMany({ where: { job: key }, orderBy: { startedAt: "desc" }, take: 5 }),
   })));
-  return NextResponse.json({ jobs, schedulerConfigured: (process.env.CRON_SECRET ?? "").length >= 24 });
+  return NextResponse.json({ jobs, scheduler: schedulerStatus(), externalCron: (process.env.CRON_SECRET ?? "").length >= 24 });
 }
 
 export async function POST(req: NextRequest) {
@@ -24,7 +25,7 @@ export async function POST(req: NextRequest) {
   if (!JOB_KEYS.includes(job)) return NextResponse.json({ error: "Unknown job" }, { status: 400 });
   const recent = await prisma.jobRun.findFirst({ where: { job, status: "running", startedAt: { gte: new Date(Date.now() - 5 * 60_000) } } });
   if (recent) return NextResponse.json({ error: "This job is already running" }, { status: 409 });
-  const run = await runJob(job as JobKey, "manual");
+  const run = (await runJob(job as JobKey, "manual"))!;
   await audit(req, user, "job.run", "job", run.id, `Ran "${JOBS[job as JobKey].label}" manually: ${run.status}${run.summary ? ` — ${run.summary}` : ""}`);
   return NextResponse.json({ run });
 }

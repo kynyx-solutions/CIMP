@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!isOfficeRole(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { applicationId, action, remark, signature } = await req.json();
+  const { applicationId, action, remark, signature, signatureImage } = await req.json();
   if (!isId(applicationId) || !ACTIONS.includes(action))
     return NextResponse.json({ error: 'Valid applicationId and action required' }, { status: 400 });
 
@@ -39,13 +39,22 @@ export async function POST(req: NextRequest) {
   const fromStage = app.stage as Stage;
   const roleLabel = ROLE_LABELS[user.role] ?? user.role;
   const cleanRemark = typeof remark === 'string' ? remark.trim() : '';
-  const cleanSignature = typeof signature === 'string' ? signature.trim() : '';
+  const cleanSignature = typeof signature === 'string' ? signature.trim().slice(0, 120) : '';
+  // Drawn signature: a PNG data URL of at most 100 KB, checked by its bytes
+  let cleanImage: string | null = null;
+  if (typeof signatureImage === 'string' && signatureImage) {
+    const m = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(signatureImage);
+    const bytes = m ? Buffer.from(m[1], 'base64') : null;
+    if (!bytes || bytes.length > 100_000 || bytes.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a')
+      return NextResponse.json({ error: 'The drawn signature could not be read; clear it and sign again' }, { status: 400 });
+    cleanImage = signatureImage;
+  }
 
   const step = (toStage: string, stepAction: string) => ({
     create: {
       fromStage, toStage, action: stepAction,
       actorId: user.userId, actorName: user.name, actorRole: user.role,
-      remark: cleanRemark || null, signature: cleanSignature || null,
+      remark: cleanRemark || null, signature: cleanSignature || null, signatureImage: cleanImage,
     },
   });
   const log = (actionText: string, detail?: string) =>
@@ -53,8 +62,8 @@ export async function POST(req: NextRequest) {
 
   if (action === 'advance') {
     const def = STAGES[fromStage];
-    if (def.needsSignature && !cleanSignature)
-      return NextResponse.json({ error: 'Signature is required at this stage' }, { status: 400 });
+    if (def.needsSignature && (!cleanSignature || !cleanImage))
+      return NextResponse.json({ error: 'Draw your signature and type your name to sign at this stage' }, { status: 400 });
 
     const toStage = def.next!;
     await prisma.application.update({
