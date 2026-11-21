@@ -10,10 +10,11 @@ import { isId } from "@/lib/serialize";
 
 const PAGE = 50;
 const ENTITIES = ["application", "document", "mentor_profile", "connection", "user", "form", "site_config", "message", "auth",
-  "qpr", "session", "doc_request", "proposal", "blog", "id_card", "export", "notification", "job"];
+  "qpr", "session", "doc_request", "proposal", "blog", "id_card", "export", "notification", "job",
+  "finance", "partner", "integration", "attendance", "leave", "social", "ai"];
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !["ceo", "admin_it"].includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const p = req.nextUrl.searchParams;

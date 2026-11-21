@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { verifyToken } from '@/lib/auth';
+import { verifySession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Navbar from '@/components/Navbar';
 import StageBadge from '@/components/StageBadge';
@@ -16,7 +16,7 @@ async function getUser() {
   const cookieStore = cookies();
   const token = cookieStore.get('incubator_token')?.value;
   if (!token) return null;
-  return verifyToken(token);
+  return verifySession(token);
 }
 
 export const metadata: Metadata = { title: "Dashboard", robots: { index: false } };

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { AiDraft } from "@/components/AiTools";
 import { DEDUP_MINUTES } from "@/lib/notify-shared";
 
 type Audience = { key: string; label: string; count: number };
@@ -61,6 +62,7 @@ export default function BroadcastPage() {
                 ))}
               </div>
             </fieldset>
+            <AiDraft kind="announcement" onDraft={(r) => setF((p) => ({ ...p, title: (r.title ?? p.title).slice(0, 100), message: r.text.slice(0, 1500) }))} />
             <label className="block"><span className="block text-sm font-body font-medium text-navy mb-1.5">Title</span>
               <input required minLength={3} maxLength={100} value={f.title} onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))} placeholder="e.g. Demo day on 12 December" className={input} /></label>
             <label className="block"><span className="block text-sm font-body font-medium text-navy mb-1.5">Message</span>

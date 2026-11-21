@@ -9,7 +9,7 @@ import { audit } from '@/lib/audit';
 
 // GET /api/messages?applicationId=xxx
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const applicationId = req.nextUrl.searchParams.get('applicationId');
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/messages { applicationId, content }
 export async function POST(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { applicationId, content } = await req.json();

@@ -125,6 +125,13 @@ export default function Navbar({ user }: NavbarProps) {
     { href: "/qpr", label: "Progress", roles: ["incubatee", ...OFFICE_ROLES], primary: true },
     { href: "/messages", label: "Messages", roles: ALL, primary: true },
     { href: "/invest", label: "Invest", roles: ["mentor"], primary: true },
+    // BIIF 2.0 (Phase 3)
+    { href: "/finance", label: "Finance", roles: ["accounts"], primary: true },
+    { href: "/social", label: "Social media", roles: ["social_media"], primary: true },
+    { href: "/finance", label: "Finance", roles: OFFICE_ROLES.filter((r) => r !== "accounts") as string[], primary: false },
+    { href: "/crm", label: "Partners (CRM)", roles: ["executive", "manager", "sr_manager", "ceo", "admin_it"], primary: false },
+    { href: "/hr", label: "HR", roles: OFFICE_ROLES as string[], primary: false },
+    { href: "/social", label: "Social media", roles: ["admin_it", "ceo"], primary: false },
     { href: "/invest", label: "Investor pitches", roles: ["incubatee"], primary: false },
     { href: "/invest", label: "Investment proposals", roles: OFFICE_ROLES as string[], primary: false },
     { href: "/reports", label: "Reports", roles: REPORTERS, primary: false },

@@ -12,7 +12,7 @@ import { PdfBuilder, pdfResponse, BRAND, MUTED } from "@/lib/pdf";
 import { audit } from "@/lib/audit";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isId(params.id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const app = await prisma.application.findUnique({

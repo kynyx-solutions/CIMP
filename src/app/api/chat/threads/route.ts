@@ -11,7 +11,7 @@ type Thread = {
 };
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const office = isOfficeRole(user.role);
   const threads: Thread[] = [];

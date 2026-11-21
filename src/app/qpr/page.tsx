@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import FieldInput, { toFieldValue, isFilled, type FieldValue } from "@/components/FieldInput";
 import { displayValue, type FormDef, type AnswerValue } from "@/lib/forms";
 import { isOfficeRole } from "@/lib/workflow";
+import { AiQprInsight } from "@/components/AiTools";
 import { dueDate, periodLabel, periodOf, previousPeriod, QPR_STATUS, QPR_TONE_CLS } from "@/lib/qpr";
 
 type Report = { _id: string; period: string; answers: Record<string, AnswerValue>; status: string; submittedAt?: string; reviewNote?: string | null; reviewedBy?: string | null };
@@ -227,6 +228,7 @@ function Office({ form }: { form: FormDef }) {
                 </div>
               ))}
             </dl>
+            {data?.canReview && <AiQprInsight key={open.report._id} reportId={open.report._id} />}
             {open.report.status === "submitted" && data?.canReview && (
               <div className="mt-5 pt-5 border-t border-border">
                 <label className="block"><span className="block text-sm font-body font-medium text-navy mb-1.5">Note to the startup <span className="text-muted font-normal">(required to send back)</span></span>

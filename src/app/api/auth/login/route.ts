@@ -4,10 +4,15 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signToken, type Role } from "@/lib/auth";
 import { isCompanyEmail, isStaffRole } from "@/lib/roles";
+import { limitRequest, resetLimit } from "@/lib/ratelimit";
 
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
+    // Brute-force protection: 10 tries per account and 30 per IP address in 15 minutes.
+    const acct = `login:${String(email ?? "").toLowerCase()}`;
+    const limited = limitRequest(req, [{ key: acct, limit: 10, windowMs: 900000 }, { key: "login-ip:{ip}", limit: 30, windowMs: 900000 }], "sign-in attempts");
+    if (limited) return limited;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -65,8 +70,10 @@ export async function POST(req: NextRequest) {
       email: user.email,
       name: user.name,
       role: user.role as Role,
+      sv: user.sessionVersion,
     });
 
+    resetLimit(acct);
     await audit(req, { userId: user.id, name: user.name, role: user.role }, "auth.login", "auth", user.id, "Signed in with email and password");
 
     const response = NextResponse.json({

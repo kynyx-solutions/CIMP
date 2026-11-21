@@ -7,7 +7,7 @@ import { cardPdf } from "@/lib/idcard";
 import { pdfResponse } from "@/lib/pdf";
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const asked = req.nextUrl.searchParams.get("userId");
   const userId = asked && ["admin_it", "ceo"].includes(user.role) && isId(asked) ? asked : user.userId;

@@ -10,6 +10,8 @@ import ContentEditor from "@/components/admin/ContentEditor";
 import IdCards from "@/components/admin/IdCards";
 import Jobs from "@/components/admin/Jobs";
 import EmailSettings from "@/components/admin/EmailSettings";
+import Integrations from "@/components/admin/Integrations";
+import AiSettings from "@/components/admin/AiSettings";
 
 const TABS = [
   { key: "audit", label: "Audit log", roles: ["ceo", "admin_it"], desc: "Every change in the portal, who made it and when. Records cannot be edited or deleted." },
@@ -17,6 +19,8 @@ const TABS = [
   { key: "content", label: "Website content", roles: ["admin_it", "ceo"], desc: "Numbers, open calls, eligibility, contacts, FAQ and the ID card template." },
   { key: "idcards", label: "ID cards", roles: ["admin_it", "ceo"], desc: "Virtual ID cards for incubatees and mentors." },
   { key: "jobs", label: "Scheduled jobs", roles: ["admin_it", "ceo"], desc: "Reminders and ID card renewals that run on a schedule." },
+  { key: "ai", label: "AI assistant", roles: ["admin_it", "ceo"], desc: "Claude-powered briefings, report insights and drafts for the office." },
+  { key: "integrations", label: "Integrations", roles: ["admin_it", "ceo"], desc: "Partner API keys and webhooks." },
   { key: "email", label: "Email", roles: ["admin_it", "ceo"], desc: "How the portal sends email, and a test email to yourself." },
 ] as const;
 
@@ -58,6 +62,8 @@ function Admin() {
         {tab.key === "idcards" && <IdCards />}
         {tab.key === "jobs" && <Jobs />}
         {tab.key === "email" && <EmailSettings />}
+        {tab.key === "integrations" && <Integrations />}
+        {tab.key === "ai" && <AiSettings />}
       </div>
     </div>
   );

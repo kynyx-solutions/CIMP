@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { signToken, type Role } from "@/lib/auth";
 import { sendWelcomeEmail } from "@/lib/email";
+import { rateLimit, resetLimit, limitRequest } from "@/lib/ratelimit";
 
 export async function POST(req: NextRequest) {
   const { email, otp } = await req.json();
@@ -21,8 +22,21 @@ export async function POST(req: NextRequest) {
   if (user.isVerified)
     return NextResponse.json({ error: "Already verified" }, { status: 400 });
 
-  if (!user.otp || user.otp !== otp)
+  const ipLimited = limitRequest(req, [{ key: "otp-ip:{ip}", limit: 30, windowMs: 900000 }], "attempts");
+  if (ipLimited) return ipLimited;
+
+  if (!user.otp || user.otp !== String(otp)) {
+    // A 6-digit code allows only 5 wrong tries; then the code is cancelled and a new one is needed.
+    const key = `otp:${user.id}`;
+    const r = rateLimit(key, 4, 900000);
+    if (!r.ok) {
+      await prisma.user.update({ where: { id: user.id }, data: { otp: null, otpExpiresAt: null } });
+      resetLimit(key);
+      return NextResponse.json({ error: "Too many wrong codes. That code is cancelled: request a new one." }, { status: 429 });
+    }
     return NextResponse.json({ error: "Invalid OTP" }, { status: 400 });
+  }
+  resetLimit(`otp:${user.id}`);
 
   if (!user.otpExpiresAt || user.otpExpiresAt < new Date())
     return NextResponse.json(
@@ -46,6 +60,7 @@ export async function POST(req: NextRequest) {
     email: user.email,
     name: user.name,
     role: user.role as Role,
+    sv: user.sessionVersion,
   });
 
   const response = NextResponse.json({ success: true });

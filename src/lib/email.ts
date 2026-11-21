@@ -41,7 +41,8 @@ export async function verifyMail() {
 const mailer = {
   async sendMail(opts: { from: string; to: string; subject: string; html: string; attachments?: MailAttachment[] }) {
     if (mailMode() === "log") {
-      if (process.env.NODE_ENV === "production") throw new Error("Email is not configured (set SMTP_* or GMAIL_* in the environment)");
+      // Production must send real email, unless MAIL_TRANSPORT=log is set on purpose (CI, staging).
+      if (process.env.NODE_ENV === "production" && process.env.MAIL_TRANSPORT !== "log") throw new Error("Email is not configured (set SMTP_* or GMAIL_* in the environment)");
       console.log(`[email:dev] to=${opts.to} subject="${opts.subject}"${opts.attachments?.length ? ` attachments=${opts.attachments.map((a) => a.filename).join(",")}` : ""} (not sent: no mail server configured)`);
       return;
     }

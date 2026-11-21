@@ -24,6 +24,8 @@ model User {
   otpExpiresAt DateTime?
   // When the user accepted the Terms and Privacy Policy (DPDP Act consent, PRD WEB-10)
   consentAt    DateTime?
+  // Raised to revoke every session of this user (password change, sign out everywhere, role change)
+  sessionVersion Int     @default(0)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -149,13 +151,15 @@ model Application {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  steps         ApprovalStep[]
-  activities    Activity[]
-  messages      Message[]
-  notifications Notification[]
-  documents     ApplicationDocument[]
-  qprReports    QprReport[]
-  proposals     InvestmentProposal[]
+  steps           ApprovalStep[]
+  activities      Activity[]
+  messages        Message[]
+  notifications   Notification[]
+  documents       ApplicationDocument[]
+  qprReports      QprReport[]
+  proposals       InvestmentProposal[]
+  financeRequests FinanceRequest[]
+  seedFund        SeedFund?
 
   @@index([userId])
   @@index([stage])
@@ -464,4 +468,209 @@ model JobRun {
 
   @@unique([job, slot])
   @@index([job, startedAt])
+}
+
+// ── Phase 3 (BIIF 2.0, demo) ────────────────────────────────────────────────
+
+// Accounts: payment requests with multi-level approval
+model FinanceRequest {
+  id            String        @id @default(cuid())
+  kind          String // disbursement | reimbursement | vendor_invoice | grant_tranche
+  title         String
+  description   String        @db.Text
+  amountInr     Int
+  payee         String
+  applicationId String?
+  application   Application?  @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  requestedById String
+  requestedBy   String
+  status        String        @default("submitted") // submitted | verified | approved | final_approved | paid | rejected | returned
+  invoiceName   String?
+  invoiceStored String?
+  invoiceMime   String?
+  invoiceSize   Int?
+  paymentRef    String?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  steps         FinanceStep[]
+
+  @@index([status])
+  @@index([applicationId])
+}
+
+model FinanceStep {
+  id         String         @id @default(cuid())
+  requestId  String
+  request    FinanceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fromStatus String
+  toStatus   String
+  action     String
+  actorId    String
+  actorName  String
+  actorRole  String
+  remark     String?        @db.Text
+  at         DateTime       @default(now())
+}
+
+// Seed fund sanctioned to a startup; tranches are grant_tranche finance requests
+model SeedFund {
+  id            String      @id @default(cuid())
+  applicationId String      @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  scheme        String
+  sanctionedInr Int
+  sanctionedOn  DateTime
+  note          String?     @db.Text
+  createdBy     String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+// CRM: partners, sponsors, CSR, government and academic relationships
+model Partner {
+  id               String            @id @default(cuid())
+  name             String
+  type             String // corporate | csr | government | academic | investor_network | incubator | other
+  stage            String            @default("lead") // lead | contacted | proposal | mou_signed | active | dormant
+  ownerId          String?
+  ownerName        String?
+  contactName      String?
+  contactEmail     String?
+  contactPhone     String?
+  website          String?
+  expectedValueInr Int?
+  notes            String?           @db.Text
+  mouSignedOn      DateTime?
+  mouExpiresOn     DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  activities       PartnerActivity[]
+
+  @@index([stage])
+}
+
+model PartnerActivity {
+  id        String    @id @default(cuid())
+  partnerId String
+  partner   Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  kind      String // call | meeting | email | note | follow_up
+  summary   String    @db.Text
+  dueAt     DateTime?
+  done      Boolean   @default(false)
+  byId      String
+  byName    String
+  createdAt DateTime  @default(now())
+
+  @@index([partnerId])
+}
+
+// Partner integrations: API keys for the read-only partner API, and signed webhooks
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  prefix      String // first characters, shown in the admin list
+  keyHash     String    @unique // SHA-256 of the key; the key itself is shown once
+  scopes      String[]
+  createdById String
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Webhook {
+  id              String            @id @default(cuid())
+  url             String
+  secret          String
+  events          String[]
+  active          Boolean           @default(true)
+  createdById     String
+  lastStatus      Int?
+  lastError       String?
+  lastDeliveredAt DateTime?
+  createdAt       DateTime          @default(now())
+  deliveries      WebhookDelivery[]
+}
+
+model WebhookDelivery {
+  id         String   @id @default(cuid())
+  webhookId  String
+  webhook    Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event      String
+  status     Int?
+  error      String?
+  durationMs Int?
+  createdAt  DateTime @default(now())
+
+  @@index([webhookId, createdAt])
+}
+
+// HR: attendance and leave for office users
+model Attendance {
+  id       String    @id @default(cuid())
+  userId   String
+  userName String
+  date     String // YYYY-MM-DD (IST)
+  checkIn  DateTime
+  checkOut DateTime?
+  mode     String // office | wfh | field
+  note     String?
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+model LeaveRequest {
+  id           String    @id @default(cuid())
+  userId       String
+  userName     String
+  userRole     String
+  type         String // casual | sick | earned | unpaid
+  fromDate     String // YYYY-MM-DD
+  toDate       String
+  days         Float
+  reason       String    @db.Text
+  status       String    @default("pending") // pending | approved | rejected | cancelled
+  approverId   String?
+  approverName String?
+  decisionNote String?   @db.Text
+  decidedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+// Social media manager: content calendar
+model SocialPost {
+  id             String    @id @default(cuid())
+  platforms      String[] // linkedin | x | facebook | instagram
+  content        String    @db.Text
+  scheduledFor   DateTime?
+  status         String    @default("draft") // draft | scheduled | published
+  publishedLinks Json?
+  createdById    String
+  createdBy      String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, scheduledFor])
+}
+
+// AI assistant usage (cost and audit)
+model AiRun {
+  id           String   @id @default(cuid())
+  userId       String
+  userName     String
+  feature      String // application_review | qpr_insight | draft
+  entityId     String?
+  model        String
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  status       String // ok | failed
+  error        String?
+  createdAt    DateTime @default(now())
+
+  @@index([feature, createdAt])
 }

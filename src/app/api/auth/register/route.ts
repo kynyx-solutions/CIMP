@@ -1,5 +1,7 @@
 import { audit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
+import { randomInt } from "crypto";
+import { limitRequest } from "@/lib/ratelimit";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { sendOTPEmail } from "@/lib/email";
@@ -7,11 +9,13 @@ import { isCompanyEmail, isPublicRole } from "@/lib/roles";
 
 // Helper — generate 6-digit OTP
 function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(100000, 1000000).toString(); // cryptographically random
 }
 
 export async function POST(req: NextRequest) {
   const { name, email, password, role, consent } = await req.json();
+  const limited = limitRequest(req, [{ key: "register-ip:{ip}", limit: 10, windowMs: 3600000 }], "sign-ups from this network");
+  if (limited) return limited;
 
   if (!name || !email || !password)
     return NextResponse.json({ error: "All fields required" }, { status: 400 });
@@ -66,8 +70,13 @@ export async function POST(req: NextRequest) {
   });
   await audit(req, { userId: created.id, name: created.name, role: created.role }, "auth.signup", "user", created.id, `Registered as ${created.role} with email (consent recorded, awaiting OTP)`);
 
-  // Send OTP email
-  await sendOTPEmail(email, name, otp);
+  // Send OTP email (the account exists; the founder can ask for a new code if this fails)
+  try {
+    await sendOTPEmail(email, name, otp);
+  } catch (err) {
+    console.error("OTP email failed:", err);
+    return NextResponse.json({ error: "We could not send the verification code. Your account is created: open Verify email and use “Resend code” in a minute." }, { status: 503 });
+  }
 
   // Don't set auth cookie yet — send them to verify page instead
   return NextResponse.json({

@@ -11,14 +11,14 @@ import { runExportJob } from "@/lib/exports-server";
 import { audit } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !REPORT_ROLES.includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const jobs = await prisma.exportJob.findMany({ where: { requestedById: user.userId }, orderBy: { createdAt: "desc" }, take: 20 });
   return NextResponse.json({ jobs: withId(jobs).map(({ storedName, ...j }: any) => ({ ...j, ready: !!storedName })) });
 }
 
 export async function POST(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !REPORT_ROLES.includes(user.role)) return NextResponse.json({ error: "Your role cannot export data" }, { status: 403 });
   const { dataset, columns, filters } = await req.json().catch(() => ({}));
   if (!DATASET_KEYS.includes(dataset)) return NextResponse.json({ error: "Choose a dataset" }, { status: 400 });

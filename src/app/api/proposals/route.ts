@@ -26,7 +26,7 @@ const PROPOSAL_INCLUDE = {
 } as const;
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   if (isOfficeRole(user.role)) {
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || user.role !== "mentor" || !(await isInvestor(user.userId))) return NextResponse.json({ error: "Only approved investors can send proposals" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
   if (!isId(body.applicationId)) return NextResponse.json({ error: "Choose a startup" }, { status: 400 });
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   if (!isId(body.proposalId)) return NextResponse.json({ error: "proposalId required" }, { status: 400 });

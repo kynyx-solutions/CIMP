@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import StageBadge from '@/components/StageBadge';
 import DocumentsPanel from '@/components/DocumentsPanel';
 import SignaturePad from '@/components/SignaturePad';
+import { AiApplicationReview } from '@/components/AiTools';
 import { STAGES, PIPELINE, ROLE_LABELS, ROLE_ICONS, APPROVAL_RANK, canAct, isOfficeRole, stageEnteredAt, daysSince, daysLabel, progressStage, type Stage } from '@/lib/workflow';
 import FieldInput, { toFieldValue, type FieldValue } from '@/components/FieldInput';
 import { valueOf, displayValue, type FormDef } from '@/lib/forms';
@@ -401,6 +402,7 @@ export default function ApprovalsPage() {
                         </div>
                       );
                     })}
+                    {(APPROVAL_RANK[user.role] ?? 0) >= 1 && !editing && <AiApplicationReview key={'ai-' + sideApp._id} applicationId={sideApp._id} />}
                     <div>
                       <p className="text-[11px] font-mono text-muted uppercase tracking-wider mb-2">Documents</p>
                       <DocumentsPanel key={sideApp._id} applicationId={sideApp._id} editable={false} logoEditable={false} compact />

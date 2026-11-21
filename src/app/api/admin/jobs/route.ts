@@ -9,7 +9,7 @@ import { schedulerStatus } from "@/lib/scheduler";
 const ALLOWED = ["admin_it", "ceo"];
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !ALLOWED.includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const jobs = await Promise.all(JOB_KEYS.map(async (key) => ({
     key, ...JOBS[key],
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !ALLOWED.includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { job } = await req.json().catch(() => ({}));
   if (!JOB_KEYS.includes(job)) return NextResponse.json({ error: "Unknown job" }, { status: 400 });

@@ -21,7 +21,7 @@ const AUDIENCES: Record<string, { label: string; where: Prisma.UserWhereInput }>
 };
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !SENDERS.includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const audiences = await Promise.all(Object.entries(AUDIENCES).map(async ([key, a]) => ({ key, label: a.label, count: await prisma.user.count({ where: a.where }) })));
   const recent = await prisma.auditLog.findMany({ where: { action: "notification.blast" }, orderBy: { at: "desc" }, take: 15, select: { id: true, actorName: true, actorRole: true, summary: true, at: true } });
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !SENDERS.includes(user.role)) return NextResponse.json({ error: "Your role cannot send notifications to groups" }, { status: 403 });
   const { audience, title, message, email } = await req.json().catch(() => ({}));
   const a = AUDIENCES[audience as string];

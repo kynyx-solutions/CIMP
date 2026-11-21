@@ -12,7 +12,7 @@ import { notify } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isId(params.id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const d = await prisma.docRequest.findUnique({ where: { id: params.id } });
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isId(params.id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const d = await prisma.docRequest.findUnique({ where: { id: params.id } });

@@ -23,7 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const publicLogo = doc.kind === "logo" && doc.application.isPublic && doc.application.status === "approved";
   if (!publicLogo) {
-    const user = getSessionUser(req);
+    const user = await getSessionUser(req);
     const allowed = user && (isOfficeRole(user.role) || (user.role === "incubatee" && user.userId === doc.application.userId));
     if (!allowed) return NextResponse.json({ error: user ? "Forbidden" : "Unauthorized" }, { status: user ? 403 : 401 });
   }
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isId(params.id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const doc = await load(params.id);

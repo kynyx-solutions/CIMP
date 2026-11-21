@@ -14,6 +14,8 @@ const ENTITIES = [
   ["form", "Form builder"], ["site_config", "Website content"], ["qpr", "Progress reports"], ["session", "Mentor sessions"],
   ["doc_request", "Document requests"], ["proposal", "Investment proposals"], ["blog", "Blog"], ["id_card", "ID cards"],
   ["export", "Exports"], ["notification", "Notification blasts"], ["job", "Scheduled jobs"],
+  ["finance", "Finance"], ["partner", "CRM"], ["integration", "Partner API & webhooks"], ["attendance", "Attendance"],
+  ["leave", "Leave"], ["social", "Social media"], ["ai", "AI assistant"],
 ] as const;
 
 const show = (v: unknown) => (v == null || v === "" ? "—" : typeof v === "string" ? v : JSON.stringify(v));

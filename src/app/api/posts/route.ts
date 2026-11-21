@@ -35,14 +35,14 @@ async function notifyAdmins(title: string) {
 }
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !BLOG_WRITERS.includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const posts = await prisma.blogPost.findMany({ where: user.role === "admin_it" ? {} : { authorId: user.userId }, orderBy: { updatedAt: "desc" } });
   return NextResponse.json({ posts: withId(posts), canPublish: user.role === "admin_it" });
 }
 
 export async function POST(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !BLOG_WRITERS.includes(user.role)) return NextResponse.json({ error: "Only Office Staff and Admin IT write posts" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
   const p = parse(body);
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !BLOG_WRITERS.includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
   if (!isId(body.postId)) return NextResponse.json({ error: "postId required" }, { status: 400 });
@@ -75,7 +75,7 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || user.role !== "admin_it") return NextResponse.json({ error: "Only Admin IT approves posts" }, { status: 403 });
   const { postId, action, note } = await req.json().catch(() => ({}));
   if (!isId(postId) || !["publish", "reject", "unpublish"].includes(action)) return NextResponse.json({ error: "postId and action required" }, { status: 400 });

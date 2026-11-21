@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { AiDraft } from "@/components/AiTools";
 import { BLOG_STATUS, BLOG_WRITERS, parseBody } from "@/lib/blog";
 
 type Post = { _id: string; slug: string; title: string; excerpt: string; body: string; status: string; authorId: string; authorName: string; reviewNote: string | null; updatedAt: string; publishedAt: string | null };
@@ -66,6 +67,7 @@ export default function PostsPage() {
 
         {edit && (
           <form onSubmit={(e) => { e.preventDefault(); save(true); }} className="mt-6 bg-white border border-border rounded-2xl shadow-card p-6 space-y-4">
+            <AiDraft kind="blog" onDraft={(r) => setEdit((x) => x && { ...x, f: { title: (r.title ?? x.f.title).slice(0, 140), excerpt: (r.excerpt ?? x.f.excerpt).slice(0, 300), body: r.text } })} />
             <label className="block"><span className="block text-sm font-body font-medium text-navy mb-1.5">Title</span>
               <input required maxLength={140} value={edit.f.title} onChange={(e) => setEdit((x) => x && { ...x, f: { ...x.f, title: e.target.value } })} className={input} /></label>
             <label className="block"><span className="block text-sm font-body font-medium text-navy mb-1.5">Summary</span>

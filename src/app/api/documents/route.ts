@@ -13,7 +13,7 @@ import { audit } from "@/lib/audit";
 const PUBLIC_FIELDS = { id: true, kind: true, fileName: true, mimeType: true, size: true, createdAt: true } as const;
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const applicationId = req.nextUrl.searchParams.get("applicationId");
   if (!isId(applicationId)) return NextResponse.json({ error: "applicationId required" }, { status: 400 });
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (user.role !== "incubatee") return NextResponse.json({ error: "Only the applicant can upload documents" }, { status: 403 });
 

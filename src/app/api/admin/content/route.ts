@@ -13,7 +13,7 @@ const canView = (role: string) => role === "admin_it" || role === "ceo";
 const canEdit = (role: string) => role === "admin_it"; // PRD §5: site config = Admin IT
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !canView(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const rows = await prisma.siteConfig.findMany();
   const byKey = new Map(rows.map((r) => [r.key, r]));
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !canEdit(user.role)) return NextResponse.json({ error: "Only Admin IT can edit site content" }, { status: 403 });
   const { key, value } = await req.json().catch(() => ({}));
   if (!CONTENT_KEYS.includes(key)) return NextResponse.json({ error: "Unknown content key" }, { status: 400 });
@@ -48,7 +48,7 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !canEdit(user.role)) return NextResponse.json({ error: "Only Admin IT can edit site content" }, { status: 403 });
   const key = req.nextUrl.searchParams.get("key") as ContentKey;
   if (!CONTENT_KEYS.includes(key)) return NextResponse.json({ error: "Unknown content key" }, { status: 400 });

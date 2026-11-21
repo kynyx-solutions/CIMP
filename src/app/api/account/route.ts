@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
-import { signToken, type Role } from "@/lib/auth";
+import { signToken, revokeSessions, type Role } from "@/lib/auth";
 import { isStaffRole } from "@/lib/roles";
 import { audit } from "@/lib/audit";
 
@@ -16,7 +16,7 @@ const COOKIE = {
 };
 
 export async function GET(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
@@ -39,13 +39,13 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { name } = await req.json().catch(() => ({}));
   const clean = typeof name === "string" ? name.trim().replace(/\s+/g, " ") : "";
   if (clean.length < 2 || clean.length > 80) return NextResponse.json({ error: "Name must be 2 to 80 characters" }, { status: 400 });
 
-  const before = await prisma.user.findUnique({ where: { id: session.userId }, select: { name: true, email: true, role: true, image: true } });
+  const before = await prisma.user.findUnique({ where: { id: session.userId }, select: { name: true, email: true, role: true, image: true, sessionVersion: true } });
   if (!before) return NextResponse.json({ error: "Account not found" }, { status: 404 });
   if (before.name === clean) return NextResponse.json({ error: "That is already your name" }, { status: 400 });
 
@@ -55,17 +55,17 @@ export async function PATCH(req: NextRequest) {
 
   const res = NextResponse.json({ success: true, name: clean });
   res.cookies.set("incubator_token", signToken({
-    userId: session.userId, email: before.email, name: clean, role: before.role as Role, ...(before.image ? { image: before.image } : {}),
+    userId: session.userId, email: before.email, name: clean, role: before.role as Role, sv: before.sessionVersion, ...(before.image ? { image: before.image } : {}),
   }), COOKIE);
   return res;
 }
 
 export async function POST(req: NextRequest) {
-  const session = getSessionUser(req);
+  const session = await getSessionUser(req);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { currentPassword, newPassword } = await req.json().catch(() => ({}));
 
-  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { password: true, role: true } });
+  const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { password: true, role: true, name: true, email: true, image: true } });
   if (!user) return NextResponse.json({ error: "Account not found" }, { status: 404 });
   if (!user.password) return NextResponse.json({ error: "You sign in with Google, so there is no password to change here." }, { status: 400 });
 
@@ -81,6 +81,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Choose a password different from your current one" }, { status: 400 });
 
   await prisma.user.update({ where: { id: session.userId }, data: { password: await bcrypt.hash(newPassword, 12) } });
-  await audit(req, session, "user.password_change", "user", session.userId, "Changed account password");
-  return NextResponse.json({ success: true });
+  // A new password signs out every other device; this browser gets a fresh session.
+  const sv = await revokeSessions(session.userId);
+  await audit(req, session, "user.password_change", "user", session.userId, "Changed account password (other sessions signed out)");
+  const res = NextResponse.json({ success: true });
+  res.cookies.set("incubator_token", signToken({ userId: session.userId, email: user.email, name: user.name, role: user.role as Role, sv, ...(user.image ? { image: user.image } : {}) }), COOKIE);
+  return res;
 }
