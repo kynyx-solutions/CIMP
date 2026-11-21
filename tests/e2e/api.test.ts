@@ -95,6 +95,26 @@ run("brute-force protection", () => {
   });
 });
 
+run("password reset", () => {
+  it("answers the same for unknown and known addresses", async () => {
+    const unknown = await call("/api/auth/forgot-password", { method: "POST", json: { email: `nobody-${Date.now()}@example.com` } });
+    expect(unknown.res.status).toBe(200);
+    expect(unknown.body.message).toMatch(/If an account exists/);
+  });
+
+  it("limits reset requests per address", async () => {
+    const email = `limit-${Date.now()}@example.com`;
+    for (let i = 0; i < 3; i++) expect((await call("/api/auth/forgot-password", { method: "POST", json: { email } })).res.status).toBe(200);
+    expect((await call("/api/auth/forgot-password", { method: "POST", json: { email } })).res.status).toBe(429);
+  });
+
+  it("rejects an invalid link", async () => {
+    expect((await call("/api/auth/reset-password?token=not-a-real-token-1234567890")).res.status).toBe(400);
+    const r = await call("/api/auth/reset-password", { method: "POST", json: { token: "not-a-real-token-1234567890", password: "whatever123" } });
+    expect(r.res.status).toBe(400);
+  });
+});
+
 run("partner API", () => {
   it("requires an API key", async () => {
     const { res } = await call("/api/v1/startups");
