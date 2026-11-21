@@ -15,6 +15,7 @@ export const PUBLIC_NAV = [
   { href: "/mentors", label: "Mentors" },
   { href: "/facilities", label: "Facilities" },
   { href: "/schemes", label: "Schemes" },
+  { href: "/blog", label: "Blog" },
   { href: "/faq", label: "FAQ" },
 ];
 

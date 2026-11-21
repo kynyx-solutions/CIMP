@@ -7,11 +7,15 @@ import Navbar from "@/components/Navbar";
 import AuditLog from "@/components/admin/AuditLog";
 import FormBuilder from "@/components/admin/FormBuilder";
 import ContentEditor from "@/components/admin/ContentEditor";
+import IdCards from "@/components/admin/IdCards";
+import Jobs from "@/components/admin/Jobs";
 
 const TABS = [
   { key: "audit", label: "Audit log", roles: ["ceo", "admin_it"], desc: "Every change in the portal, who made it and when. Records cannot be edited or deleted." },
   { key: "forms", label: "Form builder", roles: ["admin_it", "ceo"], desc: "Questions on the application and mentor forms, and which answers are public." },
-  { key: "content", label: "Website content", roles: ["admin_it", "ceo"], desc: "Numbers, open calls, eligibility, contacts and FAQ on the public site." },
+  { key: "content", label: "Website content", roles: ["admin_it", "ceo"], desc: "Numbers, open calls, eligibility, contacts, FAQ and the ID card template." },
+  { key: "idcards", label: "ID cards", roles: ["admin_it", "ceo"], desc: "Virtual ID cards for incubatees and mentors." },
+  { key: "jobs", label: "Scheduled jobs", roles: ["admin_it", "ceo"], desc: "Reminders and ID card renewals that run on a schedule." },
 ] as const;
 
 function Admin() {
@@ -49,6 +53,8 @@ function Admin() {
         {tab.key === "audit" && <AuditLog />}
         {tab.key === "forms" && <FormBuilder canEdit={isAdminIT} />}
         {tab.key === "content" && <ContentEditor />}
+        {tab.key === "idcards" && <IdCards />}
+        {tab.key === "jobs" && <Jobs />}
       </div>
     </div>
   );

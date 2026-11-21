@@ -287,6 +287,43 @@ async function main() {
         await prisma.application.update({ where: { id: app.id }, data: { pitchDeckUrl: `/api/documents/${doc.id}`, pitchDeckName: d.fileName } });
     }
 
+    // ── Phase 2 samples ──
+    const qOf = (d) => `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`;
+    const prevQ = (p) => { const [y, q] = [Number(p.slice(0, 4)), Number(p.slice(6))]; return q === 1 ? `${y - 1}-Q4` : `${y}-Q${q - 1}`; };
+    const greenApp = await prisma.application.findFirst({ where: { userId: incubatee.id, status: 'approved' } });
+    if (greenApp && (await prisma.qprReport.count()) === 0) {
+      const lastQ = prevQ(qOf(new Date())), olderQ = prevQ(lastQ);
+      await prisma.qprReport.createMany({ data: [
+        { applicationId: greenApp.id, period: olderQ, formVersion: 0, status: 'accepted', submittedAt: new Date(Date.now() - 80 * 864e5), reviewedBy: 'Demo Executive', reviewedAt: new Date(Date.now() - 75 * 864e5), reviewNote: 'Good start.',
+          answers: { revenue: 320000, customers: 22, teamSize: 5, fundsRaised: 0, milestones: 'Installed controllers in 8 clinics in Nalanda district.', challenges: 'Slow payments from two clinics.', supportNeeded: 'Introductions to the state health mission.', nextGoals: 'Reach 15 clinics and hire a field engineer.' } },
+        { applicationId: greenApp.id, period: lastQ, formVersion: 0, status: 'submitted', submittedAt: new Date(Date.now() - 3 * 864e5),
+          answers: { revenue: 450000, customers: 31, teamSize: 6, fundsRaised: 1000000, milestones: 'Live in 14 clinics; first government tender shortlisted.', challenges: 'Battery supply delays.', supportNeeded: 'Mentoring on government procurement.', nextGoals: 'Win the tender and reach 25 clinics.' } },
+      ] });
+    }
+    const activeConn = await prisma.connection.findFirst({ where: { incubateeId: incubatee.id, status: 'active' } });
+    if (activeConn && (await prisma.mentorSession.count()) === 0) {
+      const m1u = users['mentor1@demo.com'];
+      const past = await prisma.mentorSession.create({ data: { connectionId: activeConn.id, scheduledAt: new Date(Date.now() - 6 * 864e5), durationMin: 60, mode: 'physical', location: 'B-Hub meeting room 2', agenda: 'Review the health-department tender and the pricing sheet.', status: 'completed', createdById: m1u.id } });
+      await prisma.sessionFeedback.createMany({ data: [
+        { sessionId: past.id, authorId: incubatee.id, authorRole: 'mentee', rating: 5, comment: 'Very practical advice on the tender documents.' },
+        { sessionId: past.id, authorId: m1u.id, authorRole: 'mentor', rating: 4, comment: 'Well prepared team.' },
+      ] });
+      const next = new Date(Date.now() + 2 * 864e5); next.setHours(16, 0, 0, 0);
+      await prisma.mentorSession.create({ data: { connectionId: activeConn.id, scheduledAt: next, durationMin: 45, mode: 'virtual', location: 'https://meet.google.com/demo-sample', agenda: 'Prepare the tender presentation.', createdById: m1u.id } });
+      await prisma.docRequest.create({ data: { connectionId: activeConn.id, title: 'Last 6 months of clinic installations', note: 'A simple sheet: clinic, date, system size.', requestedBy: m1u.id } });
+    }
+    if (greenApp && users['mentor2@demo.com'] && (await prisma.investmentProposal.count()) === 0) {
+      await prisma.investmentProposal.create({ data: { investorId: users['mentor2@demo.com'].id, applicationId: greenApp.id, amount: '₹25 lakh', instrument: 'equity', terms: 'Seed investment for 8% equity with a board observer seat; follow-on rights in the next round.' } });
+    }
+    if ((await prisma.blogPost.count()) === 0 && users.staff) {
+      await prisma.blogPost.createMany({ data: [
+        { slug: 'sample-welcome-to-the-cimp-biif-blog', title: 'Sample: Welcome to the CIMP-BIIF blog', excerpt: 'News, events and founder stories from the incubation team. This is a sample post.', authorId: users.staff.id, authorName: users.staff.name, status: 'published', publishedAt: new Date(Date.now() - 2 * 864e5), reviewedBy: 'Demo Admin IT',
+          body: 'This blog shares news from CIMP-BIIF: open calls, events at B-Hub and stories from the startups we support.\n\n## What you will find here\n\n- Announcements of new cohorts and deadlines\n- Reports from demo days and workshops\n- Founder stories and lessons learned\n\nThis is a sample post for the portal demo. Real posts are written by the office team and approved by Admin IT before they appear here.' },
+        { slug: 'sample-demo-day-preview', title: 'Sample: Demo day preview', excerpt: 'Twelve startups will pitch to investors at B-Hub next month.', authorId: users.staff.id, authorName: users.staff.name, status: 'submitted',
+          body: 'Twelve startups from the current cohort will pitch to a panel of investors and mentors at B-Hub next month.\n\nEach team has ten minutes to present and five minutes for questions. Investors interested in a startup can send a proposal through the portal, and the incubation team arranges a follow-up pitch.' },
+      ] });
+    }
+
     // Sample conversations (PRD MSG-1, MSG-2)
     if ((await prisma.chatMessage.count()) === 0) {
       const ago = (h) => new Date(Date.now() - h * 3_600_000);

@@ -6,7 +6,8 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export type AuditEntity =
-  | "application" | "document" | "mentor_profile" | "connection" | "user" | "form" | "site_config" | "message" | "auth";
+  | "application" | "document" | "mentor_profile" | "connection" | "user" | "form" | "site_config" | "message" | "auth"
+  | "qpr" | "session" | "doc_request" | "proposal" | "blog" | "id_card" | "export" | "notification" | "job";
 
 export type Diff = Record<string, { from: unknown; to: unknown }>;
 

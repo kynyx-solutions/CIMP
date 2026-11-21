@@ -11,7 +11,9 @@ type Entry = {
 const ENTITIES = [
   ["", "All areas"], ["application", "Applications"], ["document", "Documents"], ["mentor_profile", "Mentor profiles"],
   ["connection", "Connections"], ["message", "Messages"], ["user", "Office users"], ["auth", "Sign-ins"],
-  ["form", "Form builder"], ["site_config", "Website content"],
+  ["form", "Form builder"], ["site_config", "Website content"], ["qpr", "Progress reports"], ["session", "Mentor sessions"],
+  ["doc_request", "Document requests"], ["proposal", "Investment proposals"], ["blog", "Blog"], ["id_card", "ID cards"],
+  ["export", "Exports"], ["notification", "Notification blasts"], ["job", "Scheduled jobs"],
 ] as const;
 
 const show = (v: unknown) => (v == null || v === "" ? "—" : typeof v === "string" ? v : JSON.stringify(v));

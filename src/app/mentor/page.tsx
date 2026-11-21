@@ -157,6 +157,7 @@ export default function MentorHubPage() {
                       {c.startup?.startupName ?? c.incubatee.name} · {c.type === "investment" ? "Investment" : "Mentorship"}
                       <span className="text-brand font-semibold">💬 Message</span>
                     </Link>
+                    <Link href={`/mentorship/${c._id}`} className="ml-2 inline-flex items-center text-sm font-body font-semibold text-brand hover:underline">📅 Sessions &amp; documents</Link>
                   </li>
                 ))}
               </ul>

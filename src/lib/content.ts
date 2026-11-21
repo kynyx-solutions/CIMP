@@ -12,6 +12,15 @@ export const CONTENT_DEFAULTS = {
   eligibility: ELIGIBILITY,
   contacts: CONTACTS,
   faqs: FAQS,
+  // Virtual ID card template (PRD IDC-1)
+  idCardTemplate: {
+    cardTitle: "Member ID card",
+    validityMonths: 12,
+    signatoryName: "Kumod Kumar",
+    signatoryTitle: "Chief Executive Officer, CIMP-BIIF",
+    issuerLine: "CIMP-BIIF, Mithapur Institutional Area, Patna 800001",
+    terms: "This card identifies the holder as a member of the CIMP-BIIF incubation network. It is not transferable. Verify it at the link on this card.",
+  },
 };
 
 export type ContentKey = keyof typeof CONTENT_DEFAULTS;
@@ -25,6 +34,7 @@ export const CONTENT_META: Record<ContentKey, { label: string; desc: string; whe
   eligibility: { label: "Eligibility", desc: "Who can apply, one point per line.", where: "Home, How to apply" },
   contacts: { label: "Contacts", desc: "Contact by audience.", where: "Footer on every public page" },
   faqs: { label: "FAQ", desc: "Questions grouped by category.", where: "FAQ page" },
+  idCardTemplate: { label: "ID card template", desc: "Text and validity of the virtual ID cards issued to incubatees and mentors.", where: "ID card PDFs and the verification page" },
 };
 
 /** All site content for this request: database overrides on top of the defaults. */

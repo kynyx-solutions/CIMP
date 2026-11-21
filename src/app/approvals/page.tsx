@@ -347,6 +347,7 @@ export default function ApprovalsPage() {
                       {sideApp.officeEdited
                         ? <span className="text-[10px] font-mono text-sky-800 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-full" title="Corrected by the office; see Activity for old and new values">✎ Edited by office</span>
                         : <span />}
+                      <a href={`/api/applications/${sideApp._id}/pdf`} className="ml-auto mr-3 text-[11px] font-body font-semibold text-brand hover:underline" title="Application with approval trail and signatures">⬇ PDF</a>
                       {schema && OFFICE_EDITORS.includes(user.role) && !editing && (
                         <button onClick={startEdit} className="text-[11px] font-body font-semibold text-brand hover:underline">✎ Correct fields</button>
                       )}

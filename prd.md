@@ -446,21 +446,21 @@ Every item in *CIMP-BIIF 1.0 High-Level Overview (v1.0, 2025)* mapped to this PR
 | 2.1 | Documents: pitch deck, ID proof, business registration, logo | DOC-1, DOC-2 | 1 | ✅ private local storage, type-checked (S3 in Phase 1) |
 | 2.1 | Multi-level approval with digital signatures | APR-1, APR-2 | 1 | ✅ typed signature |
 | 2.1 | Public profile after CEO approval | WF-4, WEB-13, PUB-1 | 1 | ✅ profile page with logo |
-| 2.1 | QPR submission from the dashboard | QPR-1 | 2 | ❌ |
-| 2.1 | Mentorship request, feedback, session scheduling | MEN-3, MEN-4 | 1 / 2 | 🟡 request only (no feedback, scheduling) |
+| 2.1 | QPR submission from the dashboard | QPR-1 | 2 | ✅ demo: configurable form, draft, review, PDF |
+| 2.1 | Mentorship request, feedback, session scheduling | MEN-3, MEN-4 | 1 / 2 | ✅ |
 | 2.1 | Messaging with office and assigned mentor | MSG-1 | 1 | ✅ unified inbox |
 | 2.2 | Mentor registration, profile, approval | MEN-1 | 1 | ✅ |
 | 2.2 | Mentor public profile after approval | PUB-1, WEB-13 | 1 | ✅ opt-in profile page |
 | 2.2 | Accept / decline mentee requests | MEN-3 | 1 | ✅ |
-| 2.2 | Physical or virtual meetings with mentees | MEN-4 | 2 | ❌ |
-| 2.2 | Request documents from mentees | MEN-4 | 2 | ❌ |
-| 2.2 | Post-session feedback | MEN-4 | 2 | ❌ |
+| 2.2 | Physical or virtual meetings with mentees | MEN-4 | 2 | ✅ demo |
+| 2.2 | Request documents from mentees | MEN-4 | 2 | ✅ demo |
+| 2.2 | Post-session feedback | MEN-4 | 2 | ✅ demo: 1–5 rating, shown once both rate |
 | 2.3 | Mentors register as investors (separate approval) | MEN-2 | 1 | ✅ |
-| 2.3 | Investment proposals to the office | INV-1 | 2 | ❌ |
-| 2.3 | View and message invested startups | INV-1 | 2 | ❌ |
+| 2.3 | Investment proposals to the office | INV-1 | 2 | ✅ demo: pitch scheduling, outcome |
+| 2.3 | View and message invested startups | INV-1 | 2 | ✅ demo: portfolio with latest QPR |
 | 2.4 | Admin IT: form fields, site config, public visibility | FORM-1…3, WEB-6 | 1 | ✅ stats, calls, eligibility, contacts, FAQ, sample mode |
-| 2.4 | Admin IT: blog approvals | BLG-1 | 2 | ❌ |
-| 2.4 | Admin IT: ID card templates | IDC-1 | 2 | ❌ |
+| 2.4 | Admin IT: blog approvals | BLG-1 | 2 | ✅ demo |
+| 2.4 | Admin IT: ID card templates | IDC-1 | 2 | ✅ demo: text and validity editable |
 | 2.4 | Admin IT: audit logs | AUD-1 | 1 | ✅ append-only (DB trigger), filters, CSV |
 | 2.4 | CEO: final approval and signing, fast-track, all statistics | APR-1, APR-2, RBAC-3 | 1 | ✅ |
 | 2.4 | Sr. Manager: approval and signing | APR-1, APR-2 | 1 | ✅ |
@@ -468,12 +468,12 @@ Every item in *CIMP-BIIF 1.0 High-Level Overview (v1.0, 2025)* mapped to this PR
 | 2.4 | Incubation Manager: due diligence with remarks | APR-1 | 1 | ✅ |
 | 2.4 | Incubation Manager: connection routing, message mentors and investors | MEN-3, MSG-2 | 1 | ✅ |
 | 2.4 | Executive: accept submissions | APR-1 | 1 | ✅ |
-| 2.4 | Executive: custom notifications | NOT-3 | 2 | ❌ |
-| 2.4 | Executive: reports and Excel downloads | RBAC-5, XLS-1 | 2 | ❌ |
+| 2.4 | Executive: custom notifications | NOT-3 | 2 | ✅ demo |
+| 2.4 | Executive: reports and Excel downloads | RBAC-5, XLS-1 | 2 | ✅ demo |
 | 2.4 | Office Staff: view-only access | RBAC-1 | 1 | ✅ |
 | 2.4 | Office Staff: edit application fields (flagged) | RBAC-4 | 1 | ✅ reason required, old/new in audit |
 | 2.4 | Office Staff: message incubatees | MSG-2 | 1 | ✅ |
-| 2.4 | Office Staff: write blog posts | BLG-1 | 2 | ❌ |
+| 2.4 | Office Staff: write blog posts | BLG-1 | 2 | ✅ demo |
 | 2.5 | Executive → Manager → Sr. Manager → CEO pipeline | APR-1, WF-1…6 [Q2] | 1 | ✅ |
 | 2.5 | Higher roles approve or fast-track at any stage | APR-1, §5 | 1 | ✅ (fast-track: CEO) |
 | 2.5 | Every action recorded with timestamp, actor, remark | WF-1, AUD-1 | 1 | ✅ approval trail |
@@ -481,18 +481,18 @@ Every item in *CIMP-BIIF 1.0 High-Level Overview (v1.0, 2025)* mapped to this PR
 | 2.5 | Separate track for connection requests | 6.3, MEN-3 | 1 | ✅ |
 | 2.6 | Dashboard notifications | NOT-1, NOT-2 | 1 | ✅ |
 | 2.6 | Automatic emails for key events | NOT-1 | 1 | ✅ application, mentor and connection events (SMTP needed to send) |
-| 2.6 | Reminders: incomplete profiles, pending QPR | REM-1, QPR-2 | 2 | ❌ |
-| 2.6 | Custom notification blast by CEO, Manager, Admin IT | NOT-3 | 2 | ❌ |
-| 2.6 | Deduplication within a cooldown window | NOT-4 | 2 | ❌ |
-| 2.7 | Configurable Excel exports | XLS-1 | 2 | ❌ |
-| 2.7 | Signed PDF of approved applications | PDF-1 | 2 | ❌ |
-| 2.7 | QPR PDF download | PDF-1 | 2 | ❌ |
-| 2.7 | Chat history PDF export | PDF-1 | 2 | ❌ |
-| 2.7 | Virtual ID card PDF by email | IDC-1 | 2 | ❌ |
+| 2.6 | Reminders: incomplete profiles, pending QPR | REM-1, QPR-2 | 2 | ✅ demo: run from admin; scheduler needs CRON_SECRET |
+| 2.6 | Custom notification blast by CEO, Manager, Admin IT | NOT-3 | 2 | ✅ demo |
+| 2.6 | Deduplication within a cooldown window | NOT-4 | 2 | ✅ demo: 10 min, database (Redis in production) |
+| 2.7 | Configurable Excel exports | XLS-1 | 2 | ✅ demo: background job, polled |
+| 2.7 | Signed PDF of approved applications | PDF-1 | 2 | ✅ demo: typed signatures (legal eSign: SIG-2 open) |
+| 2.7 | QPR PDF download | PDF-1 | 2 | ✅ demo |
+| 2.7 | Chat history PDF export | PDF-1 | 2 | ✅ demo |
+| 2.7 | Virtual ID card PDF by email | IDC-1 | 2 | ✅ demo: emailed, verify page, daily renewal job |
 | 2.8 | Public listing of approved incubatees | PUB-1, WEB-13 | 1 | ✅ search and filters |
 | 2.8 | Public listing of mentors and investors | PUB-1 | 1 | ✅ approved, opted-in profiles |
 | 2.8 | Admin IT controls visible profile fields | FORM-3 | 1 | ✅ per-field public flag |
-| 2.8 | Blog posts from the office team | BLG-1, WEB-9 | 2 | ❌ |
+| 2.8 | Blog posts from the office team | BLG-1, WEB-9 | 2 | ✅ demo |
 
 ### 14.2 Technology and architecture (overview §3–6)
 

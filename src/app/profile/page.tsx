@@ -25,6 +25,7 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [idCard, setIdCard] = useState<{ card: { number: string; status: string; expiresAt: string } | null; eligible: boolean } | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((d) => {
@@ -32,6 +33,7 @@ export default function ProfilePage() {
       setUser(d.user);
     });
     fetch("/api/account").then((r) => r.json()).then((d) => { if (d.account) { setAccount(d.account); setName(d.account.name); } });
+    fetch("/api/idcards").then((r) => r.json()).then((d) => { if ("card" in d) setIdCard(d); });
   }, [router]);
 
   async function saveName(e: React.FormEvent) {
@@ -143,6 +145,22 @@ export default function ProfilePage() {
           <section className="mt-6 bg-white border border-border rounded-2xl shadow-card p-6">
             <h2 className="font-body font-bold text-navy">Office account</h2>
             <p className="mt-2 text-sm text-secondary font-body">Your role and email are set by the CEO. Ask the CEO if either needs to change.</p>
+          </section>
+        )}
+
+        {idCard && (idCard.card || idCard.eligible) && (
+          <section className="mt-6 bg-white border border-border rounded-2xl shadow-card p-6">
+            <h2 className="font-body font-bold text-navy">Your ID card</h2>
+            {idCard.card ? (
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-sm font-body">
+                <span className="font-mono text-navy">{idCard.card.number}</span>
+                <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full border ${idCard.card.status === "active" && new Date(idCard.card.expiresAt) > new Date() ? "bg-leaf-50 text-leaf-800 border-leaf-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+                  {idCard.card.status === "active" && new Date(idCard.card.expiresAt) > new Date() ? `Valid till ${new Date(idCard.card.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : idCard.card.status === "revoked" ? "Revoked" : "Expired"}
+                </span>
+                <a href="/api/idcards/pdf" target="_blank" rel="noopener noreferrer" className="ml-auto font-semibold text-brand hover:underline">⬇ Download PDF</a>
+                <Link href={`/verify/${idCard.card.number}`} target="_blank" className="text-secondary hover:underline">Verification page ↗</Link>
+              </div>
+            ) : <p className="mt-2 text-sm text-secondary font-body">You are eligible for a virtual ID card. The CIMP-BIIF office will issue it and email it to you.</p>}
           </section>
         )}
 

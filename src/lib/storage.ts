@@ -24,7 +24,15 @@ export function sniffType(buf: Buffer): FileType | null {
 }
 
 // Stored names are generated here (uuid + known extension); never derived from user input.
-const SAFE_NAME = /^[0-9a-f-]{36}\.(pdf|png|jpg|webp|pptx|ppt)$/;
+const SAFE_NAME = /^[0-9a-f-]{36}\.(pdf|png|jpg|webp|pptx|ppt|xlsx)$/;
+
+/** Generated Excel exports (PRD XLS-1); never user uploads. */
+export async function saveExport(buf: Buffer): Promise<string> {
+  await mkdir(ROOT, { recursive: true });
+  const storedName = `${randomUUID()}.xlsx`;
+  await writeFile(path.join(ROOT, storedName), buf, { flag: "wx" });
+  return storedName;
+}
 
 export async function saveFile(buf: Buffer, type: FileType): Promise<string> {
   await mkdir(ROOT, { recursive: true });
