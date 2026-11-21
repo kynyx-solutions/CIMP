@@ -158,6 +158,20 @@ export class PdfBuilder {
 
   gap(n: number) { this.y -= n; }
 
+  /** A PNG (data URL or bytes) at most `maxW` × `maxH`, keeping its aspect ratio. Returns false if unreadable. */
+  async image(png: string | Uint8Array, maxW: number, maxH: number, x = this.M): Promise<boolean> {
+    try {
+      const bytes = typeof png === "string" ? Buffer.from(png.split(",")[1] ?? "", "base64") : png;
+      const img = await this.doc.embedPng(bytes);
+      const k = Math.min(maxW / img.width, maxH / img.height, 1);
+      const w = img.width * k, h = img.height * k;
+      this.ensure(h + 4);
+      this.page.drawImage(img, { x, y: this.y - h, width: w, height: h });
+      this.y -= h + 4;
+      return true;
+    } catch { return false; }
+  }
+
   async save(): Promise<Uint8Array> {
     const pages = this.doc.getPages();
     const stamp = `Generated ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })} IST`;

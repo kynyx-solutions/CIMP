@@ -21,9 +21,19 @@ function blank(template: unknown): unknown {
   return null;
 }
 
-function ShapeEditor({ template, value, onChange, label, disabled }: {
+function ShapeEditor({ template, value, onChange, label, disabled, path = "", choices = {} }: {
   template: unknown; value: unknown; onChange: (v: unknown) => void; label: string; disabled: boolean;
+  path?: string; choices?: Record<string, string[]>;
 }) {
+  const options = choices[path];
+  if (options && typeof template === "string") {
+    return (
+      <label className="block"><span className="block text-[11px] text-muted font-body mb-1">{label}</span>
+        <select className={input} disabled={disabled} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>
+          {options.map((o) => <option key={o} value={o}>{o}</option>)}
+        </select></label>
+    );
+  }
   if (typeof template === "boolean") {
     return (
       <label className="flex items-center gap-2 text-sm font-body text-navy">
@@ -80,7 +90,7 @@ function ShapeEditor({ template, value, onChange, label, disabled }: {
       <div className="grid sm:grid-cols-2 gap-3">
         {Object.entries(template as Record<string, unknown>).map(([k, t]) => (
           <div key={k} className={Array.isArray(t) || (typeof t === "string" && t.length > 70) ? "sm:col-span-2" : ""}>
-            <ShapeEditor template={t} value={obj[k]} onChange={(v) => onChange({ ...obj, [k]: v })} label={human(k)} disabled={disabled} />
+            <ShapeEditor template={t} value={obj[k]} onChange={(v) => onChange({ ...obj, [k]: v })} label={human(k)} disabled={disabled} path={path ? `${path}.${k}` : k} choices={choices} />
           </div>
         ))}
       </div>
@@ -92,6 +102,7 @@ function ShapeEditor({ template, value, onChange, label, disabled }: {
 export default function ContentEditor() {
   const [items, setItems] = useState<Item[] | null>(null);
   const [canEdit, setCanEdit] = useState(false);
+  const [choices, setChoices] = useState<Record<string, string[]>>({});
   const [active, setActive] = useState<string>("sampleMode");
   const [draft, setDraft] = useState<unknown>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
@@ -99,7 +110,7 @@ export default function ContentEditor() {
 
   const load = useCallback(async (keep?: string) => {
     const d = await fetch("/api/admin/content").then((r) => r.json());
-    setItems(d.items); setCanEdit(d.canEdit);
+    setItems(d.items); setCanEdit(d.canEdit); setChoices(d.choices ?? {});
     const cur = d.items.find((i: Item) => i.key === (keep ?? active)) ?? d.items[0];
     setActive(cur.key); setDraft(cur.value);
   }, [active]);
@@ -151,7 +162,7 @@ export default function ContentEditor() {
         </div>
         {msg && <p role="status" className={`mb-4 text-sm font-body px-4 py-2.5 rounded-xl border ${msg.ok ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-red-50 border-red-200 text-red-700"}`}>{msg.text}</p>}
         {!canEdit && <p className="mb-4 text-xs font-body text-muted">View only. Website content is edited by Admin IT.</p>}
-        <ShapeEditor template={item.default} value={draft} onChange={setDraft} label={item.key === "sampleMode" ? "Show sample banner and tags" : item.label} disabled={!canEdit} />
+        <ShapeEditor template={item.default} value={draft} onChange={setDraft} label={item.key === "sampleMode" ? "Show sample banner and tags" : item.label} disabled={!canEdit} path={item.key} choices={choices} />
         {canEdit && (
           <div className="mt-6 pt-5 border-t border-border flex flex-wrap gap-3">
             <button onClick={save} disabled={!dirty || busy} className="px-5 py-2.5 rounded-xl bg-brand text-white text-sm font-semibold font-body disabled:opacity-40">{busy ? "Saving…" : "Save & publish"}</button>

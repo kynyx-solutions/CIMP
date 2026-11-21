@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import MentorOverview from "@/components/MentorOverview";
 import { INDUSTRIES } from "@/lib/application-fields";
 import { PROFILE_STATUS_LABELS, CONN_STAGES } from "@/lib/network";
 import FieldInput, { toFieldValue, type FieldValue } from "@/components/FieldInput";
@@ -122,6 +123,8 @@ export default function MentorHubPage() {
           Welcome, {user.name}. Manage your profile and the startups routed to you.{" "}
           <Link href={`/messages?type=mentor_office&id=${user.userId}`} className="text-brand font-semibold underline">Message the office</Link>
         </p>
+
+        {status === "approved" && <MentorOverview />}
 
         {/* Requests waiting on this mentor */}
         <section className="mt-8 bg-white border border-border rounded-2xl p-6 shadow-card">

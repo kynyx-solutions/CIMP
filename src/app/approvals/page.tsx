@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import StageBadge from '@/components/StageBadge';
 import DocumentsPanel from '@/components/DocumentsPanel';
+import SignaturePad from '@/components/SignaturePad';
 import { STAGES, PIPELINE, ROLE_LABELS, ROLE_ICONS, APPROVAL_RANK, canAct, isOfficeRole, stageEnteredAt, daysSince, daysLabel, progressStage, type Stage } from '@/lib/workflow';
 import FieldInput, { toFieldValue, type FieldValue } from '@/components/FieldInput';
 import { valueOf, displayValue, type FormDef } from '@/lib/forms';
@@ -11,7 +12,7 @@ import { valueOf, displayValue, type FormDef } from '@/lib/forms';
 // Office roles that may correct application fields (PRD RBAC-4); enforced again by the API.
 const OFFICE_EDITORS = ['staff', 'executive', 'manager', 'sr_manager', 'ceo'];
 
-type Step = { fromStage: string; toStage: string; action: string; actorName: string; actorRole: string; remark?: string; signature?: string; at: string; };
+type Step = { fromStage: string; toStage: string; action: string; actorName: string; actorRole: string; remark?: string; signature?: string; signatureImage?: string | null; at: string; };
 type App = {
   _id: string; applicantName: string; startupName: string; idea: string;
   industry: string; stage: string; status: string; isFastTracked: boolean;
@@ -34,6 +35,7 @@ export default function ApprovalsPage() {
   const [modal, setModal] = useState<{ type: string; app: App } | null>(null);
   const [inputText, setInputText] = useState('');
   const [signature, setSignature] = useState('');
+  const [signatureImage, setSignatureImage] = useState('');
   // Side panel
   const [sideApp, setSideApp] = useState<App | null>(null);
   const [sideTab, setSideTab] = useState<'details'|'trail'|'timeline'|'messages'>('details');
@@ -103,7 +105,7 @@ export default function ApprovalsPage() {
       const data = await res.json();
       if (!res.ok) { showToast('Error: ' + data.error, 'error'); return; }
       showToast('Done! Application updated.');
-      setModal(null); setInputText(''); setSignature('');
+      setModal(null); setInputText(''); setSignature(''); setSignatureImage('');
       await fetchApps();
       if (sideApp?._id === applicationId) openSidePanel({ ...sideApp, ...data.application });
     } catch { showToast('Something went wrong', 'error'); }
@@ -180,19 +182,20 @@ export default function ApprovalsPage() {
               onBlur={e => { e.target.style.borderColor=''; e.target.style.boxShadow=''; }} />
             {modal.type === 'advance' && STAGES[modal.app.stage as Stage]?.needsSignature && (
               <div className="mb-4">
-                <label className="block text-xs font-body font-semibold text-navy mb-1.5">✍️ Digital signature: type your full name</label>
-                <input value={signature} onChange={e => setSignature(e.target.value)} placeholder={user.name}
-                  className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-navy text-lg focus:outline-none"
-                  style={{ fontFamily: 'cursive' }} />
-                <p className="text-[11px] text-muted font-body mt-1">Recorded with your account and a timestamp. (Demo: typed signature. Phase 1: drawn/uploaded image.)</p>
+                <p className="block text-xs font-body font-semibold text-navy mb-1.5">✍️ Sign with your finger, pen or mouse</p>
+                <SignaturePad key={modal.app._id} onChange={setSignatureImage} label={`Sign as ${user.name}`} />
+                <label className="block text-xs font-body font-semibold text-navy mt-3 mb-1.5" htmlFor="sig-name">Type your full name</label>
+                <input id="sig-name" value={signature} onChange={e => setSignature(e.target.value)} placeholder={user.name}
+                  className="w-full bg-bg border border-border rounded-xl px-4 py-2.5 text-navy text-sm focus:outline-none" />
+                <p className="text-[11px] text-muted font-body mt-1">The drawn signature and your name are recorded with your account, the date and time, and appear on the signed PDF. Legally valid eSign (Aadhaar / DSC) is a separate decision for CIMP.</p>
               </div>
             )}
             <div className="flex gap-3">
-              <button onClick={() => { setModal(null); setInputText(''); setSignature(''); }}
+              <button onClick={() => { setModal(null); setInputText(''); setSignature(''); setSignatureImage(''); }}
                 className="flex-1 py-2.5 border border-border text-secondary rounded-xl hover:text-navy hover:border-border-2 transition-colors font-body text-sm">Cancel</button>
               <button
-                disabled={!!actionLoading || ((modal.type === 'reject' || modal.type === 'send_back') && !inputText.trim()) || (modal.type === 'advance' && !!STAGES[modal.app.stage as Stage]?.needsSignature && !signature.trim())}
-                onClick={() => takeAction(modal.app._id, modal.type, { remark: inputText, signature })}
+                disabled={!!actionLoading || ((modal.type === 'reject' || modal.type === 'send_back') && !inputText.trim()) || (modal.type === 'advance' && !!STAGES[modal.app.stage as Stage]?.needsSignature && (!signature.trim() || !signatureImage))}
+                onClick={() => takeAction(modal.app._id, modal.type, { remark: inputText, signature, signatureImage })}
                 className={`flex-1 py-2.5 rounded-xl font-body text-sm font-semibold transition-colors disabled:opacity-50 ${modal.type === 'reject' ? 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100' : 'text-white hover:opacity-90'}`}
                 style={modal.type !== 'reject' ? { background: '#3F7A16' } : {}}>
                 {modal.type === 'reject' ? 'Confirm Reject' : modal.type === 'send_back' ? 'Send back' : 'Confirm'}
@@ -418,7 +421,13 @@ export default function ApprovalsPage() {
                           {s.action} · <span className="text-muted">{STAGES[s.fromStage as Stage]?.label} → {STAGES[s.toStage as Stage]?.label}</span>
                         </p>
                         {s.remark && <p className="text-[11px] text-muted mt-1">&ldquo;{s.remark}&rdquo;</p>}
-                        {s.signature && <p className="text-base text-navy mt-1.5 border-t border-dashed border-border pt-1.5" style={{ fontFamily: 'cursive' }}>{s.signature}</p>}
+                        {s.signature && (
+                          <div className="mt-1.5 border-t border-dashed border-border pt-1.5">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            {s.signatureImage && <img src={s.signatureImage} alt={`Signature of ${s.actorName}`} className="h-12 w-auto" />}
+                            <p className="text-xs text-navy font-body">Signed: {s.signature}</p>
+                          </div>
+                        )}
                         <p className="text-[10px] text-faint font-mono mt-1">{new Date(s.at).toLocaleString('en-IN')}</p>
                       </div>
                     ))}

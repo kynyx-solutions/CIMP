@@ -60,9 +60,11 @@ function cell(v: unknown): ExcelJS.CellValue {
 }
 
 export async function runExportJob(jobId: string) {
+  // Claim the job atomically: the request that queued it and the 30-second processor may both try
+  const claimed = await prisma.exportJob.updateMany({ where: { id: jobId, status: "queued" }, data: { status: "running" } });
+  if (claimed.count === 0) return;
   const job = await prisma.exportJob.findUnique({ where: { id: jobId } });
-  if (!job || job.status !== "queued") return;
-  await prisma.exportJob.update({ where: { id: job.id }, data: { status: "running" } });
+  if (!job) return;
   try {
     const def = DATASETS[job.dataset as DatasetKey];
     const cols = def.columns.filter((c) => job.columns.includes(c.key));

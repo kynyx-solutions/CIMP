@@ -55,9 +55,19 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }),
     office ? [0.13, 0.2, 0.2, 0.27, 0.2] : [0.15, 0.3, 0.3, 0.25],
   );
+  // Drawn signatures (Senior Manager and CEO stages)
+  const signed = app.steps.filter((s) => s.signature);
+  if (signed.length) {
+    pdf.heading("Signatures");
+    for (const s of signed) {
+      if (s.signatureImage) await pdf.image(s.signatureImage, 180, 56);
+      pdf.text(`${s.signature} · ${ROLE_LABELS[s.actorRole] ?? s.actorRole} · ${s.at.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })} IST`, { size: 9, color: MUTED });
+      pdf.gap(10);
+    }
+  }
   if (approved) {
     pdf.gap(14);
-    pdf.text("This application has completed CIMP-BIIF's four-stage review. Signatures above are typed signatures recorded with the reviewer's account, date and time in the portal's audit log.", { size: 9, color: MUTED });
+    pdf.text("This application has completed CIMP-BIIF's four-stage review. Signatures above were given by each reviewer in the portal and are recorded with their account, date and time in the audit log.", { size: 9, color: MUTED });
     pdf.gap(6);
     pdf.text(`Verification reference: ${app.id}`, { size: 9, bold: true, color: BRAND });
   }

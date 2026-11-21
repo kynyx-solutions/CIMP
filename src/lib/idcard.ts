@@ -41,7 +41,7 @@ export function verifyUrl(number: string) {
 /** Issue a new card or renew an existing one (same number, new validity). */
 export async function issueCard(holder: Holder) {
   const { idCardTemplate: t } = await getContent();
-  const months = Math.min(60, Math.max(1, Math.round(t.validityMonths || 12)));
+  const months = Math.min(60, Math.max(1, Math.round(Number(t.validityMonths) || 12)));
   const issuedAt = new Date();
   const expiresAt = new Date(issuedAt); expiresAt.setMonth(expiresAt.getMonth() + months);
   const existing = await prisma.idCard.findUnique({ where: { userId: holder.userId } });
@@ -70,13 +70,20 @@ export async function emailCard(card: { id: string; userId: string; number: stri
 }
 
 const W = 242.6, H = 153; // CR80 card, 85.6 × 54 mm
-const GREEN = rgb(0.247, 0.478, 0.086), DARK = rgb(0.11, 0.21, 0.06), MUTE = rgb(0.42, 0.47, 0.38), PALE = rgb(0.95, 0.97, 0.92), WHITE = rgb(1, 1, 1);
+const ACCENTS = { green: rgb(0.247, 0.478, 0.086), saffron: rgb(0.85, 0.47, 0.05), blue: rgb(0.12, 0.31, 0.55) } as const;
+const GREEN = ACCENTS.green, DARK = rgb(0.11, 0.21, 0.06), MUTE = rgb(0.42, 0.47, 0.38), PALE = rgb(0.95, 0.97, 0.92), WHITE = rgb(1, 1, 1);
 
 /** Two-page PDF at card size: front and back. Null when the card does not exist. */
 export async function cardPdf(number: string): Promise<Uint8Array | null> {
   const card = await prisma.idCard.findUnique({ where: { number } });
   if (!card) return null;
-  const { idCardTemplate: t } = await getContent();
+  const { idCardTemplate: saved } = await getContent();
+  const { CONTENT_DEFAULTS } = await import("@/lib/content");
+  const t = { ...CONTENT_DEFAULTS.idCardTemplate, ...saved };
+  // Incubatee and mentor cards use their own template (title and colour)
+  const kind = card.role.startsWith("Incubatee") ? "incubatee" : "mentor";
+  const tpl = { ...CONTENT_DEFAULTS.idCardTemplate[kind], ...(t[kind] ?? {}) };
+  const ACC = ACCENTS[tpl.accent as keyof typeof ACCENTS] ?? GREEN;
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const dir = path.join(process.cwd(), "assets", "fonts");
@@ -97,29 +104,29 @@ export async function cardPdf(number: string): Promise<Uint8Array | null> {
   // Front
   const f = doc.addPage([W, H]);
   f.drawRectangle({ x: 0, y: 0, width: W, height: H, color: WHITE });
-  f.drawRectangle({ x: 0, y: H - 34, width: W, height: 34, color: GREEN });
+  f.drawRectangle({ x: 0, y: H - 34, width: W, height: 34, color: ACC });
   f.drawText("CIMP-BIIF", { x: 12, y: H - 22, size: 12, font: bold, color: WHITE });
-  f.drawText(fit(t.cardTitle, 7.5, 110), { x: W - 12 - reg.widthOfTextAtSize(fit(t.cardTitle, 7.5, 110), 7.5), y: H - 21, size: 7.5, font: reg, color: WHITE });
+  f.drawText(fit(tpl.cardTitle, 7.5, 110), { x: W - 12 - reg.widthOfTextAtSize(fit(tpl.cardTitle, 7.5, 110), 7.5), y: H - 21, size: 7.5, font: reg, color: WHITE });
   const initials = card.holderName.replace(/^.*:\s*/, "").split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]!.toUpperCase()).join("");
-  f.drawCircle({ x: 34, y: 66, size: 22, color: PALE, borderColor: GREEN, borderWidth: 1 });
-  f.drawText(safe(initials), { x: 34 - bold.widthOfTextAtSize(safe(initials), 14) / 2, y: 61, size: 14, font: bold, color: GREEN });
+  f.drawCircle({ x: 34, y: 66, size: 22, color: PALE, borderColor: ACC, borderWidth: 1 });
+  f.drawText(safe(initials), { x: 34 - bold.widthOfTextAtSize(safe(initials), 14) / 2, y: 61, size: 14, font: bold, color: ACC });
   f.drawText(fit(card.holderName, 11, 170, bold), { x: 66, y: 88, size: 11, font: bold, color: DARK });
-  f.drawText(fit(card.role, 8, 170), { x: 66, y: 75, size: 8, font: reg, color: GREEN });
+  f.drawText(fit(card.role, 8, 170), { x: 66, y: 75, size: 8, font: reg, color: ACC });
   if (card.organisation) f.drawText(fit(card.organisation, 8, 170), { x: 66, y: 63, size: 8, font: reg, color: MUTE });
   f.drawText("ID", { x: 66, y: 46, size: 6, font: bold, color: MUTE });
   f.drawText(card.number, { x: 78, y: 46, size: 7.5, font: bold, color: DARK });
   f.drawLine({ start: { x: 12, y: 30 }, end: { x: W - 12, y: 30 }, thickness: 0.4, color: PALE });
   f.drawText(`Issued ${date(card.issuedAt)}`, { x: 12, y: 16, size: 6.5, font: reg, color: MUTE });
   const valid = expired ? "NOT VALID" : `Valid till ${date(card.expiresAt)}`;
-  f.drawText(valid, { x: W - 12 - bold.widthOfTextAtSize(valid, 7), y: 16, size: 7, font: bold, color: expired ? rgb(0.7, 0.14, 0.1) : GREEN });
+  f.drawText(valid, { x: W - 12 - bold.widthOfTextAtSize(valid, 7), y: 16, size: 7, font: bold, color: expired ? rgb(0.7, 0.14, 0.1) : ACC });
 
   // Back
   const b = doc.addPage([W, H]);
-  b.drawRectangle({ x: 0, y: H - 6, width: W, height: 6, color: GREEN });
+  b.drawRectangle({ x: 0, y: H - 6, width: W, height: 6, color: ACC });
   let y = H - 22;
   for (const line of wrap(t.terms, 6.5, W - 24).slice(0, 5)) { b.drawText(line, { x: 12, y, size: 6.5, font: reg, color: DARK }); y -= 9; }
   b.drawText("Verify this card", { x: 12, y: 58, size: 6.5, font: bold, color: MUTE });
-  b.drawText(fit(verifyUrl(card.number), 6.5, W - 24), { x: 12, y: 49, size: 6.5, font: reg, color: GREEN });
+  b.drawText(fit(verifyUrl(card.number), 6.5, W - 24), { x: 12, y: 49, size: 6.5, font: reg, color: ACC });
   b.drawLine({ start: { x: W - 110, y: 32 }, end: { x: W - 12, y: 32 }, thickness: 0.5, color: MUTE });
   b.drawText(fit(t.signatoryName, 7, 98, bold), { x: W - 110, y: 23, size: 7, font: bold, color: DARK });
   wrap(t.signatoryTitle, 5.5, 98).slice(0, 2).forEach((line, i) => b.drawText(line, { x: W - 110, y: 15 - i * 7, size: 5.5, font: reg, color: MUTE }));

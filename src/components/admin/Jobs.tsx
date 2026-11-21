@@ -4,9 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 
 type Run = { id: string; trigger: string; status: string; summary: string | null; startedAt: string };
 type Job = { key: string; label: string; schedule: string; cron: string; desc: string; runs: Run[] };
+type Sched = { enabled: boolean; running: boolean; startedAt: string | null; lastTick: string | null; next: Record<string, string | null> };
+const at = (d: string) => new Date(d).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export default function Jobs() {
-  const [data, setData] = useState<{ jobs: Job[]; schedulerConfigured: boolean } | null>(null);
+  const [data, setData] = useState<{ jobs: Job[]; scheduler: Sched; externalCron: boolean } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const load = useCallback(() => fetch("/api/admin/jobs").then((r) => r.json()).then(setData), []);
@@ -25,15 +27,20 @@ export default function Jobs() {
   if (!data) return <p className="text-sm text-muted font-body">Loading…</p>;
   return (
     <div>
-      <p className={`mb-4 text-sm font-body px-4 py-2.5 rounded-xl border ${data.schedulerConfigured ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
-        {data.schedulerConfigured ? "The scheduler is configured: jobs run automatically at the times below." : "Demo: no scheduler is connected, so jobs run only when started here. In production a scheduler calls them at the times below. Repeat notifications within 10 minutes are skipped."}
+      <p className={`mb-4 text-sm font-body px-4 py-2.5 rounded-xl border ${data.scheduler.running ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
+        {data.scheduler.running
+          ? <>The scheduler is running in this server: jobs start on their own at the times below (IST), and queued Excel exports are picked up every 30 seconds.{data.scheduler.lastTick && <> Last check {at(data.scheduler.lastTick)}.</>}</>
+          : data.scheduler.enabled ? "The scheduler is not running in this server process yet. It starts when the server boots." : "The in-app scheduler is switched off (SCHEDULER_ENABLED=false)."}
+        {data.externalCron && " An external scheduler can also call /api/cron; each time slot still runs only once."}
+        {" "}Repeat notifications within 10 minutes are skipped.
       </p>
       {msg && <p role="status" className={`mb-4 text-sm font-body px-4 py-2.5 rounded-xl border ${msg.ok ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-red-50 border-red-200 text-red-700"}`}>{msg.text}</p>}
       <div className="grid lg:grid-cols-3 gap-4">
         {data.jobs.map((j) => (
           <section key={j.key} className="bg-white border border-border rounded-2xl shadow-card p-5 flex flex-col">
             <h3 className="font-body font-bold text-navy">{j.label}</h3>
-            <p className="text-xs font-mono text-muted mt-0.5">{j.schedule} · <span title="cron expression">{j.cron}</span></p>
+            <p className="text-xs font-mono text-muted mt-0.5">{j.schedule} · <span title="cron expression, IST">{j.cron}</span></p>
+            {data.scheduler.running && data.scheduler.next[j.key] && <p className="text-xs font-body text-leaf-800 mt-1">Next run: {at(data.scheduler.next[j.key]!)}</p>}
             <p className="text-sm text-secondary font-body mt-2">{j.desc}</p>
             <ul className="mt-3 space-y-2 flex-1">
               {j.runs.length === 0 && <li className="text-xs text-muted font-body">Never run.</li>}

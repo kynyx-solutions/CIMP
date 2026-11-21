@@ -17,10 +17,10 @@ export const JOB_KEYS = Object.keys(JOBS) as JobKey[];
 
 async function qprReminders(trigger: "cron" | "manual") {
   const now = new Date();
-  // Cron: only on a Monday inside the reminder window. Manual runs remind for the window's
-  // period, or for the last completed quarter outside it.
+  // Manual runs remind for the window's period, or for the last completed quarter outside it.
   let period = reminderPeriod(now);
-  if (trigger === "cron" && (now.getDay() !== 1 || !period)) return "Outside the reminder window: nothing sent";
+  // The cron expression already limits this to Mondays 9 AM IST; outside the window, nothing is sent
+  if (trigger === "cron" && !period) return "Outside the reminder window: nothing sent";
   period ??= previousPeriod(periodOf(now));
   const apps = await prisma.application.findMany({
     where: { status: "approved", qprReports: { none: { period, status: { in: ["submitted", "accepted"] } } } },
@@ -60,9 +60,18 @@ async function idCardExpiry() {
   return `${renewed} renewed, ${expired} expired (holder no longer eligible)`;
 }
 
-/** Run a job and record it. Never throws: the failure is stored on the run. */
-export async function runJob(job: JobKey, trigger: "cron" | "manual") {
-  const run = await prisma.jobRun.create({ data: { job, trigger } });
+/**
+ * Run a job and record it. Never throws: the failure is stored on the run.
+ * With a `slot` (scheduled runs) the run is skipped, returning null, if that slot already ran.
+ */
+export async function runJob(job: JobKey, trigger: "cron" | "manual", slot?: string) {
+  let run;
+  try {
+    run = await prisma.jobRun.create({ data: { job, trigger, slot: slot ?? null } });
+  } catch (err: any) {
+    if (err?.code === "P2002") return null; // another tick or server took this slot
+    throw err;
+  }
   try {
     const summary = job === "qpr-reminders" ? await qprReminders(trigger) : job === "profile-reminders" ? await profileReminders() : await idCardExpiry();
     return prisma.jobRun.update({ where: { id: run.id }, data: { status: "ok", summary, finishedAt: new Date() } });

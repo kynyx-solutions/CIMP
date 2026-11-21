@@ -78,8 +78,8 @@ Take KisanLink through all four stages. Keep the founder signed in, in the priva
 
 1. **Executive** (exec@cimp.local) opens **Applications** (`/approvals`). Open KisanLink's side panel: details, documents, approval trail, activity and chat. Click **Accept Submission** with a remark. The application is now locked for editing.
 2. **Incubation Manager** (mgr@cimp.local) clicks **Complete Due Diligence** with a remark.
-3. **Senior Manager** (srm@cimp.local) clicks **Approve & Sign** and types a signature.
-4. **CEO** (ceo@cimp.local) clicks **Final Approve & Sign**, then **Publish** to list KisanLink in the public directory. Refresh `/startups` to show it.
+3. **Senior Manager** (srm@cimp.local) clicks **Approve & Sign**, draws a signature with the mouse or a finger, and types their name.
+4. **CEO** (ceo@cimp.local) clicks **Final Approve & Sign** and signs the same way, then **Publish** to list KisanLink in the public directory. Refresh `/startups` to show it.
 5. **Send back instead of reject.** As the Incubation Manager, open **MediScan** and choose send back with "Please add the CIN certificate". The founder sees the request, edits and resubmits, and it returns to the same stage.
 6. **Office correction.** As Office Staff (staff@cimp.local), open an application, click **Correct fields**, change the city and give a reason. The application is flagged "Edited by office", the founder is notified, and the old and new values go to the audit log.
 
@@ -129,13 +129,15 @@ Message: CIMP runs the portal itself, and every change is on record.
 
 Message: after incubation starts, the portal keeps tracking progress, mentoring and investment, and runs the routine work on a schedule. Phase 2 is a separate scope; show it only if time allows.
 
-1. **Progress report.** As the Executive, open **Progress** (`/qpr`). GreenGrid's report for the last quarter is waiting: open it, download the PDF, then accept it or send it back with a note. As GreenGrid, the same page shows each quarter's status; Admin IT can change the report's questions in the form builder.
-2. **Mentor sessions.** As Priya Sinha (mentor1@demo.com), open the Mentor hub and click **Sessions & documents** for GreenGrid. Show the completed session with both ratings, the upcoming video call, and the open document request. As GreenGrid, upload the requested file.
-3. **Investment.** As the Incubation Manager, open **More → Investment proposals** (`/invest`): Vikram Rao proposes ₹25 lakh in GreenGrid. Schedule a pitch, then click **Record investment**. As Vikram (mentor2@demo.com), **Invest** now shows GreenGrid in his portfolio with its latest accepted progress numbers and a button to message the founders.
-4. **Reports and exports.** As the Executive, open **More → Reports** (`/reports`): live figures for the pipeline, sectors, mentoring and progress reports. Export applications to Excel with chosen columns. In **Applications**, the side panel's **PDF** gives the signed application with its approval trail.
-5. **Broadcast.** As the Executive, open **More → Broadcast** and send a message to approved mentors. Sending the same message again skips everyone who already received it.
-6. **Blog.** As Admin IT, open **More → Blog posts**: a post from Office Staff is waiting. Preview and publish it, then open `/blog`.
-7. **ID cards and scheduled jobs.** As Admin IT, open **Admin → ID cards**, issue a card to GreenGrid's founder and open its PDF and verify page. Then **Admin → Scheduled jobs → Run now** on the progress-report reminder.
+1. **Dashboards.** Open the dashboard as GreenGrid, the Executive and Admin IT: each shows its own to-do cards (report due, mentor documents, reports to review, proposals to arrange, posts to approve, members without an ID card).
+2. **Progress report.** As the Executive, open **Progress** (`/qpr`). GreenGrid's report for the last quarter is waiting: open it, download the PDF, then accept it or send it back with a note. As GreenGrid, the same page shows each quarter's status; Admin IT can change the report's questions in the form builder.
+3. **Mentor sessions.** As Priya Sinha (mentor1@demo.com), open the Mentor hub and click **Sessions & documents** for GreenGrid. Show the completed session with both ratings, the upcoming video call, and the open document request. As GreenGrid, upload the requested file.
+4. **Investment.** As the Incubation Manager, open **More → Investment proposals** (`/invest`): Vikram Rao proposes ₹25 lakh in GreenGrid. Schedule a pitch, then click **Record investment**. As Vikram (mentor2@demo.com), **Invest** now shows GreenGrid in his portfolio with its latest accepted progress numbers and a button to message the founders.
+5. **Reports and exports.** As the Executive, open **More → Reports** (`/reports`): live figures for the pipeline, sectors, mentoring and progress reports. Export applications to Excel with chosen columns. In **Applications**, the side panel's **PDF** gives the signed application with its approval trail.
+6. **Broadcast.** As the Executive, open **More → Broadcast** and send a message to approved mentors. Sending the same message again skips everyone who already received it.
+7. **Blog.** As Admin IT, open **More → Blog posts**: a post from Office Staff is waiting. Preview and publish it, then open `/blog`.
+8. **ID cards and scheduled jobs.** As Admin IT, open **Admin → ID cards**, issue a card to GreenGrid's founder and open its PDF and verify page. Then open **Admin → Scheduled jobs**: the jobs run on their own at the times shown (next run listed), and **Run now** starts one immediately. **Admin → Email** shows how email is sent and sends a test email.
+9. **Signed PDF.** Download KisanLink's application PDF from **Applications**: it ends with the drawn signatures of the Senior Manager and the CEO.
 
 ## Closing and questions (5 min)
 
@@ -158,4 +160,4 @@ Close on the founder's dashboard for KisanLink: one application, four roles, eve
 - **Apple sign-in:** needs CIMP's decision and an Apple developer account.
 - **Office accounts:** whether Admin IT may also create office users, or only the CEO.
 - **Real content and numbers:** stats, programs, mentors and contacts to come from CIMP.
-- **Phase 2 (separate scope):** shown as a working demo in Act 7. Before production it needs CIMP's mail account for emails, a scheduler for the reminder jobs, and a decision on legally valid eSign (today signatures are typed and recorded in the audit log).
+- **Phase 2 (separate scope):** shown as a working demo in Act 7. Before production it needs CIMP's mail account (set in the server settings; Admin → Email confirms it) and a decision on legally valid eSign: today signatures are drawn in the portal and recorded in the audit log, not Aadhaar eSign or DSC.

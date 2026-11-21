@@ -66,6 +66,7 @@ docker-compose.override.yml
 # Secondary Next.js build dir (testing)
 /.next-test/
 /.next-build/
+/.next-test2/
 
 # Uploaded documents (private, never served directly)
 /storage/
