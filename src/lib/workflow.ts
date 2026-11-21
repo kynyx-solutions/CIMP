@@ -8,7 +8,10 @@ export type OfficeRole =
   | "sr_manager"
   | "manager"
   | "executive"
-  | "staff";
+  | "staff"
+  // BIIF 2.0 (Phase 3): finance and communications
+  | "accounts"
+  | "social_media";
 
 export const OFFICE_ROLES: OfficeRole[] = [
   "ceo",
@@ -17,6 +20,8 @@ export const OFFICE_ROLES: OfficeRole[] = [
   "manager",
   "executive",
   "staff",
+  "accounts",
+  "social_media",
 ];
 
 export const ROLE_LABELS: Record<string, string> = {
@@ -28,6 +33,8 @@ export const ROLE_LABELS: Record<string, string> = {
   manager: "Incubation Manager",
   executive: "Executive",
   staff: "Office Staff",
+  accounts: "Accounts Officer",
+  social_media: "Social Media Manager",
 };
 
 export const ROLE_ICONS: Record<string, string> = {
@@ -39,6 +46,8 @@ export const ROLE_ICONS: Record<string, string> = {
   manager: "🔍",
   executive: "📋",
   staff: "🗂️",
+  accounts: "💰",
+  social_media: "📣",
 };
 
 // Approval authority. Higher rank can act on any stage at or below its rank.

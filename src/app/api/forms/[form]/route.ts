@@ -12,7 +12,7 @@ import { audit, type Diff } from "@/lib/audit";
 const canConfigure = (role: string) => role === "admin_it"; // PRD §5: configure forms = Admin IT only
 
 export async function GET(req: NextRequest, { params }: { params: { form: string } }) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!FORM_KEYS.includes(params.form as FormKey)) return NextResponse.json({ error: "Unknown form" }, { status: 404 });
   const form = await getForm(params.form as FormKey);
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: { form: string
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { form: string } }) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!canConfigure(user.role)) return NextResponse.json({ error: "Only Admin IT can change forms" }, { status: 403 });
   const key = params.form as FormKey;

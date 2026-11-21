@@ -12,6 +12,7 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 # Build output
 dist/
@@ -71,3 +72,7 @@ docker-compose.override.yml
 # Uploaded documents (private, never served directly)
 /storage/
 /public/uploads/
+
+# Database backups (scripts/backup.sh)
+/backups/
+/.next-*/

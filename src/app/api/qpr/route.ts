@@ -15,7 +15,7 @@ import { notify, notifyRank } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const period = req.nextUrl.searchParams.get("period") || periodOf();
   if (!parsePeriod(period)) return NextResponse.json({ error: "Invalid period" }, { status: 400 });
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || user.role !== "incubatee") return NextResponse.json({ error: "Only incubatees file progress reports" }, { status: 403 });
   const body = await req.json().catch(() => ({}));
   const period = String(body.period ?? "");
@@ -78,7 +78,7 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || (APPROVAL_RANK[user.role] ?? 0) < 1) return NextResponse.json({ error: "Executive or above reviews progress reports" }, { status: 403 });
   const { reportId, decision, note } = await req.json().catch(() => ({}));
   if (!isId(reportId) || !["accept", "return"].includes(decision)) return NextResponse.json({ error: "reportId and decision are required" }, { status: 400 });

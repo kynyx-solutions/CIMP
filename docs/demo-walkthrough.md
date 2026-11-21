@@ -25,6 +25,8 @@ Office passwords are `Demo@1234`. Founder and mentor passwords are `demo123`.
 | Incubation Manager | mgr@cimp.local | Due diligence; approves mentors; reviews connection requests |
 | Executive | exec@cimp.local | First check of new applications |
 | Office Staff | staff@cimp.local | Corrects application details; messages applicants |
+| Accounts Officer | accounts@cimp.local | Verifies finance requests and records payments (Phase 3) |
+| Social Media Manager | social@cimp.local | Plans and records social media posts (Phase 3) |
 | Founder: GreenGrid Labs | incubatee@demo.com | Approved and published; one mentor connected, two requests open |
 | Founder: MediScan | founder2@demo.com | Under review, waiting for the Incubation Manager |
 | Founder: KisanLink | founder3@demo.com | Just submitted, waiting for the Executive |
@@ -139,6 +141,17 @@ Message: after incubation starts, the portal keeps tracking progress, mentoring 
 8. **ID cards and scheduled jobs.** As Admin IT, open **Admin → ID cards**, issue a card to GreenGrid's founder and open its PDF and verify page. Then open **Admin → Scheduled jobs**: the jobs run on their own at the times shown (next run listed), and **Run now** starts one immediately. **Admin → Email** shows how email is sent and sends a test email.
 9. **Signed PDF.** Download KisanLink's application PDF from **Applications**: it ends with the drawn signatures of the Senior Manager and the CEO.
 
+## Act 8: BIIF 2.0 preview (10 min, optional)
+
+Message: the same portal can run the office itself: money, partners, people and outreach, with an AI assistant. These are BIIF 2.0 modules from CIMP's overview (§6.4), a separate scope.
+
+1. **Finance approvals.** As the Accounts Officer, open **Finance**. The demo-day venue invoice (₹45,000) is waiting: verify it. As the Senior Manager, approve it; as Accounts, record the payment with a UTR number. The mentor honorarium (₹1.8 lakh) is above ₹1 lakh, so it waits for the CEO: sign in as the CEO and give final approval. **Seed-fund register** shows GreenGrid's ₹10 lakh sanction and the ₹3 lakh already released.
+2. **Partners (CRM).** As the Incubation Manager, open **More → Partners**. The board shows partners by stage. The Department of Industries has a follow-up due today and an MoU expiring in 20 days; both also appear on the dashboard. Log a call and move the CSR partner to the next stage.
+3. **Partner API and webhooks.** As Admin IT, open **Admin → Integrations**. Create an API key (shown once) and add a webhook URL; **Send test** delivers a signed sample event. Explain that partner portals can read the public startup list and receive an event when a startup is approved or published.
+4. **Attendance and leave.** As the Executive, open **More → HR**: check in, then apply for a day of casual leave and see the balance. As the Senior Manager, the same page shows today's team attendance and the Office Staff leave request to approve.
+5. **Social media.** As the Social Media Manager, open **Social media**: one post scheduled for tomorrow, one draft and one published. Write a post for X to show the 280-character limit.
+6. **AI assistant.** As Admin IT, **Admin → AI assistant** shows whether it is set up and turns it on. Then as the Executive, open KisanLink in **Applications** and click **Generate** under **AI reviewer briefing**; in **Progress**, open GreenGrid's report and click **Compare with last quarter**; in **Broadcast**, **Draft with AI** writes the message from a few points. Every result is a draft for a person to check. Without CIMP's API key the buttons explain that the assistant is not set up.
+
 ## Closing and questions (5 min)
 
 Close on the founder's dashboard for KisanLink: one application, four roles, every step recorded. Then ask CIMP for the open decisions listed below.
@@ -160,4 +173,5 @@ Close on the founder's dashboard for KisanLink: one application, four roles, eve
 - **Apple sign-in:** needs CIMP's decision and an Apple developer account.
 - **Office accounts:** whether Admin IT may also create office users, or only the CEO.
 - **Real content and numbers:** stats, programs, mentors and contacts to come from CIMP.
+- **BIIF 2.0 (separate scope):** the AI assistant needs CIMP's Anthropic API key and agreement that application text may be sent to it (phone numbers and emails are removed first). Direct posting to social networks needs CIMP's accounts on each network.
 - **Phase 2 (separate scope):** shown as a working demo in Act 7. Before production it needs CIMP's mail account (set in the server settings; Admin → Email confirms it) and a decision on legally valid eSign: today signatures are drawn in the portal and recorded in the audit log, not Aadhaar eSign or DSC.

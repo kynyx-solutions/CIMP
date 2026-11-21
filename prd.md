@@ -4,8 +4,8 @@
 |---|---|
 | **Client** | CIMP-BIIF: CIMP Business Incubation and Innovation Foundation, a Section 8 company of Chandragupt Institute of Management Patna (CIMP). Note: the client's overview document expands the name as "Centre for Innovation, Management & Policy – Business Incubation & Innovation Fund"; confirm the official name with CIMP (Q14). |
 | **Vendor** | Homeasy Automation Pvt. Ltd. |
-| **Status** | Draft v0.4: revised line by line against CIMP's overview document (see the traceability matrix in §14); ready for the requirement-alignment meeting |
-| **Last updated** | 2026-11-20 |
+| **Status** | Draft v0.5: Phase 3 (BIIF 2.0) and Phase 4 (production readiness) added in §7. Earlier, v0.4: revised line by line against CIMP's overview document (see the traceability matrix in §14); ready for the requirement-alignment meeting |
+| **Last updated** | 2026-11-21 |
 | **Sources** | CIMP-BIIF 1.0 High-Level Overview (CIMP, v1.0, 2025) · CIMP-BIIF Proposal (Homeasy, 15-04-2026) |
 | **Owner** | TBD |
 
@@ -267,6 +267,44 @@ Based on a review of 12 incubator websites (AIC-BIMTECH, IC IIT Patna, FITT IIT 
 | BLG-1 | Blog posts: Office Staff write, Admin IT approves, posts publish to the public site. |
 | SIG-2 | Legally valid eSign / DSC, if CIMP needs it **[OPEN Q1]**. This is a third-party integration with per-signature cost. |
 
+### Phase 3: BIIF 2.0 modules (separate scope & commercials)
+
+CIMP overview §6.4 lists these as future modules. The demo now shows a working version of each, so CIMP can judge scope and priority. Two new office roles support them: **Accounts Officer** and **Social Media Manager**.
+
+| ID | Requirement |
+|---|---|
+| FIN-1 | Finance requests (grant tranche, disbursement, vendor invoice, reimbursement) with an invoice or bill attached (PDF/JPG/PNG, 10 MB). |
+| FIN-2 | Approval chain: Accounts verifies → Sr. Manager or CEO approves → CEO also approves above ₹1,00,000 → Accounts records payment with a reference (UTR). Send back and reject with a remark. Nobody reviews their own request. |
+| FIN-3 | Seed-fund register per startup: amount sanctioned, released and in progress. A tranche cannot exceed the remaining sanctioned amount; the founder is notified when a tranche is paid. |
+| CRM-1 | Partner pipeline (government, corporate, CSR, investor network, incubator, academic) with stages from lead to active, owner, expected value and MoU dates. |
+| CRM-2 | Activity log per partner (call, meeting, email, note, follow-up). A daily 9 AM job reminds owners of follow-ups due and MoUs expiring within 30 days. |
+| API-1 | Partner API: read-only REST endpoints (`/api/v1/startups`, `/api/v1/stats`) with API keys created by Admin IT, scopes, hashed storage, shown once, 60 requests per minute. Only fields marked public are returned. |
+| API-2 | Webhooks to partner portals for `application.approved`, `startup.published` and `mentor.approved`, signed with HMAC-SHA256, HTTPS only, private addresses blocked, every delivery logged. |
+| HR-1 | Attendance: daily check-in and check-out (office, work from home, field), late mark after 10:15 IST, monthly view; team view for the CEO and Sr. Manager. |
+| HR-2 | Leave: casual 12, sick 10, earned 15 days a year plus unpaid; balances, overlap checks, working days Monday to Saturday with half days. Staff leave goes to the Sr. Manager; Sr. Manager, Admin IT and Accounts leave goes to the CEO. |
+| SOC-1 | Social media dashboard: draft, schedule and record published posts for LinkedIn, X, Facebook and Instagram, with the X 280-character limit. Direct posting through each network's API needs CIMP's accounts **[OPEN]**. |
+| AI-1 | AI assistant for office users (Claude): application briefing (summary, strengths, risks, questions, fit score), progress-report insight compared with the previous quarter, and drafts of announcements, blog and social posts. |
+| AI-2 | AI governance: Admin IT turns it on; phone numbers and email addresses are removed before text is sent; 30 requests per user per hour; every run recorded with token use and estimated cost; output is a draft that a person reviews. Needs CIMP's API key and a data-processing decision **[OPEN]**. |
+
+### Phase 4: production readiness
+
+Phase 4 turns the demo into something that can run CIMP's live portal: deployment, security hardening, backups and automated tests, as set out in §8. It adds no new screens apart from **Settings → Sign out on all devices**.
+
+| ID | Requirement | Status in the demo |
+|---|---|---|
+| OPS-1 | Docker image (Next.js standalone, non-root user, health check) and docker-compose with PostgreSQL 16 and Caddy for automatic HTTPS. Migrations run as a separate step before the app starts. | ✅ `Dockerfile`, `docker-compose.yml`, `deploy/Caddyfile` |
+| OPS-2 | Environment check at start-up: production refuses to start when the database URL, a strong `JWT_SECRET` (32+ characters), office email domains, an https app address or a mail account is missing. | ✅ `src/lib/env.ts` |
+| OPS-3 | Health endpoint `/api/health` (database check) for Docker, load balancers and uptime monitors. | ✅ |
+| OPS-4 | Daily database and upload backups with 14-day retention, documented restore, quarterly restore test. | ✅ `scripts/backup.sh`, docs/deployment.md |
+| OPS-5 | CI on every push: type-check, unit tests, migrations applied to an empty database and checked against the schema, build, API tests against the production server. | ✅ `.github/workflows/ci.yml` |
+| OPS-6 | Automated tests: unit tests for approval, finance, leave, scheduler and security rules; API tests for sessions, brute-force limits, headers and health. | ✅ 33 unit + 10 API tests (`tests/`) |
+| SEC-1 | Revocable sessions: every request checks the token against the user's record (15-second cache). Deleting an office user, a role change, a password change or "sign out on all devices" ends sessions at once. | ✅ |
+| SEC-2 | Brute-force limits: sign-in 10 per account and 30 per address in 15 minutes; email codes cancelled after 5 wrong tries and generated with a cryptographic random source; limits on sign-ups and code resends. | ✅ in-memory (one server); Redis for several |
+| SEC-3 | Security headers: Content-Security-Policy, HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy; API responses not cached. | ✅ |
+| SEC-4 | File storage on any S3-compatible store (AWS S3 Mumbai, Cloudflare R2, MinIO) or local disk, chosen by environment. Files stay private; downloads go through access-checked routes. | ✅ local tested; S3 driver written, to be tested against CIMP's bucket |
+
+Still open before go-live: refresh-token rotation and password reset (AUTH-3, AUTH-4), Redis for multi-server limits, CSP nonces in place of `'unsafe-inline'`, and a load test on the chosen server.
+
 ## 8. Non-functional requirements
 
 | Area | Requirement |
@@ -364,7 +402,7 @@ Weekly demos on staging. Anything outside the signed SRS goes through a change r
 
 ## 11. Current state
 
-*As of 2026-11-20, branch `feature/cimp-demo`.* The demo is a Next.js monolith on PostgreSQL (Prisma, committed migrations), branded from the official CIMP-BIIF logo, with demo data marked "Sample". It is built to show CIMP the product at the alignment meeting; it is not the Phase 1 architecture (§9).
+*As of 2026-11-21, branch `feature/cimp-demo`. Phases 2–4 have since been added to the demo: see the Phase 2, Phase 3 and Phase 4 tables in §7; the tables below describe the Phase 1 baseline.* The demo is a Next.js monolith on PostgreSQL (Prisma, committed migrations), branded from the official CIMP-BIIF logo, with demo data marked "Sample". It is built to show CIMP the product at the alignment meeting; it is not the Phase 1 architecture (§9).
 
 ### 11.1 Built in the demo
 
@@ -500,17 +538,17 @@ Every item in *CIMP-BIIF 1.0 High-Level Overview (v1.0, 2025)* mapped to this PR
 |---|---|---|:-:|
 | 3 | Node.js + Express | §9.1 | ❌ Next.js API routes (demo only) |
 | 3 | MongoDB (Mongoose) | §9.4 [Q13] | 🔄 PostgreSQL proposed instead |
-| 3 | Redis (refresh tokens, rate limits, dedup) | AUTH-3, AUTH-6, NOT-4 | ❌ |
-| 3 | JWT + bcrypt + OAuth 2.0 | AUTH-1…3 | 🟡 single 7-day JWT, bcrypt, Google |
-| 3 | AWS S3 | DOC-2 | ❌ local disk |
+| 3 | Redis (refresh tokens, rate limits, dedup) | AUTH-3, AUTH-6, NOT-4 | 🟡 rate limits and dedup in the app (one server); Redis needed for several (SEC-2) |
+| 3 | JWT + bcrypt + OAuth 2.0 | AUTH-1…3 | 🟡 7-day JWT revocable per user (SEC-1), bcrypt, Google; no refresh-token rotation yet |
+| 3 | AWS S3 | DOC-2 | ✅ S3-compatible driver or local disk (SEC-4) |
 | 3 | Nodemailer + Handlebars | NOT-1 | 🟡 Nodemailer, inline HTML |
 | 3 | Puppeteer, ExcelJS | PDF-1, XLS-1 | ❌ |
-| 3 | Zod validation | §8 | 🟡 hand-written validation |
+| 3 | Zod validation | §8 | 🟡 hand-written request validation; environment checked at start-up (OPS-2) |
 | 3 | node-cron | REM-1, QPR-2, XLS-1, IDC-1 | ❌ |
-| 3 | Docker + Docker Compose | §8 | ❌ |
+| 3 | Docker + Docker Compose | §8 | ✅ OPS-1 |
 | 4.2 | Middleware chain (authenticate → resolveRole → requireRole → validate) and audit logger | RBAC-1, AUD-1 | 🟡 checks per route |
 | 4.2 | Response envelope `{ success, data, meta }` | §8 | ❌ |
-| 4.3 | Presigned S3 upload flow with confirm step | DOC-2 | ❌ |
+| 4.3 | Presigned S3 upload flow with confirm step | DOC-2 | 🔄 files go through access-checked API routes, so every download is checked and logged |
 | 4.4 | Monthly profile reminder (1st, 9 AM) | REM-1 | ❌ |
 | 4.4 | Weekly QPR reminder (Mondays, quarter-end weeks) | QPR-2 | ❌ |
 | 4.4 | Export processor (every 30 s) | XLS-1 | ❌ |
@@ -521,7 +559,7 @@ Every item in *CIMP-BIIF 1.0 High-Level Overview (v1.0, 2025)* mapped to this PR
 | 6.2 | Route groups `/auth` `/profiles` `/approvals` `/connections` `/messages` `/notifications` `/reports` `/mentorship` `/dashboard` `/exports` `/blogs` `/admin/*` `/public/*` `/upload` | §9.3 | 🟡 auth, approvals, messages, notifications, public, upload, staff |
 | 6.3 | 15-min access token, 7-day refresh token in httpOnly cookie, rotation on refresh | AUTH-3 | ❌ |
 | 6.3 | Password reset | AUTH-4 | ❌ |
-| 6.4 | BIIF 2.0 APIs (accounts, social media, CRM, attendance, leave, partner APIs, AI tools) | §3 Out of scope | n/a |
+| 6.4 | BIIF 2.0 APIs (accounts, social media, CRM, attendance, leave, partner APIs, AI tools) | Phase 3: FIN-1…3, CRM-1…2, API-1…2, HR-1…2, SOC-1, AI-1…2 | ✅ demo; separate scope |
 
 ### 14.3 Where this PRD differs from the overview (to confirm with CIMP)
 

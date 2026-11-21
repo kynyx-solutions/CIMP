@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || user.role !== "mentor") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const conns = await prisma.connection.findMany({ where: { mentorId: user.userId, status: "active" }, select: { id: true, applicationId: true, incubatee: { select: { name: true } } } });
   const ids = conns.map((c) => c.id);

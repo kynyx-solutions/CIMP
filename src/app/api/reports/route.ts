@@ -9,7 +9,7 @@ import { periodOf, previousPeriod, periodLabel } from "@/lib/qpr";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !REPORT_ROLES.includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const [apps, approvals, mentors, conns, sessions, feedback, proposals] = await Promise.all([

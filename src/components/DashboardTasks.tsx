@@ -7,6 +7,9 @@ import { CONN_STAGES } from "@/lib/network";
 import { canHandleProposals } from "@/lib/invest";
 import { dueDate, fileablePeriods, periodLabel, previousPeriod, periodOf } from "@/lib/qpr";
 import { eligibleHolders } from "@/lib/idcard";
+import { CEO_LIMIT_INR } from "@/lib/finance";
+import { leaveApproverRole } from "@/lib/hr";
+import { canUseCrm } from "@/lib/crm";
 
 type User = { userId: string; role: string; name: string };
 type Card = { title: string; value: string | number; note?: string; href: string; cta: string; urgent?: boolean };
@@ -60,6 +63,12 @@ async function officeCards(user: User): Promise<Card[]> {
       cards.push({ title: "Members without a valid ID card", value: n, href: "/admin?tab=idcards", cta: "Issue cards" });
     }));
   }
+  // BIIF 2.0 (Phase 3): finance, leave, CRM
+  const finWhere = user.role === "accounts" ? { OR: [{ status: "submitted" }, { status: "final_approved" }, { status: "approved", amountInr: { lte: CEO_LIMIT_INR } }] }
+    : user.role === "sr_manager" ? { status: "verified" } : user.role === "ceo" ? { status: "approved", amountInr: { gt: CEO_LIMIT_INR } } : null;
+  if (finWhere) tasks.push(prisma.financeRequest.count({ where: { ...finWhere, requestedById: { not: user.userId } } }).then((n) => { cards.push({ title: "Finance requests waiting on you", value: n, href: "/finance", cta: "Open finance", urgent: n > 0 }); }));
+  if (user.role === "sr_manager" || user.role === "ceo") tasks.push(prisma.leaveRequest.findMany({ where: { status: "pending", userId: { not: user.userId } }, select: { userRole: true } }).then((rows) => { const n = rows.filter((r) => user.role === "ceo" || leaveApproverRole(r.userRole) === user.role).length; if (n) cards.push({ title: "Leave requests to approve", value: n, href: "/hr", cta: "Review leave", urgent: true }); }));
+  if (canUseCrm(user.role)) tasks.push(prisma.partnerActivity.count({ where: { kind: "follow_up", done: false, dueAt: { lte: new Date(Date.now() + 864e5) }, partner: { ownerId: user.userId } } }).then((n) => { if (n) cards.push({ title: "Partner follow-ups due", value: n, href: "/crm", cta: "Open CRM", urgent: true }); }));
   if (user.role === "staff") tasks.push(prisma.blogPost.count({ where: { authorId: user.userId, status: "rejected" } }).then((n) => { if (n) cards.push({ title: "Your posts with changes requested", value: n, href: "/posts", cta: "Edit", urgent: true }); }));
   await Promise.all(tasks);
   return cards.sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent) || Number(b.value) - Number(a.value));

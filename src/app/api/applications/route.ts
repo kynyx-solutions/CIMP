@@ -25,7 +25,7 @@ function split(fields: FieldDef[], data: Record<string, AnswerValue>, previousAn
 }
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   // Incubatees see their own; the office sees all; other roles (mentors) none.
   if (user.role !== 'incubatee' && !isOfficeRole(user.role)) return NextResponse.json({ applications: [] });
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (user.role !== 'incubatee') return NextResponse.json({ error: 'Only incubatees can apply' }, { status: 403 });
 
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH — the applicant edits (while editable), or an office user corrects fields (RBAC-4).
 export async function PATCH(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();

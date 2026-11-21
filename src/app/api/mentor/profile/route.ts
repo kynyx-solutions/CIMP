@@ -11,8 +11,8 @@ import { customFields, validateFields } from "@/lib/forms";
 import { getForm } from "@/lib/forms-server";
 import type { Prisma } from "@prisma/client";
 
-function requireMentor(req: NextRequest) {
-  const user = getSessionUser(req);
+async function requireMentor(req: NextRequest) {
+  const user = await getSessionUser(req);
   return user?.role === "mentor" ? user : null;
 }
 
@@ -44,7 +44,7 @@ function parseProfile(body: Record<string, unknown>) {
 
 // GET — own profile (or null)
 export async function GET(req: NextRequest) {
-  const user = requireMentor(req);
+  const user = await requireMentor(req);
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const profile = await prisma.mentorProfile.findUnique({ where: { userId: user.userId } });
   return NextResponse.json({ profile: profile ? withId(profile) : null });
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
 
 // PUT — save profile; { submit: true } also sends it for office review
 export async function PUT(req: NextRequest) {
-  const user = requireMentor(req);
+  const user = await requireMentor(req);
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
@@ -85,7 +85,7 @@ export async function PUT(req: NextRequest) {
 
 // POST — apply to also be listed as an investor (approved mentors only)
 export async function POST(req: NextRequest) {
-  const user = requireMentor(req);
+  const user = await requireMentor(req);
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();

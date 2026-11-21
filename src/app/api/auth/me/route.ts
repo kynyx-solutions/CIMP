@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { verifySession } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   const token = req.cookies.get('incubator_token')?.value;
   if (!token) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
-  const payload = verifyToken(token);
+  const payload = await verifySession(token);
   if (!payload) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }

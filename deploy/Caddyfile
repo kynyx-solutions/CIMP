@@ -1,0 +1,14 @@
+# HTTPS with automatic Let's Encrypt certificates. DOMAIN comes from .env.production (e.g. portal.cimp.ac.in).
+{$DOMAIN} {
+	encode zstd gzip
+	# Uploads are limited in the app (10 MB); allow a little overhead
+	request_body {
+		max_size 12MB
+	}
+	# Caddy sets X-Forwarded-For to the real client address; the app rate limiter reads the last entry
+	reverse_proxy app:3000
+	log {
+		output stdout
+		format console
+	}
+}

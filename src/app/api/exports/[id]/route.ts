@@ -8,7 +8,7 @@ import { readStored } from "@/lib/storage";
 import { audit } from "@/lib/audit";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !REPORT_ROLES.includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   if (!isId(params.id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const job = await prisma.exportJob.findUnique({ where: { id: params.id } });

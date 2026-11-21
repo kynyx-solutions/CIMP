@@ -13,7 +13,7 @@ import { audit } from "@/lib/audit";
 const MANAGERS = ["admin_it", "ceo"];
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!MANAGERS.includes(user.role)) {
     const card = await prisma.idCard.findUnique({ where: { userId: user.userId } });
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || user.role !== "admin_it") return NextResponse.json({ error: "Only Admin IT issues ID cards" }, { status: 403 });
   const { userId } = await req.json().catch(() => ({}));
   if (!isId(userId)) return NextResponse.json({ error: "userId required" }, { status: 400 });
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || user.role !== "admin_it") return NextResponse.json({ error: "Only Admin IT manages ID cards" }, { status: 403 });
   const { userId, action, reason } = await req.json().catch(() => ({}));
   if (!isId(userId) || action !== "revoke") return NextResponse.json({ error: "userId and action required" }, { status: 400 });

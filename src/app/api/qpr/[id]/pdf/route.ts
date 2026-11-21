@@ -10,7 +10,7 @@ import { periodLabel, QPR_STATUS } from "@/lib/qpr";
 import { PdfBuilder, pdfResponse } from "@/lib/pdf";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isId(params.id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const r = await prisma.qprReport.findUnique({

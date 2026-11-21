@@ -38,7 +38,7 @@ export default function SettingsPage() {
     const d = await res.json(); setBusy(false);
     if (!res.ok) { setMsg({ text: d.error, ok: false }); return; }
     setPw({ currentPassword: "", newPassword: "", confirm: "" });
-    setMsg({ text: "Password changed. Use the new password next time you sign in.", ok: true });
+    setMsg({ text: "Password changed. Other devices have been signed out.", ok: true });
   }
 
   if (!user || !account) return <div className="min-h-screen bg-bg flex items-center justify-center"><div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" /></div>;
@@ -72,6 +72,22 @@ export default function SettingsPage() {
           ) : (
             <p className="mt-3 text-sm text-secondary font-body">You sign in with Google, so your password is managed in your Google account.</p>
           )}
+        </section>
+
+        <section aria-labelledby="sessions-title" className="mt-6 bg-white border border-border rounded-2xl shadow-card p-6">
+          <h2 id="sessions-title" className="font-body font-bold text-navy">Signed-in devices</h2>
+          <p className="mt-2 text-sm text-secondary font-body max-w-xl">
+            Lost a phone or used a shared computer? Sign out everywhere, including this browser. Changing your password also signs out every other device.
+          </p>
+          <button type="button"
+            onClick={async () => {
+              if (!confirm("Sign out on every device, including this one?")) return;
+              await fetch("/api/auth/logout?all=1", { method: "POST" });
+              router.push("/login");
+            }}
+            className="mt-4 px-5 py-2.5 rounded-xl border border-border text-sm font-semibold font-body text-navy hover:bg-gray-50">
+            Sign out on all devices
+          </button>
         </section>
 
         <section aria-labelledby="privacy-title" className="mt-6 bg-white border border-border rounded-2xl shadow-card p-6">

@@ -9,7 +9,7 @@ import { PdfBuilder, pdfResponse, MUTED } from "@/lib/pdf";
 import { audit } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const type = req.nextUrl.searchParams.get("type") as ThreadType;
   const id = req.nextUrl.searchParams.get("id");

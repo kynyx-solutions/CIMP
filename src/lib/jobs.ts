@@ -7,10 +7,11 @@ import { reminderPeriod, periodOf, previousPeriod, periodLabel, dueDate } from "
 import { eligibleHolders, issueCard, emailCard } from "@/lib/idcard";
 import { DOC_KINDS } from "@/lib/documents";
 
-export type JobKey = "qpr-reminders" | "profile-reminders" | "id-card-expiry";
+export type JobKey = "qpr-reminders" | "profile-reminders" | "id-card-expiry" | "crm-reminders";
 export const JOBS: Record<JobKey, { label: string; schedule: string; cron: string; desc: string }> = {
   "qpr-reminders": { label: "Progress report reminders", schedule: "Mondays 9:00 AM during quarter-end weeks", cron: "0 9 * * 1", desc: "Reminds incubated startups that have not submitted the quarter's report (QPR-2)." },
   "profile-reminders": { label: "Incomplete profile reminders", schedule: "1st of each month, 9:00 AM", cron: "0 9 1 * *", desc: "Reminds founders with a missing application or required documents, and mentors with unfinished profiles (REM-1)." },
+  "crm-reminders": { label: "CRM follow-ups and MoU expiry", schedule: "Daily, 9:00 AM", cron: "0 9 * * *", desc: "Reminds partner owners of follow-ups due today and MoUs expiring within 30 days." },
   "id-card-expiry": { label: "ID card expiry and renewal", schedule: "Daily, 2:00 AM", cron: "0 2 * * *", desc: "Renews expired cards of members who are still eligible and expires the rest (IDC-1)." },
 };
 export const JOB_KEYS = Object.keys(JOBS) as JobKey[];
@@ -60,6 +61,24 @@ async function idCardExpiry() {
   return `${renewed} renewed, ${expired} expired (holder no longer eligible)`;
 }
 
+async function crmReminders() {
+  const now = new Date(), tomorrow = new Date(Date.now() + 864e5), in30 = new Date(Date.now() + 30 * 864e5);
+  const [due, expiring] = await Promise.all([
+    prisma.partnerActivity.findMany({ where: { kind: "follow_up", done: false, dueAt: { lte: tomorrow } }, include: { partner: { select: { name: true, ownerId: true } } } }),
+    prisma.partner.findMany({ where: { mouExpiresOn: { gte: now, lte: in30 }, stage: { in: ["mou_signed", "active"] } } }),
+  ]);
+  let n = 0;
+  for (const a of due) {
+    const to = a.partner.ownerId ?? a.byId;
+    n += await notifyUsers([to], `Follow-up due: ${a.partner.name}`, a.summary.slice(0, 300), "info", undefined, { ctaPath: "/crm", ctaLabel: "Open CRM" });
+  }
+  for (const p of expiring) {
+    if (!p.ownerId) continue;
+    n += await notifyUsers([p.ownerId], `MoU expiring: ${p.name}`, `The MoU with ${p.name} expires on ${p.mouExpiresOn!.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}. Plan the renewal.`, "warning", undefined, { ctaPath: "/crm", ctaLabel: "Open CRM" });
+  }
+  return `${due.length} follow-up${due.length === 1 ? "" : "s"} due, ${expiring.length} MoU${expiring.length === 1 ? "" : "s"} expiring; ${n} reminder${n === 1 ? "" : "s"} sent`;
+}
+
 /**
  * Run a job and record it. Never throws: the failure is stored on the run.
  * With a `slot` (scheduled runs) the run is skipped, returning null, if that slot already ran.
@@ -73,7 +92,7 @@ export async function runJob(job: JobKey, trigger: "cron" | "manual", slot?: str
     throw err;
   }
   try {
-    const summary = job === "qpr-reminders" ? await qprReminders(trigger) : job === "profile-reminders" ? await profileReminders() : await idCardExpiry();
+    const summary = job === "qpr-reminders" ? await qprReminders(trigger) : job === "profile-reminders" ? await profileReminders() : job === "crm-reminders" ? await crmReminders() : await idCardExpiry();
     return prisma.jobRun.update({ where: { id: run.id }, data: { status: "ok", summary, finishedAt: new Date() } });
   } catch (err) {
     console.error(`[job] ${job} failed`, err);

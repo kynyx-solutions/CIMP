@@ -32,6 +32,8 @@ const OFFICE = [
   { role: 'manager', name: 'Demo Incubation Manager', email: `mgr@${domain}` },
   { role: 'executive', name: 'Demo Executive', email: `exec@${domain}` },
   { role: 'staff', name: 'Demo Office Staff', email: `staff@${domain}` },
+  { role: 'accounts', name: 'Demo Accounts Officer', email: `accounts@${domain}` },
+  { role: 'social_media', name: 'Demo Social Media Manager', email: `social@${domain}` },
 ];
 
 const INCUBATEES = [
@@ -321,6 +323,47 @@ async function main() {
           body: 'This blog shares news from CIMP-BIIF: open calls, events at B-Hub and stories from the startups we support.\n\n## What you will find here\n\n- Announcements of new cohorts and deadlines\n- Reports from demo days and workshops\n- Founder stories and lessons learned\n\nThis is a sample post for the portal demo. Real posts are written by the office team and approved by Admin IT before they appear here.' },
         { slug: 'sample-demo-day-preview', title: 'Sample: Demo day preview', excerpt: 'Twelve startups will pitch to investors at B-Hub next month.', authorId: users.staff.id, authorName: users.staff.name, status: 'submitted',
           body: 'Twelve startups from the current cohort will pitch to a panel of investors and mentors at B-Hub next month.\n\nEach team has ten minutes to present and five minutes for questions. Investors interested in a startup can send a proposal through the portal, and the incubation team arranges a follow-up pitch.' },
+      ] });
+    }
+
+    // ── Phase 3 (BIIF 2.0) samples ──
+    const day = (n) => new Date(Date.now() + n * 864e5);
+    const ist = (d) => new Date(d.getTime() + 5.5 * 3600e3).toISOString().slice(0, 10);
+    const acc = users.accounts, srm = users.srm, ceoU = users.ceo, staffU = users.staff, mgrU = users.mgr, execU = users.exec;
+    if (greenApp && acc && (await prisma.seedFund.count()) === 0) {
+      await prisma.seedFund.create({ data: { applicationId: greenApp.id, scheme: 'Bihar Startup Policy seed fund (sample)', sanctionedInr: 1000000, sanctionedOn: day(-40), createdBy: acc.name } });
+      const step = (from, to, action, u, remark) => ({ fromStatus: from, toStatus: to, action, actorId: u.id, actorName: u.name, actorRole: u.role, remark: remark || null });
+      await prisma.financeRequest.create({ data: { kind: 'grant_tranche', title: 'First tranche: pilot in 14 clinics (sample)', description: 'Release of the first seed-fund tranche after the pilot milestone.', amountInr: 300000, payee: 'GreenGrid Labs Private Limited', applicationId: greenApp.id, requestedById: mgrU.id, requestedBy: mgrU.name, status: 'paid', paymentRef: 'UTR SAMPLE0001', paidAt: day(-20),
+        steps: { create: [step('new', 'submitted', 'raised the request', mgrU), step('submitted', 'verified', 'verified the request', acc), step('verified', 'approved', 'approved', srm), step('approved', 'final_approved', 'gave CEO approval', ceoU), step('final_approved', 'paid', 'recorded payment UTR SAMPLE0001', acc)] } } });
+      await prisma.financeRequest.create({ data: { kind: 'vendor_invoice', title: 'Demo day venue and AV (sample)', description: 'Hall booking, projector and sound for demo day.', amountInr: 45000, payee: 'Sample Events Pvt Ltd', requestedById: staffU.id, requestedBy: staffU.name, status: 'submitted',
+        steps: { create: [step('new', 'submitted', 'raised the request', staffU)] } } });
+      await prisma.financeRequest.create({ data: { kind: 'disbursement', title: 'Mentor honorarium, quarter 3 (sample)', description: 'Honorarium for 6 mentors for sessions held this quarter.', amountInr: 180000, payee: 'Mentor panel (6)', requestedById: execU.id, requestedBy: execU.name, status: 'approved',
+        steps: { create: [step('new', 'submitted', 'raised the request', execU), step('submitted', 'verified', 'verified the request', acc), step('verified', 'approved', 'approved', srm, 'Within budget')] } } });
+    }
+    if (mgrU && (await prisma.partner.count()) === 0) {
+      const mk = (data, acts) => prisma.partner.create({ data: { ...data, ownerId: mgrU.id, ownerName: mgrU.name, activities: { create: acts.map((a) => ({ ...a, byId: mgrU.id, byName: mgrU.name })) } } });
+      await mk({ name: 'Sample: Department of Industries, Bihar', type: 'government', stage: 'active', contactName: 'Startup cell', website: 'https://state.bihar.gov.in', mouSignedOn: day(-700), mouExpiresOn: day(20), notes: 'Seed fund route for Bihar startups. MoU renewal due.' },
+        [{ kind: 'meeting', summary: 'Quarterly review of seed-fund disbursements.', dueAt: null }, { kind: 'follow_up', summary: 'Send renewal draft of the MoU', dueAt: day(0) }]);
+      await mk({ name: 'Sample: Patna Power Ltd (CSR)', type: 'csr', stage: 'proposal', contactName: 'CSR head', expectedValueInr: 2500000, notes: 'Interested in funding clean-energy startups.' },
+        [{ kind: 'call', summary: 'Intro call; they asked for a proposal for a CleanTech track.', dueAt: null }, { kind: 'follow_up', summary: 'Share the CleanTech track proposal', dueAt: day(3) }]);
+      await mk({ name: 'Sample: T-Hub, Hyderabad', type: 'incubator', stage: 'mou_signed', mouSignedOn: day(-300), mouExpiresOn: day(400), notes: 'Startup exchange and joint events.' }, [{ kind: 'note', summary: 'Two startups shortlisted for the exchange programme.', dueAt: null }]);
+      await mk({ name: 'Sample: Agri Angels Network', type: 'investor_network', stage: 'lead', expectedValueInr: 0 }, []);
+    }
+    if ((await prisma.attendance.count()) === 0) {
+      const today = ist(new Date());
+      const at = (h, m) => new Date(Date.parse(today + 'T00:00:00Z') + ((h - 5.5) * 60 + m) * 60000);
+      const rows = [[execU, 9, 42, 'office'], [mgrU, 10, 31, 'office'], [acc, 9, 55, 'wfh'], [users.social, 10, 5, 'office']].filter(([u]) => u);
+      await prisma.attendance.createMany({ data: rows.map(([u, h, m, mode]) => ({ userId: u.id, userName: u.name, date: today, checkIn: at(h, m), mode })) });
+    }
+    if (staffU && (await prisma.leaveRequest.count()) === 0) {
+      await prisma.leaveRequest.create({ data: { userId: staffU.id, userName: staffU.name, userRole: 'staff', type: 'casual', fromDate: ist(day(7)), toDate: ist(day(8)), days: 2, reason: 'Family function (sample).' } });
+    }
+    if (users.social && (await prisma.socialPost.count()) === 0) {
+      const so = users.social;
+      await prisma.socialPost.createMany({ data: [
+        { platforms: ['linkedin', 'x'], content: 'Applications are open for the 2027 incubation cohort at CIMP-BIIF. Apply on the portal. #StartupBihar (sample)', scheduledFor: day(1), status: 'scheduled', createdById: so.id, createdBy: so.name },
+        { platforms: ['linkedin'], content: 'Meet GreenGrid Labs: smart micro-grid controllers now live in 14 rural clinics. (sample draft)', status: 'draft', createdById: so.id, createdBy: so.name },
+        { platforms: ['facebook', 'instagram'], content: 'Thank you to every mentor who joined the mentor meet at B-Hub. (sample)', status: 'published', publishedLinks: {}, createdById: so.id, createdBy: so.name },
       ] });
     }
 

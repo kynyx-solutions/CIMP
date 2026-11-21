@@ -8,7 +8,7 @@ import { audit } from "@/lib/audit";
 const ALLOWED = ["admin_it", "ceo"];
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !ALLOWED.includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const mode = mailMode();
   const since = new Date(Date.now() - 7 * 864e5);
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !ALLOWED.includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const me = await prisma.user.findUnique({ where: { id: user.userId }, select: { email: true, name: true } });
   if (!me) return NextResponse.json({ error: "Account not found" }, { status: 404 });

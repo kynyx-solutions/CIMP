@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import { verifySession } from '@/lib/auth';
 import { withId, isId } from '@/lib/serialize';
 import {
   STAGES, PIPELINE, ROLE_LABELS,
@@ -8,21 +8,22 @@ import {
 } from '@/lib/workflow';
 import { notify, notifyReviewers } from '@/lib/notify';
 import { audit, diffOf } from '@/lib/audit';
+import { emitEvent } from '@/lib/integrations';
 
 // Applicants get an email for every decision on their application (PRD NOT-1).
 const APPLICANT_EMAIL = { ctaPath: '/dashboard', ctaLabel: 'Open your dashboard' };
 
-function getUser(req: NextRequest) {
+async function getUser(req: NextRequest) {
   const token = req.cookies.get('incubator_token')?.value;
   if (!token) return null;
-  return verifyToken(token);
+  return verifySession(token);
 }
 
 
 const ACTIONS: WorkflowAction[] = ['advance', 'reject', 'send_back', 'fasttrack', 'toggle_public'];
 
 export async function POST(req: NextRequest) {
-  const user = getUser(req);
+  const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!isOfficeRole(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -138,6 +139,10 @@ export async function POST(req: NextRequest) {
     where: { id: app.id }, include: { steps: { orderBy: { at: 'asc' } } },
   });
   if (application) {
+    // Partner webhooks (BIIF 2.0): public, non-sensitive fields only
+    const pub = { id: application.id, startupName: application.startupName, industry: application.industry, city: application.city, state: application.state };
+    if (application.status === 'approved' && app.status !== 'approved') emitEvent('application.approved', { ...pub, fastTracked: application.isFastTracked });
+    if (application.isPublic && !app.isPublic) emitEvent('startup.published', { ...pub, idea: application.idea, website: application.website });
     const changed = diffOf(app, application, ['stage', 'status', 'isPublic', 'isFastTracked']);
     const what = `${roleLabel}: ${action.replace('_', ' ')} "${app.startupName}"`;
     await audit(req, user, `application.${action}`, 'application', app.id,
@@ -148,7 +153,7 @@ export async function POST(req: NextRequest) {
 
 // GET — pipeline stats (count per stage)
 export async function GET(req: NextRequest) {
-  const user = getUser(req);
+  const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!isOfficeRole(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 

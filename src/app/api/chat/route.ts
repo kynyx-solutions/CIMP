@@ -16,7 +16,7 @@ function parseThread(type: unknown, id: unknown): { type: ThreadType; id: string
 }
 
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const t = parseThread(req.nextUrl.searchParams.get("type"), req.nextUrl.searchParams.get("id"));
   if (!t) return NextResponse.json({ error: "type and id are required" }, { status: 400 });
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const t = parseThread(body.type, body.id);

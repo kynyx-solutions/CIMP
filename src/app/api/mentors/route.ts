@@ -7,10 +7,11 @@ import { isOfficeRole } from "@/lib/workflow";
 import { canReviewMentor, canReviewInvestor } from "@/lib/network";
 import { notify } from "@/lib/notify";
 import { audit } from "@/lib/audit";
+import { emitEvent } from "@/lib/integrations";
 
 // GET — incubatees/mentors: approved mentors (no emails). Office: all profiles with contact.
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const office = isOfficeRole(user.role);
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
 
 // POST — office review: { profileId, kind: "mentor" | "investor", decision: "approve" | "reject", note }
 export async function POST(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || !isOfficeRole(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { profileId, kind, decision, note } = await req.json();
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
       where: { id: profile.id },
       data: { status: approved ? "approved" : "rejected", reviewNote: cleanNote || null, reviewedBy: user.name },
     });
+    if (approved && profile.isPublic) emitEvent("mentor.approved", { id: profile.id, headline: profile.headline, sectors: profile.sectors });
     await notify(profile.userId,
       approved ? "Mentor profile approved 🎉" : "Mentor profile not approved",
       approved ? "Your mentor profile is approved and listed in the CIMP-BIIF network." : `Your mentor profile was not approved. Reason: ${cleanNote}`,

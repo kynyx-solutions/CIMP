@@ -13,7 +13,7 @@ const OPEN: ConnStatus[] = ["requested", "manager_approved", "routed", "active"]
 
 // GET — scoped by role
 export async function GET(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const where =
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
 
 // POST — incubatee requests a connection: { mentorId, type, message }
 export async function POST(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user || user.role !== "incubatee") return NextResponse.json({ error: "Only incubatees can request connections" }, { status: 403 });
 
   const { mentorId, type, message } = await req.json();
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH — move a connection along: { connectionId, action: approve|reject|accept|decline, remark }
 export async function PATCH(req: NextRequest) {
-  const user = getSessionUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { connectionId, action, remark } = await req.json();
