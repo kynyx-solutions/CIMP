@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import { verifySession } from '@/lib/auth';
 import { withId } from '@/lib/serialize';
 
-function getUser(req: NextRequest) {
+async function getUser(req: NextRequest) {
   const token = req.cookies.get('incubator_token')?.value;
   if (!token) return null;
-  return verifyToken(token);
+  return verifySession(token);
 }
 
 // GET — fetch notifications for current user
 export async function GET(req: NextRequest) {
-  const user = getUser(req);
+  const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const [notifications, unreadCount] = await Promise.all([
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
 // PATCH — mark all as read
 export async function PATCH(req: NextRequest) {
-  const user = getUser(req);
+  const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   await prisma.notification.updateMany({ where: { userId: user.userId, read: false }, data: { read: true } });

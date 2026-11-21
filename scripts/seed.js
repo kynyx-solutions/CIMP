@@ -11,6 +11,9 @@
 require('dotenv').config({ path: '.env.local' });
 require('dotenv').config({ path: '.env' });
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 
 if (process.env.NODE_ENV === 'production') {
@@ -29,6 +32,8 @@ const OFFICE = [
   { role: 'manager', name: 'Demo Incubation Manager', email: `mgr@${domain}` },
   { role: 'executive', name: 'Demo Executive', email: `exec@${domain}` },
   { role: 'staff', name: 'Demo Office Staff', email: `staff@${domain}` },
+  { role: 'accounts', name: 'Demo Accounts Officer', email: `accounts@${domain}` },
+  { role: 'social_media', name: 'Demo Social Media Manager', email: `social@${domain}` },
 ];
 
 const INCUBATEES = [
@@ -83,6 +88,69 @@ const APPLICATIONS = [
   },
 ];
 
+// Sample mentors / investors (PRD MEN-1, MEN-2). Names are placeholders until CIMP shares its real network.
+const MENTOR_PASSWORD = 'demo123';
+const MENTORS = [
+  {
+    name: 'Sample Mentor: Priya Sinha', email: 'mentor1@demo.com',
+    profile: { headline: 'Energy-systems consultant', organisation: 'Independent', yearsExperience: 15,
+      expertise: 'Rural electrification, hardware go-to-market, government tenders', sectors: ['CleanTech', 'ESDM / Hardware'],
+      bio: 'Fifteen years building solar and storage projects across eastern India.', status: 'approved', reviewedBy: 'Demo Incubation Manager' },
+  },
+  {
+    name: 'Sample Investor: Vikram Rao', email: 'mentor2@demo.com',
+    profile: { headline: 'Angel investor, ex-founder', organisation: 'Patna Angels (sample)', yearsExperience: 20,
+      expertise: 'Seed fundraising, unit economics, board building', sectors: ['SaaS', 'FinTech', 'CleanTech'],
+      status: 'approved', reviewedBy: 'Demo Incubation Manager',
+      investorStatus: 'approved', investorThesis: 'Seed-stage B2B companies from Bihar with early revenue.', ticketSize: '₹10–25 lakh' },
+  },
+  {
+    name: 'Sample Mentor: Dr. Meera Jha', email: 'mentor3@demo.com',
+    profile: { headline: 'Public-health physician', organisation: 'District hospital (sample)', yearsExperience: 12,
+      expertise: 'Clinical pilots, hospital procurement, regulatory approvals', sectors: ['HealthTech', 'AI/ML'],
+      status: 'approved', reviewedBy: 'Demo Incubation Manager',
+      investorStatus: 'submitted', investorThesis: 'Small cheques into health-access startups.', ticketSize: '₹5–10 lakh' },
+  },
+  {
+    name: 'Sample Mentor: Arvind Kumar', email: 'mentor4@demo.com',
+    profile: { headline: 'Agri supply-chain specialist', organisation: 'FPO network (sample)', yearsExperience: 18,
+      expertise: 'Farmer producer organisations, cold chain, bulk buyers', sectors: ['AgriTech', 'E-Commerce'],
+      status: 'submitted' },
+  },
+];
+
+// Connections for the approved startup (GreenGrid Labs), one per workflow stage.
+const CONNECTIONS = [
+  { mentor: 'mentor1@demo.com', type: 'mentorship', status: 'active',
+    message: 'We are expanding to 50 clinics and need help with state health-department tenders.',
+    path: [['mgr', 'Approve & forward', 'Good fit'], ['srm', 'Route to mentor', null], ['mentor1@demo.com', 'accepted', null]] },
+  { mentor: 'mentor2@demo.com', type: 'investment', status: 'routed',
+    message: 'Raising a ₹50 lakh seed round; would value a conversation about terms and fit.',
+    path: [['mgr', 'Approve & forward', 'Traction supports it'], ['srm', 'Route to mentor', 'Ok']] },
+  { mentor: 'mentor3@demo.com', type: 'mentorship', status: 'requested',
+    message: 'Looking for advice on running a clinical pilot with our controllers in PHCs.', path: [] },
+];
+
+/** A minimal one-page PDF with a few lines of text (placeholder documents). */
+function samplePdf(lines) {
+  const esc = (s) => s.replace(/[\\()]/g, (c) => `\\${c}`);
+  const text = lines.map((l, i) => `BT /F1 ${i === 0 ? 28 : 16} Tf 72 ${720 - i * 40} Td (${esc(l)}) Tj ET`).join('\n');
+  const objs = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${Buffer.byteLength(text)} >>\nstream\n${text}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objs.forEach((o, i) => { offsets.push(Buffer.byteLength(out)); out += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+  const xref = Buffer.byteLength(out);
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n${offsets.map((n) => `${String(n).padStart(10, '0')} 00000 n \n`).join('')}`;
+  out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 const STAGE_AFTER = {
   'Accept Submission': 'executive_accepted',
   'Complete Due Diligence': 'manager_reviewed',
@@ -130,7 +198,7 @@ async function main() {
         };
       });
 
-      await prisma.application.create({
+      const created = await prisma.application.create({
         data: {
           ...a.data, userId: owner.id, applicantName: owner.name,
           stage, status: stage === 'ceo_approved' ? 'approved' : 'pending',
@@ -145,6 +213,181 @@ async function main() {
           },
         },
       });
+      // Matching audit trail (PRD AUD-1), so the audit screen has history in the demo
+      const created0 = created.createdAt;
+      await prisma.auditLog.createMany({
+        data: [
+          { actorId: owner.id, actorName: owner.name, actorRole: "incubatee", action: "application.submit", entity: "application", entityId: created.id,
+            summary: `Submitted application "${created.startupName}" (form v0)`, at: created0 },
+          ...steps.map((st) => ({
+            actorId: st.actorId, actorName: st.actorName, actorRole: st.actorRole, action: "application.advance", entity: "application", entityId: created.id,
+            summary: `${st.action} "${created.startupName}"${st.remark ? ` (remark: ${st.remark})` : ""}${st.signature ? " [signed]" : ""}`,
+            diff: { stage: { from: st.fromStage, to: st.toStage } }, at: st.at,
+          })),
+          ...(a.publish ? [{ actorId: users.ceo?.id ?? null, actorName: "Demo CEO", actorRole: "ceo", action: "application.toggle_public", entity: "application", entityId: created.id,
+            summary: `Published "${created.startupName}" to the public directory`, diff: { isPublic: { from: false, to: true } } }] : []),
+        ],
+      });
+    }
+
+    // Mentors and their profiles
+    const mentorHash = await bcrypt.hash(MENTOR_PASSWORD, 12);
+    for (const m of MENTORS) {
+      const u = await prisma.user.upsert({
+        where: { email: m.email }, update: {},
+        create: { name: m.name, email: m.email, role: 'mentor', password: mentorHash, isVerified: true, consentAt: new Date() },
+      });
+      users[m.email] = u;
+      await prisma.mentorProfile.upsert({ where: { userId: u.id }, update: {}, create: { ...m.profile, userId: u.id } });
+    }
+
+    // Connection requests for the approved startup
+    const incubatee = users['incubatee@demo.com'];
+    const approvedApp = await prisma.application.findFirst({ where: { userId: incubatee.id, status: 'approved' } });
+    if (approvedApp && !(await prisma.connection.findFirst({ where: { incubateeId: incubatee.id } }))) {
+      const NEXT = { 'Approve & forward': 'manager_approved', 'Route to mentor': 'routed', accepted: 'active' };
+      for (const c of CONNECTIONS) {
+        let status = 'requested';
+        const total = c.path.length + 1;
+        const steps = [
+          { fromStatus: 'new', toStatus: 'requested', action: 'requested connection', actorId: incubatee.id, actorName: incubatee.name, actorRole: 'incubatee', remark: null, at: new Date(Date.now() - total * 86_400_000) },
+          ...c.path.map(([who, action, remark], idx) => {
+            const actor = users[who];
+            const from = status;
+            status = NEXT[action];
+            return { fromStatus: from, toStatus: status, action, actorId: actor.id, actorName: actor.name, actorRole: actor.role, remark, at: new Date(Date.now() - (total - idx - 1) * 86_400_000) };
+          }),
+        ];
+        await prisma.connection.create({
+          data: {
+            incubateeId: incubatee.id, mentorId: users[c.mentor].id, applicationId: approvedApp.id,
+            type: c.type, message: c.message, status: c.status, steps: { create: steps },
+          },
+        });
+      }
+    }
+
+    // Sample documents (PRD DOC-1): small placeholder PDFs in private storage
+    const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(process.cwd(), 'storage', 'uploads'));
+    fs.mkdirSync(uploadDir, { recursive: true });
+    const SAMPLE_DOCS = [
+      { owner: 'incubatee@demo.com', kind: 'pitch_deck', fileName: 'GreenGrid-pitch-deck.pdf', lines: ['SAMPLE PITCH DECK', 'GreenGrid Labs', 'Smart micro-grid controllers for rural clinics', 'Placeholder document for the CIMP-BIIF demo'] },
+      { owner: 'incubatee@demo.com', kind: 'id_proof', fileName: 'Founder-ID.pdf', lines: ['SAMPLE ID PROOF', 'Placeholder document for the CIMP-BIIF demo', 'No real personal data'] },
+      { owner: 'incubatee@demo.com', kind: 'registration', fileName: 'Certificate-of-incorporation.pdf', lines: ['SAMPLE CERTIFICATE', 'GreenGrid Labs Private Limited', 'Placeholder document for the CIMP-BIIF demo'] },
+      { owner: 'founder2@demo.com', kind: 'pitch_deck', fileName: 'MediScan-deck.pdf', lines: ['SAMPLE PITCH DECK', 'MediScan', 'AI X-ray triage for district hospitals', 'Placeholder document for the CIMP-BIIF demo'] },
+    ];
+    for (const d of SAMPLE_DOCS) {
+      const app = await prisma.application.findFirst({ where: { userId: users[d.owner].id } });
+      if (!app || (await prisma.applicationDocument.findUnique({ where: { applicationId_kind: { applicationId: app.id, kind: d.kind } } }))) continue;
+      const buf = samplePdf(d.lines);
+      const storedName = `${crypto.randomUUID()}.pdf`;
+      fs.writeFileSync(path.join(uploadDir, storedName), buf);
+      const doc = await prisma.applicationDocument.create({
+        data: { applicationId: app.id, kind: d.kind, fileName: d.fileName, storedName, mimeType: 'application/pdf', size: buf.length, uploadedBy: users[d.owner].id },
+      });
+      if (d.kind === 'pitch_deck')
+        await prisma.application.update({ where: { id: app.id }, data: { pitchDeckUrl: `/api/documents/${doc.id}`, pitchDeckName: d.fileName } });
+    }
+
+    // ── Phase 2 samples ──
+    const qOf = (d) => `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`;
+    const prevQ = (p) => { const [y, q] = [Number(p.slice(0, 4)), Number(p.slice(6))]; return q === 1 ? `${y - 1}-Q4` : `${y}-Q${q - 1}`; };
+    const greenApp = await prisma.application.findFirst({ where: { userId: incubatee.id, status: 'approved' } });
+    if (greenApp && (await prisma.qprReport.count()) === 0) {
+      const lastQ = prevQ(qOf(new Date())), olderQ = prevQ(lastQ);
+      await prisma.qprReport.createMany({ data: [
+        { applicationId: greenApp.id, period: olderQ, formVersion: 0, status: 'accepted', submittedAt: new Date(Date.now() - 80 * 864e5), reviewedBy: 'Demo Executive', reviewedAt: new Date(Date.now() - 75 * 864e5), reviewNote: 'Good start.',
+          answers: { revenue: 320000, customers: 22, teamSize: 5, fundsRaised: 0, milestones: 'Installed controllers in 8 clinics in Nalanda district.', challenges: 'Slow payments from two clinics.', supportNeeded: 'Introductions to the state health mission.', nextGoals: 'Reach 15 clinics and hire a field engineer.' } },
+        { applicationId: greenApp.id, period: lastQ, formVersion: 0, status: 'submitted', submittedAt: new Date(Date.now() - 3 * 864e5),
+          answers: { revenue: 450000, customers: 31, teamSize: 6, fundsRaised: 1000000, milestones: 'Live in 14 clinics; first government tender shortlisted.', challenges: 'Battery supply delays.', supportNeeded: 'Mentoring on government procurement.', nextGoals: 'Win the tender and reach 25 clinics.' } },
+      ] });
+    }
+    const activeConn = await prisma.connection.findFirst({ where: { incubateeId: incubatee.id, status: 'active' } });
+    if (activeConn && (await prisma.mentorSession.count()) === 0) {
+      const m1u = users['mentor1@demo.com'];
+      const past = await prisma.mentorSession.create({ data: { connectionId: activeConn.id, scheduledAt: new Date(Date.now() - 6 * 864e5), durationMin: 60, mode: 'physical', location: 'B-Hub meeting room 2', agenda: 'Review the health-department tender and the pricing sheet.', status: 'completed', createdById: m1u.id } });
+      await prisma.sessionFeedback.createMany({ data: [
+        { sessionId: past.id, authorId: incubatee.id, authorRole: 'mentee', rating: 5, comment: 'Very practical advice on the tender documents.' },
+        { sessionId: past.id, authorId: m1u.id, authorRole: 'mentor', rating: 4, comment: 'Well prepared team.' },
+      ] });
+      const next = new Date(Date.now() + 2 * 864e5); next.setHours(16, 0, 0, 0);
+      await prisma.mentorSession.create({ data: { connectionId: activeConn.id, scheduledAt: next, durationMin: 45, mode: 'virtual', location: 'https://meet.google.com/demo-sample', agenda: 'Prepare the tender presentation.', createdById: m1u.id } });
+      await prisma.docRequest.create({ data: { connectionId: activeConn.id, title: 'Last 6 months of clinic installations', note: 'A simple sheet: clinic, date, system size.', requestedBy: m1u.id } });
+    }
+    if (greenApp && users['mentor2@demo.com'] && (await prisma.investmentProposal.count()) === 0) {
+      await prisma.investmentProposal.create({ data: { investorId: users['mentor2@demo.com'].id, applicationId: greenApp.id, amount: '₹25 lakh', instrument: 'equity', terms: 'Seed investment for 8% equity with a board observer seat; follow-on rights in the next round.' } });
+    }
+    if ((await prisma.blogPost.count()) === 0 && users.staff) {
+      await prisma.blogPost.createMany({ data: [
+        { slug: 'sample-welcome-to-the-cimp-biif-blog', title: 'Sample: Welcome to the CIMP-BIIF blog', excerpt: 'News, events and founder stories from the incubation team. This is a sample post.', authorId: users.staff.id, authorName: users.staff.name, status: 'published', publishedAt: new Date(Date.now() - 2 * 864e5), reviewedBy: 'Demo Admin IT',
+          body: 'This blog shares news from CIMP-BIIF: open calls, events at B-Hub and stories from the startups we support.\n\n## What you will find here\n\n- Announcements of new cohorts and deadlines\n- Reports from demo days and workshops\n- Founder stories and lessons learned\n\nThis is a sample post for the portal demo. Real posts are written by the office team and approved by Admin IT before they appear here.' },
+        { slug: 'sample-demo-day-preview', title: 'Sample: Demo day preview', excerpt: 'Twelve startups will pitch to investors at B-Hub next month.', authorId: users.staff.id, authorName: users.staff.name, status: 'submitted',
+          body: 'Twelve startups from the current cohort will pitch to a panel of investors and mentors at B-Hub next month.\n\nEach team has ten minutes to present and five minutes for questions. Investors interested in a startup can send a proposal through the portal, and the incubation team arranges a follow-up pitch.' },
+      ] });
+    }
+
+    // ── Phase 3 (BIIF 2.0) samples ──
+    const day = (n) => new Date(Date.now() + n * 864e5);
+    const ist = (d) => new Date(d.getTime() + 5.5 * 3600e3).toISOString().slice(0, 10);
+    const acc = users.accounts, srm = users.srm, ceoU = users.ceo, staffU = users.staff, mgrU = users.mgr, execU = users.exec;
+    if (greenApp && acc && (await prisma.seedFund.count()) === 0) {
+      await prisma.seedFund.create({ data: { applicationId: greenApp.id, scheme: 'Bihar Startup Policy seed fund (sample)', sanctionedInr: 1000000, sanctionedOn: day(-40), createdBy: acc.name } });
+      const step = (from, to, action, u, remark) => ({ fromStatus: from, toStatus: to, action, actorId: u.id, actorName: u.name, actorRole: u.role, remark: remark || null });
+      await prisma.financeRequest.create({ data: { kind: 'grant_tranche', title: 'First tranche: pilot in 14 clinics (sample)', description: 'Release of the first seed-fund tranche after the pilot milestone.', amountInr: 300000, payee: 'GreenGrid Labs Private Limited', applicationId: greenApp.id, requestedById: mgrU.id, requestedBy: mgrU.name, status: 'paid', paymentRef: 'UTR SAMPLE0001', paidAt: day(-20),
+        steps: { create: [step('new', 'submitted', 'raised the request', mgrU), step('submitted', 'verified', 'verified the request', acc), step('verified', 'approved', 'approved', srm), step('approved', 'final_approved', 'gave CEO approval', ceoU), step('final_approved', 'paid', 'recorded payment UTR SAMPLE0001', acc)] } } });
+      await prisma.financeRequest.create({ data: { kind: 'vendor_invoice', title: 'Demo day venue and AV (sample)', description: 'Hall booking, projector and sound for demo day.', amountInr: 45000, payee: 'Sample Events Pvt Ltd', requestedById: staffU.id, requestedBy: staffU.name, status: 'submitted',
+        steps: { create: [step('new', 'submitted', 'raised the request', staffU)] } } });
+      await prisma.financeRequest.create({ data: { kind: 'disbursement', title: 'Mentor honorarium, quarter 3 (sample)', description: 'Honorarium for 6 mentors for sessions held this quarter.', amountInr: 180000, payee: 'Mentor panel (6)', requestedById: execU.id, requestedBy: execU.name, status: 'approved',
+        steps: { create: [step('new', 'submitted', 'raised the request', execU), step('submitted', 'verified', 'verified the request', acc), step('verified', 'approved', 'approved', srm, 'Within budget')] } } });
+    }
+    if (mgrU && (await prisma.partner.count()) === 0) {
+      const mk = (data, acts) => prisma.partner.create({ data: { ...data, ownerId: mgrU.id, ownerName: mgrU.name, activities: { create: acts.map((a) => ({ ...a, byId: mgrU.id, byName: mgrU.name })) } } });
+      await mk({ name: 'Sample: Department of Industries, Bihar', type: 'government', stage: 'active', contactName: 'Startup cell', website: 'https://state.bihar.gov.in', mouSignedOn: day(-700), mouExpiresOn: day(20), notes: 'Seed fund route for Bihar startups. MoU renewal due.' },
+        [{ kind: 'meeting', summary: 'Quarterly review of seed-fund disbursements.', dueAt: null }, { kind: 'follow_up', summary: 'Send renewal draft of the MoU', dueAt: day(0) }]);
+      await mk({ name: 'Sample: Patna Power Ltd (CSR)', type: 'csr', stage: 'proposal', contactName: 'CSR head', expectedValueInr: 2500000, notes: 'Interested in funding clean-energy startups.' },
+        [{ kind: 'call', summary: 'Intro call; they asked for a proposal for a CleanTech track.', dueAt: null }, { kind: 'follow_up', summary: 'Share the CleanTech track proposal', dueAt: day(3) }]);
+      await mk({ name: 'Sample: T-Hub, Hyderabad', type: 'incubator', stage: 'mou_signed', mouSignedOn: day(-300), mouExpiresOn: day(400), notes: 'Startup exchange and joint events.' }, [{ kind: 'note', summary: 'Two startups shortlisted for the exchange programme.', dueAt: null }]);
+      await mk({ name: 'Sample: Agri Angels Network', type: 'investor_network', stage: 'lead', expectedValueInr: 0 }, []);
+    }
+    if ((await prisma.attendance.count()) === 0) {
+      const today = ist(new Date());
+      const at = (h, m) => new Date(Date.parse(today + 'T00:00:00Z') + ((h - 5.5) * 60 + m) * 60000);
+      const rows = [[execU, 9, 42, 'office'], [mgrU, 10, 31, 'office'], [acc, 9, 55, 'wfh'], [users.social, 10, 5, 'office']].filter(([u]) => u);
+      await prisma.attendance.createMany({ data: rows.map(([u, h, m, mode]) => ({ userId: u.id, userName: u.name, date: today, checkIn: at(h, m), mode })) });
+    }
+    if (staffU && (await prisma.leaveRequest.count()) === 0) {
+      await prisma.leaveRequest.create({ data: { userId: staffU.id, userName: staffU.name, userRole: 'staff', type: 'casual', fromDate: ist(day(7)), toDate: ist(day(8)), days: 2, reason: 'Family function (sample).' } });
+    }
+    if (users.social && (await prisma.socialPost.count()) === 0) {
+      const so = users.social;
+      await prisma.socialPost.createMany({ data: [
+        { platforms: ['linkedin', 'x'], content: 'Applications are open for the 2027 incubation cohort at CIMP-BIIF. Apply on the portal. #StartupBihar (sample)', scheduledFor: day(1), status: 'scheduled', createdById: so.id, createdBy: so.name },
+        { platforms: ['linkedin'], content: 'Meet GreenGrid Labs: smart micro-grid controllers now live in 14 rural clinics. (sample draft)', status: 'draft', createdById: so.id, createdBy: so.name },
+        { platforms: ['facebook', 'instagram'], content: 'Thank you to every mentor who joined the mentor meet at B-Hub. (sample)', status: 'published', publishedLinks: {}, createdById: so.id, createdBy: so.name },
+      ] });
+    }
+
+    // Sample conversations (PRD MSG-1, MSG-2)
+    if ((await prisma.chatMessage.count()) === 0) {
+      const ago = (h) => new Date(Date.now() - h * 3_600_000);
+      const msg = (threadType, threadId, u, content, h, read = true) => ({
+        threadType, threadId, senderId: u.id, senderName: u.name, senderRole: u.role, content, createdAt: ago(h), read,
+      });
+      const active = await prisma.connection.findFirst({ where: { incubateeId: incubatee.id, status: 'active' } });
+      const m1 = users['mentor1@demo.com'];
+      const m2 = users['mentor2@demo.com'];
+      const mgr = users.mgr;
+      const rows = [];
+      if (active) rows.push(
+        msg('connection', active.id, incubatee, 'Thank you for accepting! Could we start with the Bihar health-department tender we are bidding for?', 30),
+        msg('connection', active.id, m1, 'Happy to help. Please share the tender document and your last two bids. Are you free for a call on Thursday?', 26),
+        msg('connection', active.id, incubatee, 'Shared both on email. Thursday 4 pm works for us.', 3, false),
+      );
+      if (m2 && mgr) rows.push(
+        msg('mentor_office', m2.id, mgr, 'Welcome to the CIMP-BIIF network! Demo day is planned for next month; would you join the investor panel?', 48),
+        msg('mentor_office', m2.id, m2, 'Yes, count me in. Please send the shortlist a week before.', 20, false),
+      );
+      if (rows.length) await prisma.chatMessage.createMany({ data: rows });
     }
 
     console.log('✅ Demo data ready\n');
@@ -152,6 +395,8 @@ async function main() {
     for (const o of OFFICE) console.log(`  ${o.role.padEnd(11)} ${o.email}`);
     console.log(`Incubatees (password ${INCUBATEE_PASSWORD}):`);
     for (const i of INCUBATEES) console.log(`  ${i.email}`);
+    console.log(`Mentors / investors (password ${MENTOR_PASSWORD}):`);
+    for (const m of MENTORS) console.log(`  ${m.email}  (${m.profile.status}${m.profile.investorStatus ? `, investor ${m.profile.investorStatus}` : ''})`);
   } finally {
     await prisma.$disconnect();
   }

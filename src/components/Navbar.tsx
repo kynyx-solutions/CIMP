@@ -5,21 +5,6 @@ import { useState, useEffect, useRef } from "react";
 import { OFFICE_ROLES, ROLE_LABELS } from "@/lib/workflow";
 
 // Icons (You can use lucide-react or heroicons, I'm using inline SVGs for zero dependencies)
-const SearchIcon = () => (
-  <svg
-    className="w-4 h-4 text-slate-400"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-    />
-  </svg>
-);
 const BellIcon = () => (
   <svg
     className="w-5 h-5"
@@ -79,6 +64,9 @@ export default function Navbar({ user }: NavbarProps) {
 
   // New state for Profile Dropdown
   const [showProfile, setShowProfile] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+  const [showMobile, setShowMobile] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -90,6 +78,8 @@ export default function Navbar({ user }: NavbarProps) {
         setShowNotifs(false);
       if (profileRef.current && !profileRef.current.contains(e.target as Node))
         setShowProfile(false);
+      if (moreRef.current && !moreRef.current.contains(e.target as Node))
+        setShowMore(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -122,15 +112,38 @@ export default function Navbar({ user }: NavbarProps) {
     router.push("/login");
   }
 
-  const ALL = ["incubatee", ...OFFICE_ROLES];
+  const ALL = ["incubatee", "mentor", ...OFFICE_ROLES];
+  const REPORTERS = ["executive", "manager", "sr_manager", "ceo", "admin_it"];
+  // primary = always in the bar; the rest sit under "More" (PRD: role-specific navigation)
   const links = [
-    { href: "/dashboard", label: "Dashboard", roles: ALL },
-    { href: "/apply", label: "Apply", roles: ["incubatee"] },
-    { href: "/approvals", label: "Applications", roles: OFFICE_ROLES as string[] },
-    { href: "/staff", label: "Team", roles: ["ceo"] },
-    { href: "/messages", label: "Messages", roles: ALL },
-    { href: "/startups", label: "Directory", roles: ALL },
+    { href: "/dashboard", label: "Dashboard", roles: ["incubatee", ...OFFICE_ROLES], primary: true },
+    { href: "/mentor", label: "Mentor hub", roles: ["mentor"], primary: true },
+    { href: "/apply", label: "Apply", roles: ["incubatee"], primary: true },
+    { href: "/connect", label: "Find a mentor", roles: ["incubatee"], primary: true },
+    { href: "/approvals", label: "Applications", roles: OFFICE_ROLES as string[], primary: true },
+    { href: "/network", label: "Network", roles: OFFICE_ROLES as string[], primary: true },
+    { href: "/qpr", label: "Progress", roles: ["incubatee", ...OFFICE_ROLES], primary: true },
+    { href: "/messages", label: "Messages", roles: ALL, primary: true },
+    { href: "/invest", label: "Invest", roles: ["mentor"], primary: true },
+    // BIIF 2.0 (Phase 3)
+    { href: "/finance", label: "Finance", roles: ["accounts"], primary: true },
+    { href: "/social", label: "Social media", roles: ["social_media"], primary: true },
+    { href: "/finance", label: "Finance", roles: OFFICE_ROLES.filter((r) => r !== "accounts") as string[], primary: false },
+    { href: "/crm", label: "Partners (CRM)", roles: ["executive", "manager", "sr_manager", "ceo", "admin_it"], primary: false },
+    { href: "/hr", label: "HR", roles: OFFICE_ROLES as string[], primary: false },
+    { href: "/social", label: "Social media", roles: ["admin_it", "ceo"], primary: false },
+    { href: "/invest", label: "Investor pitches", roles: ["incubatee"], primary: false },
+    { href: "/invest", label: "Investment proposals", roles: OFFICE_ROLES as string[], primary: false },
+    { href: "/reports", label: "Reports", roles: REPORTERS, primary: false },
+    { href: "/broadcast", label: "Broadcast", roles: ["executive", "manager", "ceo", "admin_it"], primary: false },
+    { href: "/posts", label: "Blog posts", roles: ["staff", "admin_it"], primary: false },
+    { href: "/staff", label: "Team", roles: ["ceo"], primary: false },
+    { href: "/admin", label: "Admin", roles: ["ceo", "admin_it"], primary: false },
+    { href: "/startups", label: "Directory", roles: ALL, primary: false },
   ].filter((l) => l.roles.includes(user.role));
+  const primaryLinks = links.filter((l) => l.primary);
+  const moreLinks = links.filter((l) => !l.primary);
+  const moreActive = moreLinks.some((l) => l.href === pathname);
 
   // Generate Avatar URL based on name if user doesn't have one
   const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=0D8ABC&color=fff&size=128`;
@@ -156,7 +169,7 @@ export default function Navbar({ user }: NavbarProps) {
 
           {/* 2. Navigation Links (Desktop) */}
           <div className="hidden md:flex items-center gap-1">
-            {links.map((l) => (
+            {primaryLinks.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
@@ -177,20 +190,32 @@ export default function Navbar({ user }: NavbarProps) {
                 )}
               </Link>
             ))}
+            {moreLinks.length > 0 && (
+              <div className="relative" ref={moreRef}>
+                <button onClick={() => setShowMore((v) => !v)} aria-expanded={showMore} aria-haspopup="menu"
+                  className={`px-3 py-2 text-sm font-medium flex items-center gap-1 ${moreActive ? "text-leaf-700" : "text-slate-600 hover:text-slate-900"}`}>
+                  More <ChevronDown />
+                </button>
+                {showMore && (
+                  <div role="menu" className="absolute left-0 top-10 w-52 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50">
+                    {moreLinks.map((l) => (
+                      <Link key={l.href + l.label} href={l.href} role="menuitem" onClick={() => setShowMore(false)}
+                        className={`block px-4 py-2 text-sm ${pathname === l.href ? "text-leaf-700 font-semibold" : "text-slate-700 hover:bg-slate-50"}`}>{l.label}</Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* 3. Right Side: Search, Notifications, Profile */}
         <div className="flex items-center gap-3 sm:gap-4">
-          {/* Search Bar (Impressive Feature) */}
-          <div className="hidden lg:flex items-center bg-slate-100 rounded-full px-3 py-1.5 border border-transparent focus-within:border-slate-300 focus-within:bg-white transition-all w-48">
-            <SearchIcon />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="bg-transparent border-none outline-none text-sm ml-2 w-full placeholder-slate-400 text-slate-700"
-            />
-          </div>
+          {/* Mobile menu */}
+          <button onClick={() => setShowMobile((v) => !v)} aria-expanded={showMobile} aria-controls="mobile-nav" aria-label="Menu"
+            className="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-700">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d={showMobile ? "M6 6l12 12M18 6L6 18" : "M4 7h16M4 12h16M4 17h16"} /></svg>
+          </button>
 
           {/* Notifications */}
           <div className="relative" ref={notifRef}>
@@ -317,6 +342,14 @@ export default function Navbar({ user }: NavbarProps) {
           </div>
         </div>
       </div>
+      {showMobile && (
+        <div id="mobile-nav" className="md:hidden border-t border-slate-200 bg-white px-4 py-3 grid grid-cols-2 gap-1">
+          {links.map((l) => (
+            <Link key={l.href + l.label} href={l.href} onClick={() => setShowMobile(false)}
+              className={`px-3 py-2 rounded-lg text-sm ${pathname === l.href ? "bg-leaf-50 text-leaf-700 font-semibold" : "text-slate-700 hover:bg-slate-50"}`}>{l.label}</Link>
+          ))}
+        </div>
+      )}
     </nav>
   );
 }

@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { PublicHeader, PublicFooter, PageHero, CtaBand, SectionHeading, SampleTag, Arrow, Check } from "@/components/public/Site";
-import { ABOUT, SITE, STATS, LEADERSHIP_MESSAGES, HOST_INSTITUTE, POLICIES, SDGS } from "@/content/site";
+import { ABOUT, SITE, LEADERSHIP_MESSAGES, HOST_INSTITUTE, POLICIES, SDGS } from "@/content/site";
+import { getContent } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "About",
   description: "CIMP Business Incubation and Innovation Foundation (CIMP-BIIF), the incubator of Chandragupt Institute of Management Patna: story, mission, leadership and recognitions.",
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const { stats: STATS } = await getContent();
   return (
     <main className="min-h-screen bg-bg antialiased">
       <PublicHeader />
@@ -102,9 +105,8 @@ export default function AboutPage() {
                 <span className="font-display text-6xl leading-none text-leaf-300" aria-hidden="true">&ldquo;</span>
                 <blockquote className="text-secondary font-body leading-relaxed -mt-4 flex-1">{m.message}</blockquote>
                 <figcaption className="mt-6 flex items-center gap-4 pt-5 border-t border-border">
-                  <div className="w-12 h-12 rounded-full bg-leaf-50 border border-leaf-200 flex items-center justify-center font-display font-bold text-brand text-lg flex-shrink-0" aria-hidden="true">
-                    {m.name.replace(/^Prof\. \(Dr\.\) /, "").charAt(0)}
-                  </div>
+                  <Image src={m.photo} alt={`Portrait of ${m.name}`} width={160} height={160}
+                    className="w-20 h-20 rounded-full object-cover object-top border-2 border-leaf-200 bg-white flex-shrink-0" />
                   <div>
                     <p className="font-body font-bold text-navy">{m.name}</p>
                     <p className="text-xs text-muted font-mono">{m.role}</p>

@@ -1,7 +1,8 @@
 // Shared building blocks for public (logged-out) pages: header, footer, headings.
 import Link from "next/link";
 import Image from "next/image";
-import { IS_SAMPLE, SITE, CONTACTS, SOCIAL } from "@/content/site";
+import { SITE, SOCIAL } from "@/content/site";
+import { getContent } from "@/lib/content";
 import HexHive from "@/components/public/HexHive";
 
 export const LOGO_SRC = "/brand/cimp-biif-logo.jpg"; // official logo, 462×571
@@ -14,6 +15,7 @@ export const PUBLIC_NAV = [
   { href: "/mentors", label: "Mentors" },
   { href: "/facilities", label: "Facilities" },
   { href: "/schemes", label: "Schemes" },
+  { href: "/blog", label: "Blog" },
   { href: "/faq", label: "FAQ" },
 ];
 
@@ -78,12 +80,15 @@ export const Check = () => (
   </svg>
 );
 
-export const SampleTag = () =>
-  IS_SAMPLE ? (
+// Hidden once Admin IT turns off sample mode (PRD WEB-6)
+export async function SampleTag() {
+  const { sampleMode } = await getContent();
+  return sampleMode.enabled ? (
     <span className="ml-2 align-middle text-[10px] font-mono uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
       Sample
     </span>
   ) : null;
+}
 
 export function SectionHeading({ eyebrow, title, desc, sample, as = "h2" }: {
   eyebrow: string; title: string; desc?: string; sample?: boolean; as?: "h1" | "h2";
@@ -113,10 +118,11 @@ function Logo() {
   );
 }
 
-export function PublicHeader() {
+export async function PublicHeader() {
+  const { sampleMode } = await getContent();
   return (
     <>
-      {IS_SAMPLE && (
+      {sampleMode.enabled && (
         <div className="bg-amber-50 border-b border-amber-200 text-amber-800 text-xs font-body text-center px-4 py-2">
           Demo build: content marked <strong>Sample</strong> is placeholder until Admin IT publishes CIMP&apos;s real data.
         </div>
@@ -156,7 +162,8 @@ export function PublicHeader() {
   );
 }
 
-export function PublicFooter() {
+export async function PublicFooter() {
+  const { contacts: CONTACTS } = await getContent();
   const year = new Date().getFullYear();
   return (
     <footer id="contact" className="bg-white border-t border-border scroll-mt-16">

@@ -223,6 +223,8 @@ export const APPLY_GUIDE = {
 export type NetworkMember = {
   name: string; role: string; expertise: string;
   type: "Mentor" | "Investor" | "Mentor & Investor"; sectors: string[];
+  /** public profile page; only for real (database) profiles */
+  href?: string;
 };
 
 export const MENTORS: NetworkMember[] = [
@@ -376,12 +378,14 @@ export const LEADERSHIP_MESSAGES = [
   {
     name: "Prof. (Dr.) Rana Singh",
     role: "Director, CIMP and CIMP-BIIF",
+    photo: "/team/rana-singh.png",
     message:
       "At CIMP-BIIF, we are building a world-class innovation ecosystem. Our aim is to nurture entrepreneurs and future leaders by helping them grow with institutional support. With India emerging as the fourth largest startup ecosystem in the world, it is our privilege to give young entrepreneurial minds a relevant platform. BIIF not only provides support and guidance to young leaders but also helps them establish their own units, using the best technology and infrastructure.",
   },
   {
     name: "Kumod Kumar",
     role: "Chief Executive Officer, CIMP-BIIF",
+    photo: "/team/kumod-kumar.png",
     message:
       "At BIIF, we believe in the power of imagination, ideation and incubation. We work closely with various stakeholders to handhold young innovators in their journey from an innovative idea to a viable enterprise. The idea is to create a strong culture of entrepreneurship where young minds will have a greater appetite for job creation rather than job seeking.",
   },

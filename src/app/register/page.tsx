@@ -9,6 +9,8 @@ export default function RegisterPage() {
   const router = useRouter();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [consent, setConsent] = useState(false);
+  // Public roles only (PRD ACC-1): founders apply; mentors/investors join the network.
+  const [role, setRole] = useState<"incubatee" | "mentor">("incubatee");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -24,7 +26,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, consent }),
+        body: JSON.stringify({ ...form, consent, role }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -50,10 +52,25 @@ export default function RegisterPage() {
       title="Create your account"
       subtitle={<>Already registered? <Link href="/login" className="text-brand font-semibold hover:text-navy">Sign in</Link></>}
     >
-      <div className="mb-6 px-4 py-3 bg-leaf-50 border border-leaf-100 rounded-xl text-xs text-secondary font-body">
-        🚀 For founders applying to CIMP-BIIF. Office staff accounts are created by the organisation; staff should{" "}
-        <Link href="/login" className="text-brand font-medium">sign in</Link> with their company email.
-      </div>
+      <fieldset className="mb-6">
+        <legend className="block text-sm font-body font-medium text-navy mb-2">I am joining as</legend>
+        <div className="grid grid-cols-2 gap-3">
+          {([
+            { value: "incubatee", icon: "🚀", title: "Founder", desc: "Apply for incubation" },
+            { value: "mentor", icon: "🧭", title: "Mentor / Investor", desc: "Guide or back startups" },
+          ] as const).map((o) => (
+            <label key={o.value} className={`cursor-pointer rounded-xl border-2 p-3 transition-colors ${role === o.value ? "border-brand bg-leaf-50" : "border-border bg-white hover:border-border-2"}`}>
+              <input type="radio" name="role" value={o.value} checked={role === o.value} onChange={() => setRole(o.value)} className="sr-only" />
+              <span className="block text-xl" aria-hidden="true">{o.icon}</span>
+              <span className="block font-body font-bold text-navy text-sm mt-1">{o.title}</span>
+              <span className="block font-body text-xs text-muted">{o.desc}</span>
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-muted font-body mt-2">
+          Office staff accounts are created by the organisation; staff should <Link href="/login" className="text-brand font-medium">sign in</Link> with their company email.
+        </p>
+      </fieldset>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {fields.map((f) => (
@@ -90,7 +107,7 @@ export default function RegisterPage() {
         <div className="flex-1 h-px bg-border" />
       </div>
 
-      <GoogleButton onError={setError} disabled={!consent} />
+      <GoogleButton onError={setError} disabled={!consent} role={role} />
       {!consent && <p className="text-[11px] text-muted font-body text-center mt-1">Tick the consent box above to continue with Google.</p>}
     </AuthShell>
   );

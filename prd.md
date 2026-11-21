@@ -4,8 +4,8 @@
 |---|---|
 | **Client** | CIMP-BIIF: CIMP Business Incubation and Innovation Foundation, a Section 8 company of Chandragupt Institute of Management Patna (CIMP). Note: the client's overview document expands the name as "Centre for Innovation, Management & Policy – Business Incubation & Innovation Fund"; confirm the official name with CIMP (Q14). |
 | **Vendor** | Homeasy Automation Pvt. Ltd. |
-| **Status** | Draft v0.3, internally agreed; ready for the requirement-alignment meeting with CIMP |
-| **Last updated** | 2026-11-20 |
+| **Status** | Draft v0.5: Phase 3 (BIIF 2.0) and Phase 4 (production readiness) added in §7. Earlier, v0.4: revised line by line against CIMP's overview document (see the traceability matrix in §14); ready for the requirement-alignment meeting |
+| **Last updated** | 2026-11-21 |
 | **Sources** | CIMP-BIIF 1.0 High-Level Overview (CIMP, v1.0, 2025) · CIMP-BIIF Proposal (Homeasy, 15-04-2026) |
 | **Owner** | TBD |
 
@@ -63,7 +63,7 @@ These exclusions come from the proposal:
 - advanced analytics and AI modules
 - external integrations beyond the agreed scope
 - on-site deployment or support
-- BIIF 2.0 modules: accounts, CRM, social media, attendance, leave
+- BIIF 2.0 modules (CIMP overview §6.4): accounts department with financial-document approvals, social media manager dashboard, CRM, attendance tracker, leave management, external API integrations with partner portals, and custom GPT / AI tools for office users. Phase 1 keeps the architecture ready for them (G7) but does not build them.
 
 ## 4. Users & roles
 
@@ -139,7 +139,7 @@ Fast-track: CEO (and a higher role over lower stages) can approve directly from 
 
 - **WF-1.** Each step records the actor, role, timestamp, decision and remark. Steps are stored inside the approval document (`approvals.steps[]`).
 - **WF-2.** A digital signature is required at the Sr. Manager and CEO stages. Its type is **[OPEN Q1]**.
-- **WF-3.** "Send back" returns the application to the applicant for edits, with a remark. The applicant can't edit the profile while it is under review.
+- **WF-3.** "Send back" returns the application to the applicant for edits, with a remark the applicant can see. The applicant can't edit the profile while it is under review; after a send-back they edit and resubmit, and the application returns to the stage that sent it back. *(Built in the demo.)*
 - **WF-4.** On final approval the incubatee's profile can appear in the public directory, depending on the visibility settings Admin IT controls.
 - **WF-5.** Every transition notifies the applicant and the next stage's reviewers.
 - **WF-6.** Stage-guarding: an action is only valid for the application's current stage. Closed applications cannot be acted on again.
@@ -175,6 +175,8 @@ Exact routing rules are **[OPEN Q7]**.
 | RBAC-1 | The six office roles from §4.2, with permissions as in §5, enforced by API middleware (authenticate → resolveRole → requireRole). |
 | RBAC-2 | An office user-management screen to create, deactivate and change roles of office users, following ACC-3. |
 | RBAC-3 | A dashboard for each role showing its queue, counts and recent activity. |
+| RBAC-4 | Office Staff can correct application fields; every such edit is flagged on the application and recorded in the audit log with the old and new values (CIMP overview §2.4). |
+| RBAC-5 | Executive / Sr. Executive can download reports and Excel data (delivered with XLS-1). |
 
 #### 7.3 Dynamic forms (Admin IT)
 | ID | Requirement |
@@ -187,7 +189,7 @@ Exact routing rules are **[OPEN Q7]**.
 | ID | Requirement |
 |---|---|
 | DOC-1 | Incubatee profile and application: dynamic form plus documents (pitch deck, ID proof, business registration, company logo). |
-| DOC-2 | Uploads go straight from the browser to S3 via presigned URLs (valid 5 min). The server checks file type and size before issuing a URL. |
+| DOC-2 | Uploads go straight from the browser to S3 via presigned URLs (valid 5 min). The server checks file type and size before issuing a URL; after upload the client confirms with the S3 key, and the server stores the key on the profile or report (CIMP overview §4.3). The API never handles file bytes. |
 | DOC-3 | Profile completion status is tracked and shown to the user. |
 
 #### 7.5 Approval engine
@@ -208,6 +210,7 @@ Exact routing rules are **[OPEN Q7]**.
 | ID | Requirement |
 |---|---|
 | MSG-1 | Threaded messaging between an incubatee and the office, and between an incubatee and their assigned mentor. |
+| MSG-2 | The Incubation Manager can message mentors and investors; office staff can message incubatees (CIMP overview §2.4). |
 | NOT-1 | Dashboard notifications plus automatic email for key events (submission, every stage transition, connection updates, new message). |
 | NOT-2 | Unread count and mark-as-read. |
 
@@ -263,6 +266,44 @@ Based on a review of 12 incubator websites (AIC-BIMTECH, IC IIT Patna, FITT IIT 
 | INV-1 | Investment proposals sent to the office to arrange pitching sessions. Investors can view and message the startups they invested in. |
 | BLG-1 | Blog posts: Office Staff write, Admin IT approves, posts publish to the public site. |
 | SIG-2 | Legally valid eSign / DSC, if CIMP needs it **[OPEN Q1]**. This is a third-party integration with per-signature cost. |
+
+### Phase 3: BIIF 2.0 modules (separate scope & commercials)
+
+CIMP overview §6.4 lists these as future modules. The demo now shows a working version of each, so CIMP can judge scope and priority. Two new office roles support them: **Accounts Officer** and **Social Media Manager**.
+
+| ID | Requirement |
+|---|---|
+| FIN-1 | Finance requests (grant tranche, disbursement, vendor invoice, reimbursement) with an invoice or bill attached (PDF/JPG/PNG, 10 MB). |
+| FIN-2 | Approval chain: Accounts verifies → Sr. Manager or CEO approves → CEO also approves above ₹1,00,000 → Accounts records payment with a reference (UTR). Send back and reject with a remark. Nobody reviews their own request. |
+| FIN-3 | Seed-fund register per startup: amount sanctioned, released and in progress. A tranche cannot exceed the remaining sanctioned amount; the founder is notified when a tranche is paid. |
+| CRM-1 | Partner pipeline (government, corporate, CSR, investor network, incubator, academic) with stages from lead to active, owner, expected value and MoU dates. |
+| CRM-2 | Activity log per partner (call, meeting, email, note, follow-up). A daily 9 AM job reminds owners of follow-ups due and MoUs expiring within 30 days. |
+| API-1 | Partner API: read-only REST endpoints (`/api/v1/startups`, `/api/v1/stats`) with API keys created by Admin IT, scopes, hashed storage, shown once, 60 requests per minute. Only fields marked public are returned. |
+| API-2 | Webhooks to partner portals for `application.approved`, `startup.published` and `mentor.approved`, signed with HMAC-SHA256, HTTPS only, private addresses blocked, every delivery logged. |
+| HR-1 | Attendance: daily check-in and check-out (office, work from home, field), late mark after 10:15 IST, monthly view; team view for the CEO and Sr. Manager. |
+| HR-2 | Leave: casual 12, sick 10, earned 15 days a year plus unpaid; balances, overlap checks, working days Monday to Saturday with half days. Staff leave goes to the Sr. Manager; Sr. Manager, Admin IT and Accounts leave goes to the CEO. |
+| SOC-1 | Social media dashboard: draft, schedule and record published posts for LinkedIn, X, Facebook and Instagram, with the X 280-character limit. Direct posting through each network's API needs CIMP's accounts **[OPEN]**. |
+| AI-1 | AI assistant for office users (Claude): application briefing (summary, strengths, risks, questions, fit score), progress-report insight compared with the previous quarter, and drafts of announcements, blog and social posts. |
+| AI-2 | AI governance: Admin IT turns it on; phone numbers and email addresses are removed before text is sent; 30 requests per user per hour; every run recorded with token use and estimated cost; output is a draft that a person reviews. Needs CIMP's API key and a data-processing decision **[OPEN]**. |
+
+### Phase 4: production readiness
+
+Phase 4 turns the demo into something that can run CIMP's live portal: deployment, security hardening, backups and automated tests, as set out in §8. It adds no new screens apart from **Settings → Sign out on all devices**.
+
+| ID | Requirement | Status in the demo |
+|---|---|---|
+| OPS-1 | Docker image (Next.js standalone, non-root user, health check) and docker-compose with PostgreSQL 16 and Caddy for automatic HTTPS. Migrations run as a separate step before the app starts. | ✅ `Dockerfile`, `docker-compose.yml`, `deploy/Caddyfile` |
+| OPS-2 | Environment check at start-up: production refuses to start when the database URL, a strong `JWT_SECRET` (32+ characters), office email domains, an https app address or a mail account is missing. | ✅ `src/lib/env.ts` |
+| OPS-3 | Health endpoint `/api/health` (database check) for Docker, load balancers and uptime monitors. | ✅ |
+| OPS-4 | Daily database and upload backups with 14-day retention, documented restore, quarterly restore test. | ✅ `scripts/backup.sh`, docs/deployment.md |
+| OPS-5 | CI on every push: type-check, unit tests, migrations applied to an empty database and checked against the schema, build, API tests against the production server. | ✅ `.github/workflows/ci.yml` |
+| OPS-6 | Automated tests: unit tests for approval, finance, leave, scheduler and security rules; API tests for sessions, brute-force limits, headers and health. | ✅ 33 unit + 10 API tests (`tests/`) |
+| SEC-1 | Revocable sessions: every request checks the token against the user's record (15-second cache). Deleting an office user, a role change, a password change or "sign out on all devices" ends sessions at once. | ✅ |
+| SEC-2 | Brute-force limits: sign-in 10 per account and 30 per address in 15 minutes; email codes cancelled after 5 wrong tries and generated with a cryptographic random source; limits on sign-ups and code resends. | ✅ in-memory (one server); Redis for several |
+| SEC-3 | Security headers: Content-Security-Policy, HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy; API responses not cached. | ✅ |
+| SEC-4 | File storage on any S3-compatible store (AWS S3 Mumbai, Cloudflare R2, MinIO) or local disk, chosen by environment. Files stay private; downloads go through access-checked routes. | ✅ local tested; S3 driver written, to be tested against CIMP's bucket |
+
+Still open before go-live: refresh-token rotation and password reset (AUTH-3, AUTH-4), Redis for multi-server limits, CSP nonces in place of `'unsafe-inline'`, and a load test on the chosen server.
 
 ## 8. Non-functional requirements
 
@@ -340,15 +381,15 @@ What does not change: Redis stays for refresh tokens, rate limits and notificati
 
 Assumes a team of 2 developers (backend + frontend) plus part-time QA/PM. With one developer, expect 14–16 weeks.
 
-| Week | Deliverable |
-|---|---|
-| 1–2 | Requirement workshop with CIMP. Signed SRS, wireframes, final role and permission matrix, workflow diagrams. Repo, Docker, AWS (S3) and Redis set up. |
-| 3 | Auth (AUTH-1…6), users, office roles, RBAC middleware, audit logger |
-| 4 | Form builder (FORM-1…3), profiles, S3 uploads (DOC-1…3) |
-| 5 | Approval engine (APR-1…3), notifications (NOT-1…2) |
-| 6 | Mentors, investors, connections (MEN-1…3). **Milestone demo on staging.** |
-| 7 | Role dashboards, messaging, public directory, emails, hardening |
-| 8 | UAT with CIMP, production deployment, training |
+| Week | Deliverable | Starting point from the demo (§11) |
+|---|---|---|
+| 1–2 | Requirement workshop with CIMP. Signed SRS, wireframes, final role and permission matrix, workflow diagrams. Repo, Docker, AWS (S3) and Redis set up. | Demo used as the walkthrough; PRD + §14 matrix as the SRS draft |
+| 3 | Auth (AUTH-1…6), users, office roles, RBAC middleware, audit logger | Registration, OTP, Google, staff rules and 6 roles exist; add refresh tokens, password reset, rate limits, middleware |
+| 4 | Form builder (FORM-1…3), profiles, S3 uploads (DOC-1…3) | Demo form fields become the first form schema; uploads move to S3 |
+| 5 | Approval engine (APR-1…3), notifications (NOT-1…2) | 4-stage engine, send-back, fast-track, trail exist; add image signatures and emails per step |
+| 6 | Mentors, investors, connections (MEN-1…3, MSG-2). **Milestone demo on staging.** | New build; public mentors page exists |
+| 7 | Role dashboards, messaging threads, public directory, Admin IT site content (WEB-6), hardening | Dashboards, website and directory exist; content moves to `site_config` |
+| 8 | UAT with CIMP, production deployment, training | — |
 
 ### Milestones & payments (from the proposal)
 | Milestone | Acceptance | Payment |
@@ -361,19 +402,42 @@ Weekly demos on staging. Anything outside the signed SRS goes through a change r
 
 ## 11. Current state
 
-A prototype ("Launchpad") was built in April 2026 alongside the proposal. It is a Next.js monolith. **The demo's data layer runs on PostgreSQL with Prisma**, the database proposed for Phase 1 (§9.4), so it can be reused if CIMP agrees. Here is what can be reused:
+*As of 2026-11-21, branch `feature/cimp-demo`. Phases 2–4 have since been added to the demo: see the Phase 2, Phase 3 and Phase 4 tables in §7; the tables below describe the Phase 1 baseline.* The demo is a Next.js monolith on PostgreSQL (Prisma, committed migrations), branded from the official CIMP-BIIF logo, with demo data marked "Sample". It is built to show CIMP the product at the alignment meeting; it is not the Phase 1 architecture (§9).
 
-| Prototype feature | Reuse in Phase 1 |
+### 11.1 Built in the demo
+
+| Area | What exists | Phase 1 reuse |
+|---|---|---|
+| Accounts | Email + OTP registration, Google sign-in verified on the server, consent recorded (WEB-10), staff rules ACC-1…7, CLI-created CEO, CEO's Team page for office users | Logic moves to Express; add refresh tokens, password reset, rate limits |
+| Roles | All six office roles from CIMP overview §2.4 | Carried over; finish role-specific actions (§14) |
+| Application | 15-field application in 4 sections, completion meter, pitch-deck upload (local disk) | Fields become the first `form_schemas` entry; uploads move to S3 |
+| Approval | Executive → Manager → Sr. Manager → CEO, higher rank acts on lower stages, CEO fast-track, typed signatures, reject with reason, send back and resubmit, approval trail, activity log | Engine carried over; signature becomes image capture (APR-2) |
+| Information | Applicant "where you stand", office "My queue", days in stage, search, full application panel (INFO-1…4) | Reused |
+| Messaging & notifications | Per-application office chat, in-app notifications with unread count | Reworked into threads; emails added per step |
+| Public website | Home (animated bodhi tree), About, Programs, How to Apply, Startups (search, filters), Mentors, Facilities, Schemes, FAQ, Privacy, Terms; per-page titles, sitemap | Reused; content moves to `site_config` (WEB-6) |
+| Content | Facts from the organisation's own site (archived Mar 2025): name, story, vision, mission, leadership messages, host institute, policies, UN SDG focus, programmes, Bihar seed-fund route, contact | Confirm with CIMP (Q14) |
+
+### 11.2 Coverage of CIMP's overview
+
+| CIMP goal (overview §1.3) | Demo coverage (estimate) |
 |---|---|
-| Email + OTP registration, Google login with server-side token verification | Logic reused; moved to Express plus the refresh-token model |
-| Staff rules: CLI-created CEO, company-domain staff login, no social login for staff | Carried over as ACC-1…7 |
-| 2-stage approval (Manager → CEO), fast-track, publish | Replaced by the 4-stage approval engine |
-| Per-application messages, notifications, activity log | Reworked into threads / notifications / audit_logs |
-| 6 office roles, 4-stage approval with typed signatures, approval trail, Team page (demo) | Logic carried into the Express approval engine; UI reused |
-| Public homepage per §7.9 with demo data (`src/content/site.ts`) | Reused; content moves to `site_config` (WEB-6) |
-| UI (auth, dashboard, approvals) | Rebranded to CIMP and reused |
+| G1 Registration, application, approval (Primary) | ~75% |
+| G2 Role-based office system (Primary) | ~55% |
+| G3 Mentor and investor connections (Primary) | ~5% |
+| G4 Notifications, reminders, QPR (Secondary) | ~20% |
+| G5 Signed PDFs, Excel, ID cards (Secondary) | 0% |
+| G6 Public directory (Secondary) | ~60%, plus a full public website beyond the spec |
+| Technology as specified (overview §3–6) | ~20% |
+| **Whole specification** | **~30–35%** |
+| **Phase 1 scope (this PRD)** | **~45%, at demo quality** |
 
-Roughly 10–15% of the Phase 1 scope exists, at prototype quality.
+### 11.3 Not yet started (largest gaps)
+- Mentor and investor module and connection workflow (G3, MEN-1…3).
+- Admin IT panel: form builder, site content, public field visibility, audit log screen.
+- Production architecture: Express API, Redis, S3, Docker, Zod, middleware chain, response envelope, refresh tokens, password reset.
+- All of Phase 2: QPR, reminders and scheduled jobs, PDFs, Excel, ID cards, mentorship sessions, investment proposals, blog.
+
+The line-by-line status is in §14.
 
 ## 12. Risks
 
@@ -404,3 +468,107 @@ Roughly 10–15% of the Phase 1 scope exists, at prototype quality.
 13. **Database:** we recommend PostgreSQL instead of the MongoDB in your spec and our proposal, for transactions, reporting and data integrity (see §9.4). Do you agree, or does your IT team require MongoDB or MySQL?
 14. **Official name:** is it "CIMP Business Incubation and Innovation Foundation" (as on the old cimpbiif.com) or the expansion in your overview document? Also confirm the current Director and CEO, and the contact phone number.
 15. **Bihar seed-fund flow:** should the portal record Department of Industries seed-fund approval as a step, given seed funding is approved by the Department after pre-incubation?
+
+## 14. Traceability to CIMP's overview document
+
+Every item in *CIMP-BIIF 1.0 High-Level Overview (v1.0, 2025)* mapped to this PRD. **Phase**: 1 = Phase 1 (8 weeks), 2 = Phase 2 (separate scope), 2.0 = BIIF 2.0 (out of scope). **Demo**: ✅ built · 🟡 partly built · ❌ not started.
+
+### 14.1 Features (overview §2)
+
+| Overview § | Item | PRD ID | Phase | Demo |
+|---|---|---|:-:|:-:|
+| 2.1 | Registration with email verification | AUTH-1 | 1 | ✅ |
+| 2.1 | Google OAuth | AUTH-2 | 1 | ✅ |
+| 2.1 | Apple OAuth | AUTH-2 [Q4] | 1 | ❌ |
+| 2.1 | Dynamic profile and application form, Admin-configurable | FORM-1…3 | 1 | ✅ versioned form builder (no file-type fields yet) |
+| 2.1 | Documents: pitch deck, ID proof, business registration, logo | DOC-1, DOC-2 | 1 | ✅ private local storage, type-checked (S3 in Phase 1) |
+| 2.1 | Multi-level approval with digital signatures | APR-1, APR-2 | 1 | ✅ typed signature |
+| 2.1 | Public profile after CEO approval | WF-4, WEB-13, PUB-1 | 1 | ✅ profile page with logo |
+| 2.1 | QPR submission from the dashboard | QPR-1 | 2 | ✅ demo: configurable form, draft, review, PDF |
+| 2.1 | Mentorship request, feedback, session scheduling | MEN-3, MEN-4 | 1 / 2 | ✅ |
+| 2.1 | Messaging with office and assigned mentor | MSG-1 | 1 | ✅ unified inbox |
+| 2.2 | Mentor registration, profile, approval | MEN-1 | 1 | ✅ |
+| 2.2 | Mentor public profile after approval | PUB-1, WEB-13 | 1 | ✅ opt-in profile page |
+| 2.2 | Accept / decline mentee requests | MEN-3 | 1 | ✅ |
+| 2.2 | Physical or virtual meetings with mentees | MEN-4 | 2 | ✅ demo |
+| 2.2 | Request documents from mentees | MEN-4 | 2 | ✅ demo |
+| 2.2 | Post-session feedback | MEN-4 | 2 | ✅ demo: 1–5 rating, shown once both rate |
+| 2.3 | Mentors register as investors (separate approval) | MEN-2 | 1 | ✅ |
+| 2.3 | Investment proposals to the office | INV-1 | 2 | ✅ demo: pitch scheduling, outcome |
+| 2.3 | View and message invested startups | INV-1 | 2 | ✅ demo: portfolio with latest QPR |
+| 2.4 | Admin IT: form fields, site config, public visibility | FORM-1…3, WEB-6 | 1 | ✅ stats, calls, eligibility, contacts, FAQ, sample mode |
+| 2.4 | Admin IT: blog approvals | BLG-1 | 2 | ✅ demo |
+| 2.4 | Admin IT: ID card templates | IDC-1 | 2 | ✅ demo: per member type, title and colour, validity |
+| 2.4 | Admin IT: audit logs | AUD-1 | 1 | ✅ append-only (DB trigger), filters, CSV |
+| 2.4 | CEO: final approval and signing, fast-track, all statistics | APR-1, APR-2, RBAC-3 | 1 | ✅ |
+| 2.4 | Sr. Manager: approval and signing | APR-1, APR-2 | 1 | ✅ |
+| 2.4 | Sr. Manager: route connection requests upward | MEN-3 (6.3) | 1 | ✅ |
+| 2.4 | Incubation Manager: due diligence with remarks | APR-1 | 1 | ✅ |
+| 2.4 | Incubation Manager: connection routing, message mentors and investors | MEN-3, MSG-2 | 1 | ✅ |
+| 2.4 | Executive: accept submissions | APR-1 | 1 | ✅ |
+| 2.4 | Executive: custom notifications | NOT-3 | 2 | ✅ demo |
+| 2.4 | Executive: reports and Excel downloads | RBAC-5, XLS-1 | 2 | ✅ demo |
+| 2.4 | Office Staff: view-only access | RBAC-1 | 1 | ✅ |
+| 2.4 | Office Staff: edit application fields (flagged) | RBAC-4 | 1 | ✅ reason required, old/new in audit |
+| 2.4 | Office Staff: message incubatees | MSG-2 | 1 | ✅ |
+| 2.4 | Office Staff: write blog posts | BLG-1 | 2 | ✅ demo |
+| 2.5 | Executive → Manager → Sr. Manager → CEO pipeline | APR-1, WF-1…6 [Q2] | 1 | ✅ |
+| 2.5 | Higher roles approve or fast-track at any stage | APR-1, §5 | 1 | ✅ (fast-track: CEO) |
+| 2.5 | Every action recorded with timestamp, actor, remark | WF-1, AUD-1 | 1 | ✅ approval trail |
+| 2.5 | Digital signatures at Sr. Manager and CEO | APR-2, SIG-2 [Q1] | 1 / 2 | ✅ typed |
+| 2.5 | Separate track for connection requests | 6.3, MEN-3 | 1 | ✅ |
+| 2.6 | Dashboard notifications | NOT-1, NOT-2 | 1 | ✅ |
+| 2.6 | Automatic emails for key events | NOT-1 | 1 | ✅ SMTP or Gmail via settings; Admin → Email test |
+| 2.6 | Reminders: incomplete profiles, pending QPR | REM-1, QPR-2 | 2 | ✅ demo: in-app scheduler (IST), one run per slot; optional external cron |
+| 2.6 | Custom notification blast by CEO, Manager, Admin IT | NOT-3 | 2 | ✅ demo |
+| 2.6 | Deduplication within a cooldown window | NOT-4 | 2 | ✅ demo: 10 min, database (Redis in production) |
+| 2.7 | Configurable Excel exports | XLS-1 | 2 | ✅ demo: background jobs, 30 s processor |
+| 2.7 | Signed PDF of approved applications | PDF-1 | 2 | ✅ demo: drawn + typed signatures (legal eSign: SIG-2 open) |
+| 2.7 | QPR PDF download | PDF-1 | 2 | ✅ demo |
+| 2.7 | Chat history PDF export | PDF-1 | 2 | ✅ demo |
+| 2.7 | Virtual ID card PDF by email | IDC-1 | 2 | ✅ demo: emailed, verify page, daily renewal job |
+| 2.8 | Public listing of approved incubatees | PUB-1, WEB-13 | 1 | ✅ search and filters |
+| 2.8 | Public listing of mentors and investors | PUB-1 | 1 | ✅ approved, opted-in profiles |
+| 2.8 | Admin IT controls visible profile fields | FORM-3 | 1 | ✅ per-field public flag |
+| 2.8 | Blog posts from the office team | BLG-1, WEB-9 | 2 | ✅ demo |
+
+### 14.2 Technology and architecture (overview §3–6)
+
+| Overview § | Item | PRD ref | Demo |
+|---|---|---|:-:|
+| 3 | Node.js + Express | §9.1 | ❌ Next.js API routes (demo only) |
+| 3 | MongoDB (Mongoose) | §9.4 [Q13] | 🔄 PostgreSQL proposed instead |
+| 3 | Redis (refresh tokens, rate limits, dedup) | AUTH-3, AUTH-6, NOT-4 | 🟡 rate limits and dedup in the app (one server); Redis needed for several (SEC-2) |
+| 3 | JWT + bcrypt + OAuth 2.0 | AUTH-1…3 | 🟡 7-day JWT revocable per user (SEC-1), bcrypt, Google; no refresh-token rotation yet |
+| 3 | AWS S3 | DOC-2 | ✅ S3-compatible driver or local disk (SEC-4) |
+| 3 | Nodemailer + Handlebars | NOT-1 | 🟡 Nodemailer, inline HTML |
+| 3 | Puppeteer, ExcelJS | PDF-1, XLS-1 | ❌ |
+| 3 | Zod validation | §8 | 🟡 hand-written request validation; environment checked at start-up (OPS-2) |
+| 3 | node-cron | REM-1, QPR-2, XLS-1, IDC-1 | ❌ |
+| 3 | Docker + Docker Compose | §8 | ✅ OPS-1 |
+| 4.2 | Middleware chain (authenticate → resolveRole → requireRole → validate) and audit logger | RBAC-1, AUD-1 | 🟡 checks per route |
+| 4.2 | Response envelope `{ success, data, meta }` | §8 | ❌ |
+| 4.3 | Presigned S3 upload flow with confirm step | DOC-2 | 🔄 files go through access-checked API routes, so every download is checked and logged |
+| 4.4 | Monthly profile reminder (1st, 9 AM) | REM-1 | ❌ |
+| 4.4 | Weekly QPR reminder (Mondays, quarter-end weeks) | QPR-2 | ❌ |
+| 4.4 | Export processor (every 30 s) | XLS-1 | ❌ |
+| 4.4 | ID card expiry (daily, 2 AM) | IDC-1 | ❌ |
+| 5 | 13 collections | §9.2 | 🟡 users, applications, approval steps, activity, messages, notifications |
+| 5.3 | One users record with `userType[]` (mentor + investor) | §4.1 | ❌ single role per user |
+| 5.3 | Dynamic answers without migrations | FORM-2 | ✅ answers JSONB |
+| 6.2 | Route groups `/auth` `/profiles` `/approvals` `/connections` `/messages` `/notifications` `/reports` `/mentorship` `/dashboard` `/exports` `/blogs` `/admin/*` `/public/*` `/upload` | §9.3 | 🟡 auth, approvals, messages, notifications, public, upload, staff |
+| 6.3 | 15-min access token, 7-day refresh token in httpOnly cookie, rotation on refresh | AUTH-3 | ❌ |
+| 6.3 | Password reset | AUTH-4 | ❌ |
+| 6.4 | BIIF 2.0 APIs (accounts, social media, CRM, attendance, leave, partner APIs, AI tools) | Phase 3: FIN-1…3, CRM-1…2, API-1…2, HR-1…2, SOC-1, AI-1…2 | ✅ demo; separate scope |
+
+### 14.3 Where this PRD differs from the overview (to confirm with CIMP)
+
+| Topic | Overview says | This PRD | Why |
+|---|---|---|---|
+| Organisation name | Centre for Innovation, Management & Policy – Business Incubation & Innovation Fund | CIMP Business Incubation and Innovation Foundation | Name on the organisation's own website (Q14) |
+| Approval order | §2.4: Sr. Manager is the first approval level; §2.5: Executive → Manager → Sr. Manager → CEO | Follows §2.5 | The two sections conflict (Q2) |
+| Database | MongoDB | PostgreSQL | Transactions, reporting, data integrity (§9.4, Q13) |
+| Send back for changes | Not mentioned | Added (WF-3) | Avoids rejecting fixable applications |
+| Staff account rules | Not specified | ACC-1…8 | Security: no self sign-up or social login for staff |
+| Consent and privacy pages | Not mentioned | WEB-10 | Required under the DPDP Act 2023 |
+| Public website pages | Directory and blog only | Full site (§7.9) | Based on a review of 12 incubator websites |
