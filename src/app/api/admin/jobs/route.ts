@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     key, ...JOBS[key],
     runs: await prisma.jobRun.findMany({ where: { job: key }, orderBy: { startedAt: "desc" }, take: 5 }),
   })));
-  return NextResponse.json({ jobs, scheduler: schedulerStatus(), externalCron: (process.env.CRON_SECRET ?? "").length >= 24 });
+  return NextResponse.json({ jobs, scheduler: schedulerStatus(), externalCron: (process.env.CRON_SECRET ?? "").length >= 24, platform: process.env.VERCEL ? "vercel" : null });
 }
 
 export async function POST(req: NextRequest) {
