@@ -48,8 +48,8 @@ export async function POST(req: NextRequest) {
   // On Vercel the function is frozen once the response is sent, so finish the export first.
   if (process.env.VERCEL) {
     await runExportJob(job.id);
-    const done = await prisma.exportJob.findUnique({ where: { id: job.id } });
-    return NextResponse.json({ success: true, job: withId(done ?? job) }, { status: 202 });
+    const { storedName, ...done } = (await prisma.exportJob.findUnique({ where: { id: job.id } })) ?? job;
+    return NextResponse.json({ success: true, job: { ...withId(done), ready: !!storedName } }, { status: 202 });
   }
   void runExportJob(job.id);
   return NextResponse.json({ success: true, job: withId(job) }, { status: 202 });
