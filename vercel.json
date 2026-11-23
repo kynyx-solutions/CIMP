@@ -1,4 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["bom1"]
+  "regions": ["bom1"],
+  "crons": [
+    { "path": "/api/cron/qpr-reminders", "schedule": "30 3 * * 1" },
+    { "path": "/api/cron/profile-reminders", "schedule": "30 3 1 * *" },
+    { "path": "/api/cron/crm-reminders", "schedule": "30 3 * * *" },
+    { "path": "/api/cron/id-card-expiry", "schedule": "30 20 * * *" },
+    { "path": "/api/cron/session-cleanup", "schedule": "30 21 * * *" }
+  ]
 }

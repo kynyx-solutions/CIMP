@@ -126,6 +126,16 @@ The app is stateless apart from three things to change before running more than 
 2. **Rate limits and session cache:** in memory per container. Move the counters to Redis (PRD §8).
 3. **Files:** use `STORAGE_DRIVER=s3`, so every container sees the same files.
 
+## Vercel
+
+The app also runs on Vercel (serverless) with a hosted PostgreSQL such as Supabase. `vercel.json` pins the functions to Mumbai (`bom1`) and schedules the jobs with Vercel Cron.
+
+- **Database:** `DATABASE_URL` is the pooled address (Supabase: transaction pooler, port 6543, ending `?pgbouncer=true&connection_limit=1`). Run `prisma migrate deploy` from your machine against the session pooler (port 5432).
+- **Files:** `STORAGE_DRIVER=s3` is required; the function file system is read-only. Supabase Storage works with `S3_ENDPOINT=https://<project>.storage.supabase.co/storage/v1/s3` and `S3_FORCE_PATH_STYLE=true`.
+- **Scheduler:** set `SCHEDULER_ENABLED=false` and `CRON_SECRET` (24+ characters). Vercel Cron calls `GET /api/cron/<job>` with `Authorization: Bearer $CRON_SECRET`; each job runs at most once per IST day. Schedules in `vercel.json` are UTC (IST − 5:30).
+- **Excel exports** run inside the request on Vercel (the function is frozen after it replies); exports stuck for 10 minutes are marked failed when the export list is loaded.
+- Environment variables take effect only after a redeploy.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request. It runs the type-check and unit tests, applies the migrations to an empty PostgreSQL and checks they match the schema, loads the demo seed, builds, starts the production server, and runs the API tests (`tests/e2e`) against it. Run the same locally:
