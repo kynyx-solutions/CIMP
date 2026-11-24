@@ -7,7 +7,12 @@ import AuthShell, { inputCls, primaryBtn } from "@/components/public/AuthShell";
 
 // Only the applicant demo account is listed: staff accounts are created via
 // scripts/create-ceo.js (CEO) and the CEO's Team page (other office users).
-const DEMO = { email: "incubatee@demo.com", password: "demo123", label: "Demo applicant" };
+// "Try the demo" account: the local seed's founder unless the hosted demo sets its own
+const DEMO = {
+  email: process.env.NEXT_PUBLIC_DEMO_EMAIL || "incubatee@demo.com",
+  password: process.env.NEXT_PUBLIC_DEMO_PASSWORD || "demo123",
+  label: "Demo applicant",
+};
 
 export default function LoginPage() {
   const router = useRouter();
