@@ -30,4 +30,4 @@ export const SESSION_MODES = [
 ] as const;
 
 export const DOC_REQUEST_TYPES = ["pdf", "jpg", "png", "pptx", "ppt"] as const;
-export const DOC_REQUEST_MAX = 10 * 1024 * 1024;
+export const DOC_REQUEST_MAX = 4 * 1024 * 1024; // hosting limit: request bodies over 4.5 MB are rejected before the app

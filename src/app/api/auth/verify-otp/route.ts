@@ -52,7 +52,12 @@ export async function POST(req: NextRequest) {
 
   await audit(req, { userId: user.id, name: user.name, role: user.role }, "auth.verify_email", "user", user.id, "Verified email with OTP");
 
-  await sendWelcomeEmail(user.email, user.name, user.role);
+  // The account is verified either way; a mail problem must not fail the sign-in
+  try {
+    await sendWelcomeEmail(user.email, user.name, user.role);
+  } catch (err) {
+    console.error("Welcome email failed:", err);
+  }
 
   // Sign them in
   const response = NextResponse.json({ success: true });

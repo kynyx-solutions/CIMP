@@ -87,16 +87,16 @@ async function deliver(hook: { id: string; url: string; secret: string }, event:
   return { status, error, durationMs };
 }
 
-/** Fire an event to every active webhook subscribed to it. Never throws; does not block the caller. */
-export function emitEvent(event: string, data: unknown) {
-  void (async () => {
-    try {
-      const hooks = await prisma.webhook.findMany({ where: { active: true, events: { has: event } } });
-      await Promise.all(hooks.map((h) => deliver(h, event, data)));
-    } catch (err) {
-      console.error("[webhooks] emit failed", event, err);
-    }
-  })();
+/** Send an event to every active webhook subscribed to it. Never throws. Callers await it: on
+ * serverless hosting work left running after the response is sent may never finish. Each
+ * delivery times out on its own, so this adds a few seconds at most. */
+export async function emitEvent(event: string, data: unknown): Promise<void> {
+  try {
+    const hooks = await prisma.webhook.findMany({ where: { active: true, events: { has: event } } });
+    await Promise.all(hooks.map((h) => deliver(h, event, data)));
+  } catch (err) {
+    console.error("[webhooks] emit failed", event, err);
+  }
 }
 
 export async function sendTestEvent(hookId: string) {

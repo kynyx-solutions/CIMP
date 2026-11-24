@@ -141,8 +141,8 @@ export async function POST(req: NextRequest) {
   if (application) {
     // Partner webhooks (BIIF 2.0): public, non-sensitive fields only
     const pub = { id: application.id, startupName: application.startupName, industry: application.industry, city: application.city, state: application.state };
-    if (application.status === 'approved' && app.status !== 'approved') emitEvent('application.approved', { ...pub, fastTracked: application.isFastTracked });
-    if (application.isPublic && !app.isPublic) emitEvent('startup.published', { ...pub, idea: application.idea, website: application.website });
+    if (application.status === 'approved' && app.status !== 'approved') await emitEvent('application.approved', { ...pub, fastTracked: application.isFastTracked });
+    if (application.isPublic && !app.isPublic) await emitEvent('startup.published', { ...pub, idea: application.idea, website: application.website });
     const changed = diffOf(app, application, ['stage', 'status', 'isPublic', 'isFastTracked']);
     const what = `${roleLabel}: ${action.replace('_', ' ')} "${app.startupName}"`;
     await audit(req, user, `application.${action}`, 'application', app.id,

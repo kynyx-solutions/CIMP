@@ -16,6 +16,9 @@ import { BLOG_WRITERS } from "@/lib/blog";
 import { AI_LIMIT_PER_HOUR, AI_MODEL, aiConfigured, aiSettings, aiUnavailable, costUsd, isStr, redact, runJson, setAiEnabled, strList } from "@/lib/ai";
 import { audit } from "@/lib/audit";
 
+// Up to two model calls of a few thousand tokens each
+export const maxDuration = 120;
+
 const REVIEWERS = (r: string) => (APPROVAL_RANK[r] ?? 0) >= 1;
 const DRAFTERS = ["executive", "manager", "ceo", "admin_it", "staff", "social_media"];
 

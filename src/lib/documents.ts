@@ -17,9 +17,9 @@ export interface DocKindDef {
 const MB = 1024 * 1024;
 
 export const DOC_KINDS: DocKindDef[] = [
-  { kind: "pitch_deck", label: "Pitch deck", help: "10–12 slides. PDF preferred.", types: ["pdf", "pptx", "ppt"], maxBytes: 10 * MB, required: true },
-  { kind: "id_proof", label: "Founder ID proof", help: "Aadhaar, PAN or passport of the lead founder.", types: ["pdf", "jpg", "png"], maxBytes: 5 * MB, required: true },
-  { kind: "registration", label: "Registration certificate", help: "Certificate of incorporation or DPIIT recognition, if registered.", types: ["pdf", "jpg", "png"], maxBytes: 5 * MB, required: false },
+  { kind: "pitch_deck", label: "Pitch deck", help: "10–12 slides. PDF preferred.", types: ["pdf", "pptx", "ppt"], maxBytes: 4 * MB, required: true },
+  { kind: "id_proof", label: "Founder ID proof", help: "Aadhaar, PAN or passport of the lead founder.", types: ["pdf", "jpg", "png"], maxBytes: 4 * MB, required: true },
+  { kind: "registration", label: "Registration certificate", help: "Certificate of incorporation or DPIIT recognition, if registered.", types: ["pdf", "jpg", "png"], maxBytes: 4 * MB, required: false },
   { kind: "logo", label: "Startup logo", help: "Square PNG or JPG. Shown on your public profile if you are published.", types: ["png", "jpg", "webp"], maxBytes: 1 * MB, required: false, isPublic: true },
 ];
 

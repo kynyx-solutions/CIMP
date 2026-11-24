@@ -10,7 +10,7 @@ import { MIME, formatBytes } from "@/lib/documents";
 import { sniffType, saveFile, readStored, deleteStored } from "@/lib/storage";
 import { audit } from "@/lib/audit";
 
-const MAX = 10 * 1024 * 1024;
+const MAX = 4 * 1024 * 1024; // hosting limit: request bodies over 4.5 MB are rejected before the app
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getSessionUser(req);
