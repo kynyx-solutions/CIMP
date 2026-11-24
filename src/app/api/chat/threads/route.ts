@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
-import { isOfficeRole } from "@/lib/workflow";
+import { canMessageApplicants } from "@/lib/workflow";
 import { isNetworkOffice, type ThreadType } from "@/lib/chat";
 
 type Thread = {
@@ -13,7 +13,7 @@ type Thread = {
 export async function GET(req: NextRequest) {
   const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const office = isOfficeRole(user.role);
+  const office = canMessageApplicants(user.role);
   const threads: Thread[] = [];
 
   // ── Application threads: incubatee ↔ office ──

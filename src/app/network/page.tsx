@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import { isOfficeRole, ROLE_LABELS } from "@/lib/workflow";
+import { canViewApplicants, ROLE_LABELS } from "@/lib/workflow";
 import { customFields, displayValue, type FieldDef, type AnswerValue } from "@/lib/forms";
 import { CONN_STAGES, PROFILE_STATUS_LABELS, canReviewMentor, canReviewInvestor, canActOnConnection, type ConnStatus } from "@/lib/network";
 
@@ -40,7 +40,7 @@ export default function NetworkPage() {
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((d) => {
-      if (!isOfficeRole(d.user?.role)) { router.push("/dashboard"); return; }
+      if (!canViewApplicants(d.user?.role)) { router.push("/dashboard"); return; }
       setUser(d.user);
     });
   }, [router]);

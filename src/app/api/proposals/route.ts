@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { withId, isId } from "@/lib/serialize";
-import { isOfficeRole, ROLE_LABELS } from "@/lib/workflow";
+import { canViewApplicants, ROLE_LABELS } from "@/lib/workflow";
 import { INSTRUMENTS, OPEN_PROPOSAL, PROPOSAL_STATUS, canHandleProposals } from "@/lib/invest";
 import { notify, notifyRank } from "@/lib/notify";
 import { audit } from "@/lib/audit";
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (isOfficeRole(user.role)) {
+  if (canViewApplicants(user.role)) {
     const proposals = await prisma.investmentProposal.findMany({ include: PROPOSAL_INCLUDE, orderBy: { updatedAt: "desc" } });
     return NextResponse.json({ role: "office", canHandle: canHandleProposals(user.role), proposals: withId(proposals) });
   }

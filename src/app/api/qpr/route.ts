@@ -7,7 +7,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { withId, isId } from "@/lib/serialize";
-import { APPROVAL_RANK, isOfficeRole, ROLE_LABELS } from "@/lib/workflow";
+import { APPROVAL_RANK, canViewApplicants, ROLE_LABELS } from "@/lib/workflow";
 import { validateFields } from "@/lib/forms";
 import { getForm } from "@/lib/forms-server";
 import { fileablePeriods, parsePeriod, periodLabel, periodOf } from "@/lib/qpr";
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     const reports = app ? await prisma.qprReport.findMany({ where: { applicationId: app.id }, orderBy: { period: "desc" } }) : [];
     return NextResponse.json({ application: app, eligible: app?.status === "approved", fileable: fileablePeriods(), reports: withId(reports) });
   }
-  if (!isOfficeRole(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!canViewApplicants(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   // Office: one row per incubated startup for the period, including those with no report yet
   const apps = await prisma.application.findMany({

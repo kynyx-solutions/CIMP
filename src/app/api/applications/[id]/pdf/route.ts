@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { isId } from "@/lib/serialize";
-import { isOfficeRole, ROLE_LABELS, STAGES, type Stage } from "@/lib/workflow";
+import { canViewApplicants, ROLE_LABELS, STAGES, type Stage } from "@/lib/workflow";
 import { displayValue, valueOf } from "@/lib/forms";
 import { getForm } from "@/lib/forms-server";
 import { DOC_KIND_MAP, type DocKind } from "@/lib/documents";
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     include: { steps: { orderBy: { at: "asc" } }, documents: { select: { kind: true, fileName: true } }, user: { select: { email: true } } },
   });
   if (!app) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const office = isOfficeRole(user.role);
+  const office = canViewApplicants(user.role);
   if (!office && !(user.role === "incubatee" && app.userId === user.userId)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const form = await getForm("application");

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { isId } from "@/lib/serialize";
-import { isOfficeRole } from "@/lib/workflow";
+import { canViewApplicants } from "@/lib/workflow";
 import { displayValue, type AnswerValue } from "@/lib/forms";
 import { getForm } from "@/lib/forms-server";
 import { periodLabel, QPR_STATUS } from "@/lib/qpr";
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     include: { application: { select: { userId: true, startupName: true, applicantName: true, industry: true, city: true, state: true } } },
   });
   if (!r) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!isOfficeRole(user.role) && !(user.role === "incubatee" && r.application.userId === user.userId))
+  if (!canViewApplicants(user.role) && !(user.role === "incubatee" && r.application.userId === user.userId))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const form = await getForm("qpr");

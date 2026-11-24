@@ -33,3 +33,20 @@ describe("page loads with an expired access token (AUTH-3)", () => {
     expect(redirected(middleware(page("/", { incubator_token: "garbage", incubator_refresh: "x" })))).toContain("/api/auth/refresh");
   });
 });
+
+describe("cross-site API requests (CSRF)", () => {
+  const api = (method: string, path: string, headers: Record<string, string>) =>
+    new NextRequest(new URL(path, "http://localhost:3000"), { method, headers: { host: "localhost:3000", ...headers } });
+
+  it("blocks a state-changing call from another site", () => {
+    expect(middleware(api("POST", "/api/approvals", { origin: "https://evil.example" })).status).toBe(403);
+    expect(middleware(api("DELETE", "/api/documents/x", { "sec-fetch-site": "cross-site" })).status).toBe(403);
+  });
+
+  it("allows the portal's own pages, reads, token routes and non-browser clients", () => {
+    expect(middleware(api("POST", "/api/approvals", { origin: "http://localhost:3000" })).status).toBe(200);
+    expect(middleware(api("GET", "/api/approvals", { origin: "https://evil.example" })).status).toBe(200);
+    expect(middleware(api("POST", "/api/cron/session-cleanup", { origin: "https://evil.example" })).status).toBe(200);
+    expect(middleware(api("POST", "/api/auth/login", {})).status).toBe(200);
+  });
+});

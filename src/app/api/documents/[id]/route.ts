@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { isId } from "@/lib/serialize";
-import { isOfficeRole } from "@/lib/workflow";
+import { canViewApplicants } from "@/lib/workflow";
 import { DOC_KIND_MAP, type DocKind } from "@/lib/documents";
 import { readStored, deleteStored } from "@/lib/storage";
 import { audit } from "@/lib/audit";
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const publicLogo = doc.kind === "logo" && doc.application.isPublic && doc.application.status === "approved";
   if (!publicLogo) {
     const user = await getSessionUser(req);
-    const allowed = user && (isOfficeRole(user.role) || (user.role === "incubatee" && user.userId === doc.application.userId));
+    const allowed = user && (canViewApplicants(user.role) || (user.role === "incubatee" && user.userId === doc.application.userId));
     if (!allowed) return NextResponse.json({ error: user ? "Forbidden" : "Unauthorized" }, { status: user ? 403 : 401 });
   }
 

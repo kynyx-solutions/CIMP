@@ -6,7 +6,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import FieldInput, { toFieldValue, isFilled, type FieldValue } from "@/components/FieldInput";
 import { displayValue, type FormDef, type AnswerValue } from "@/lib/forms";
-import { isOfficeRole } from "@/lib/workflow";
+import { canViewApplicants } from "@/lib/workflow";
 import { AiQprInsight } from "@/components/AiTools";
 import { dueDate, periodLabel, periodOf, previousPeriod, QPR_STATUS, QPR_TONE_CLS } from "@/lib/qpr";
 
@@ -24,7 +24,7 @@ export default function QprPage() {
   const [form, setForm] = useState<FormDef | null>(null);
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((d) => {
-      if (!d.user || (d.user.role !== "incubatee" && !isOfficeRole(d.user.role))) { router.push("/dashboard"); return; }
+      if (!d.user || (d.user.role !== "incubatee" && !canViewApplicants(d.user.role))) { router.push("/dashboard"); return; }
       setUser(d.user);
     });
     fetch("/api/forms/qpr").then((r) => r.json()).then((d) => setForm(d.form ?? null));

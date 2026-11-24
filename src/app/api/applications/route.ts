@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getSessionUser } from '@/lib/session';
 import { withId, isId } from '@/lib/serialize';
-import { isOfficeRole, ROLE_LABELS, type Stage } from '@/lib/workflow';
+import { canViewApplicants, isOfficeRole, ROLE_LABELS, type Stage } from '@/lib/workflow';
 import { validateFields, valueOf, displayValue, type AnswerValue, type FieldDef } from '@/lib/forms';
 import { getForm } from '@/lib/forms-server';
 import { notify, notifyReviewers } from '@/lib/notify';
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   // Incubatees see their own; the office sees all; other roles (mentors) none.
-  if (user.role !== 'incubatee' && !isOfficeRole(user.role)) return NextResponse.json({ applications: [] });
+  if (user.role !== 'incubatee' && !canViewApplicants(user.role)) return NextResponse.json({ applications: [] });
   const applications = await prisma.application.findMany({
     where: user.role === 'incubatee' ? { userId: user.userId } : {},
     include: { steps: { orderBy: { at: 'asc' } } },

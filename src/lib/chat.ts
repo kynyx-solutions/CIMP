@@ -4,7 +4,7 @@
 //   connection    incubatee ↔ mentor, once active       stored in ChatMessage, office can read (oversight)
 //   mentor_office mentor/investor ↔ incubation office    stored in ChatMessage, threadId = mentor's user id
 import { prisma } from "@/lib/prisma";
-import { APPROVAL_RANK, isOfficeRole, ROLE_LABELS } from "@/lib/workflow";
+import { APPROVAL_RANK, canMessageApplicants, isOfficeRole, ROLE_LABELS } from "@/lib/workflow";
 import { MENTOR_REVIEW_RANK } from "@/lib/network";
 import { notify, notifyRank } from "@/lib/notify";
 
@@ -33,7 +33,7 @@ export function isNetworkOffice(role: string) {
 }
 
 export async function threadAccess(user: SessionUser, type: ThreadType, id: string): Promise<ThreadAccess> {
-  const office = isOfficeRole(user.role);
+  const office = canMessageApplicants(user.role);
 
   if (type === "application") {
     const app = await prisma.application.findUnique({ where: { id }, select: { id: true, userId: true, startupName: true } });

@@ -6,7 +6,7 @@ import StageBadge from '@/components/StageBadge';
 import DocumentsPanel from '@/components/DocumentsPanel';
 import SignaturePad from '@/components/SignaturePad';
 import { AiApplicationReview } from '@/components/AiTools';
-import { STAGES, PIPELINE, ROLE_LABELS, ROLE_ICONS, APPROVAL_RANK, canAct, isOfficeRole, stageEnteredAt, daysSince, daysLabel, progressStage, type Stage } from '@/lib/workflow';
+import { STAGES, PIPELINE, ROLE_LABELS, ROLE_ICONS, APPROVAL_RANK, canAct, canViewApplicants, stageEnteredAt, daysSince, daysLabel, progressStage, type Stage } from '@/lib/workflow';
 import FieldInput, { toFieldValue, type FieldValue } from '@/components/FieldInput';
 import { valueOf, displayValue, type FormDef } from '@/lib/forms';
 
@@ -53,7 +53,7 @@ export default function ApprovalsPage() {
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
-      if (!d.user || !isOfficeRole(d.user.role)) { router.push('/dashboard'); return; }
+      if (!d.user || !canViewApplicants(d.user.role)) { router.push('/dashboard'); return; }
       setUser(d.user);
     });
     fetch('/api/forms/application').then(r => r.json()).then(d => setSchema(d.form ?? null));

@@ -4,7 +4,7 @@ import { verifySession } from '@/lib/auth';
 import { withId, isId } from '@/lib/serialize';
 import {
   STAGES, PIPELINE, ROLE_LABELS,
-  canAct, isOfficeRole, type Stage, type WorkflowAction,
+  canAct, canViewApplicants, type Stage, type WorkflowAction,
 } from '@/lib/workflow';
 import { notify, notifyReviewers } from '@/lib/notify';
 import { audit, diffOf } from '@/lib/audit';
@@ -25,7 +25,7 @@ const ACTIONS: WorkflowAction[] = ['advance', 'reject', 'send_back', 'fasttrack'
 export async function POST(req: NextRequest) {
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!isOfficeRole(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!canViewApplicants(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { applicationId, action, remark, signature, signatureImage } = await req.json();
   if (!isId(applicationId) || !ACTIONS.includes(action))
@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!isOfficeRole(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!canViewApplicants(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const [byStage, fastTracked] = await Promise.all([
     prisma.application.groupBy({ by: ['stage'], _count: { _all: true } }),

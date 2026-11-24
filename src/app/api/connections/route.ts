@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { withId, isId } from "@/lib/serialize";
-import { isOfficeRole, ROLE_LABELS } from "@/lib/workflow";
+import { canViewApplicants, ROLE_LABELS } from "@/lib/workflow";
 import { CONN_STAGES, canActOnConnection, type ConnAction, type ConnStatus } from "@/lib/network";
 import { notify, notifyRank } from "@/lib/notify";
 import { audit } from "@/lib/audit";
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const where =
     user.role === "incubatee" ? { incubateeId: user.userId }
     : user.role === "mentor" ? { mentorId: user.userId, status: { in: ["routed", "active", "declined"] } }
-    : isOfficeRole(user.role) ? {}
+    : canViewApplicants(user.role) ? {}
     : null;
   if (!where) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     ...c,
     startup: c.applicationId ? appById.get(c.applicationId) ?? null : null,
     // Office remarks stay internal; incubatees and mentors see the decision trail without them
-    steps: isOfficeRole(user.role) ? c.steps : c.steps.map(({ remark, ...s }) => s),
+    steps: canViewApplicants(user.role) ? c.steps : c.steps.map(({ remark, ...s }) => s),
   }));
   return NextResponse.json({ connections: withId(visible) });
 }

@@ -1,7 +1,7 @@
 // Mentorship on an accepted connection (PRD MEN-4): sessions, document requests, feedback.
 // Server-only access rules shared by the session and document-request routes.
 import { prisma } from "@/lib/prisma";
-import { isOfficeRole } from "@/lib/workflow";
+import { canViewApplicants } from "@/lib/workflow";
 
 export type MentorshipAccess = {
   conn: { id: string; incubateeId: string; mentorId: string; status: string; applicationId: string | null; mentor: { name: string }; incubatee: { name: string } };
@@ -19,7 +19,7 @@ export async function mentorshipAccess(user: { userId: string; role: string }, c
   });
   if (!conn) return null;
   const isMentor = user.userId === conn.mentorId, isMentee = user.userId === conn.incubateeId;
-  if (!isMentor && !isMentee && !isOfficeRole(user.role)) return null;
+  if (!isMentor && !isMentee && !canViewApplicants(user.role)) return null;
   if ((isMentor || isMentee) && conn.status !== "active") return null; // only accepted connections have a mentorship
   return { conn, isMentor, isMentee, canAct: (isMentor || isMentee) && conn.status === "active", other: isMentor ? conn.incubateeId : isMentee ? conn.mentorId : null };
 }

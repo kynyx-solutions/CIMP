@@ -63,6 +63,21 @@ export function isOfficeRole(role: string | undefined | null): boolean {
   return !!role && (OFFICE_ROLES as string[]).includes(role);
 }
 
+// PRD §5 permissions matrix. Accounts and Social Media work in their own modules (finance,
+// social calendar) and do not see applicant data.
+/** "View applications & profiles": applications, documents, reports, connections, mentor reviews. */
+export const APPLICANT_VIEWERS = ["staff", "executive", "manager", "sr_manager", "ceo", "admin_it"];
+/** "Messaging": office users who talk to applicants. Admin IT has no messaging. */
+export const APPLICANT_MESSENGERS = ["staff", "executive", "manager", "sr_manager", "ceo"];
+
+export function canViewApplicants(role: string | undefined | null): boolean {
+  return !!role && APPLICANT_VIEWERS.includes(role);
+}
+
+export function canMessageApplicants(role: string | undefined | null): boolean {
+  return !!role && APPLICANT_MESSENGERS.includes(role);
+}
+
 export type Stage =
   | "submitted"
   | "executive_accepted"

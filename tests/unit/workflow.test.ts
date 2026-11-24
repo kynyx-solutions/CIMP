@@ -37,3 +37,17 @@ describe("application approval (WF-1)", () => {
     expect(APPROVAL_RANK.ceo).toBeGreaterThan(APPROVAL_RANK.sr_manager);
   });
 });
+
+describe("PRD §5 access to applicant data", () => {
+  it("lets the PRD's office roles view applications, and no one else", async () => {
+    const { canViewApplicants } = await import("@/lib/workflow");
+    for (const r of ["staff", "executive", "manager", "sr_manager", "ceo", "admin_it"]) expect(canViewApplicants(r)).toBe(true);
+    for (const r of ["accounts", "social_media", "incubatee", "mentor", undefined, null, ""]) expect(canViewApplicants(r)).toBe(false);
+  });
+
+  it("gives messaging to the office roles the PRD lists (not Admin IT)", async () => {
+    const { canMessageApplicants } = await import("@/lib/workflow");
+    for (const r of ["staff", "executive", "manager", "sr_manager", "ceo"]) expect(canMessageApplicants(r)).toBe(true);
+    for (const r of ["admin_it", "accounts", "social_media", "incubatee", "mentor"]) expect(canMessageApplicants(r)).toBe(false);
+  });
+});

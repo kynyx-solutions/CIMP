@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { withId, isId } from "@/lib/serialize";
-import { isOfficeRole } from "@/lib/workflow";
+import { canViewApplicants } from "@/lib/workflow";
 import { canReviewMentor, canReviewInvestor } from "@/lib/network";
 import { notify } from "@/lib/notify";
 import { audit } from "@/lib/audit";
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const office = isOfficeRole(user.role);
+  const office = canViewApplicants(user.role);
   if (office) {
     const profiles = await prisma.mentorProfile.findMany({
       include: { user: { select: { id: true, name: true, email: true } } },
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 // POST — office review: { profileId, kind: "mentor" | "investor", decision: "approve" | "reject", note }
 export async function POST(req: NextRequest) {
   const user = await getSessionUser(req);
-  if (!user || !isOfficeRole(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user || !canViewApplicants(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { profileId, kind, decision, note } = await req.json();
   if (!isId(profileId) || !["mentor", "investor"].includes(kind) || !["approve", "reject"].includes(decision))

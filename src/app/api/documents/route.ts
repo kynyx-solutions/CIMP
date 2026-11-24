@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { withId, isId } from "@/lib/serialize";
-import { isOfficeRole } from "@/lib/workflow";
+import { canViewApplicants } from "@/lib/workflow";
 import { DOC_KIND_MAP, MIME, formatBytes, type DocKind } from "@/lib/documents";
 import { sniffType, saveFile, deleteStored } from "@/lib/storage";
 import { audit } from "@/lib/audit";
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
   const app = await prisma.application.findUnique({ where: { id: applicationId }, select: { userId: true } });
   if (!app) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!isOfficeRole(user.role) && !(user.role === "incubatee" && app.userId === user.userId))
+  if (!canViewApplicants(user.role) && !(user.role === "incubatee" && app.userId === user.userId))
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const documents = await prisma.applicationDocument.findMany({ where: { applicationId }, select: PUBLIC_FIELDS, orderBy: { createdAt: "asc" } });

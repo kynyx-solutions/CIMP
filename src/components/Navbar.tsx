@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
-import { OFFICE_ROLES, ROLE_LABELS } from "@/lib/workflow";
+import { APPLICANT_MESSENGERS, APPLICANT_VIEWERS, OFFICE_ROLES, ROLE_LABELS } from "@/lib/workflow";
 
 // Icons (You can use lucide-react or heroicons, I'm using inline SVGs for zero dependencies)
 const BellIcon = () => (
@@ -120,10 +120,10 @@ export default function Navbar({ user }: NavbarProps) {
     { href: "/mentor", label: "Mentor hub", roles: ["mentor"], primary: true },
     { href: "/apply", label: "Apply", roles: ["incubatee"], primary: true },
     { href: "/connect", label: "Find a mentor", roles: ["incubatee"], primary: true },
-    { href: "/approvals", label: "Applications", roles: OFFICE_ROLES as string[], primary: true },
-    { href: "/network", label: "Network", roles: OFFICE_ROLES as string[], primary: true },
-    { href: "/qpr", label: "Progress", roles: ["incubatee", ...OFFICE_ROLES], primary: true },
-    { href: "/messages", label: "Messages", roles: ALL, primary: true },
+    { href: "/approvals", label: "Applications", roles: APPLICANT_VIEWERS, primary: true },
+    { href: "/network", label: "Network", roles: APPLICANT_VIEWERS, primary: true },
+    { href: "/qpr", label: "Progress", roles: ["incubatee", ...APPLICANT_VIEWERS], primary: true },
+    { href: "/messages", label: "Messages", roles: ["incubatee", "mentor", ...APPLICANT_MESSENGERS], primary: true },
     { href: "/invest", label: "Invest", roles: ["mentor"], primary: true },
     // BIIF 2.0 (Phase 3)
     { href: "/finance", label: "Finance", roles: ["accounts"], primary: true },
@@ -133,7 +133,7 @@ export default function Navbar({ user }: NavbarProps) {
     { href: "/hr", label: "HR", roles: OFFICE_ROLES as string[], primary: false },
     { href: "/social", label: "Social media", roles: ["admin_it", "ceo"], primary: false },
     { href: "/invest", label: "Investor pitches", roles: ["incubatee"], primary: false },
-    { href: "/invest", label: "Investment proposals", roles: OFFICE_ROLES as string[], primary: false },
+    { href: "/invest", label: "Investment proposals", roles: APPLICANT_VIEWERS, primary: false },
     { href: "/reports", label: "Reports", roles: REPORTERS, primary: false },
     { href: "/broadcast", label: "Broadcast", roles: ["executive", "manager", "ceo", "admin_it"], primary: false },
     { href: "/posts", label: "Blog posts", roles: ["staff", "admin_it"], primary: false },

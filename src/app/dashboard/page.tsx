@@ -8,7 +8,7 @@ import StageBadge from '@/components/StageBadge';
 import DashboardTasks from '@/components/DashboardTasks';
 import Link from 'next/link';
 import {
-  PIPELINE, STAGES, ROLE_ICONS, ROLE_LABELS, APPROVAL_RANK, isOfficeRole,
+  PIPELINE, STAGES, ROLE_ICONS, ROLE_LABELS, APPROVAL_RANK, isOfficeRole, canViewApplicants,
   stageEnteredAt, daysSince, daysLabel, progressStage, type Stage,
 } from '@/lib/workflow';
 
@@ -46,7 +46,7 @@ export default async function DashboardPage() {
       where: { userId: user.userId }, orderBy: { createdAt: 'desc' },
       include: { steps: { orderBy: { at: 'asc' } } },
     });
-  } else {
+  } else if (canViewApplicants(user.role)) {
     if (myRank) {
       const myStages = (Object.keys(STAGES) as Stage[]).filter(s => STAGES[s].requiredRank === myRank);
       const waiting = await prisma.application.findMany({
