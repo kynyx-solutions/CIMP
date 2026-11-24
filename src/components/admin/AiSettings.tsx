@@ -20,7 +20,7 @@ export default function AiSettings() {
     <div className="grid lg:grid-cols-[1fr_360px] gap-6 items-start">
       <section className="bg-white border border-border rounded-2xl shadow-card p-6">
         <div className={`text-sm font-body px-4 py-3 rounded-xl border ${d.available ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
-          {d.available ? `On. Reviewers and writers can use Claude (${d.model}).` : d.reason}
+          {d.available ? "On. Reviewers and writers can use the AI assistant." : d.reason}
         </div>
         {msg && <p role="status" className={`mt-3 text-sm font-body px-4 py-2.5 rounded-xl border ${msg.ok ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-red-50 border-red-200 text-red-700"}`}>{msg.text}</p>}
         <dl className="mt-4 grid grid-cols-[160px_1fr] gap-y-2 text-sm font-body">
@@ -44,7 +44,7 @@ export default function AiSettings() {
         <p><strong className="text-navy">Report insights</strong> in Progress: this quarter against the last, with points to follow up.</p>
         <p><strong className="text-navy">Drafts</strong> for broadcasts, blog posts and social posts, from the points you give.</p>
         <h3 className="font-bold text-navy pt-2">Data and privacy</h3>
-        <p>Phone numbers and email addresses are removed before text is sent to Anthropic. Documents are not sent. Every request is logged here and in the audit log. Results are advice: decisions stay with the office.</p>
+        <p>Phone numbers and email addresses are removed before text is sent to the AI service. Documents are not sent. Every request is logged here and in the audit log. Results are advice: decisions stay with the office.</p>
       </aside>
     </div>
   );

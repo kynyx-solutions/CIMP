@@ -2,7 +2,7 @@
 // AI assistant widgets (BIIF 2.0). Advice only; every result says so.
 import { useState } from "react";
 
-const NOTE = "AI suggestion from Claude. It can be wrong; check it against the application before relying on it.";
+const NOTE = "AI suggestion. It can be wrong; check it against the application before relying on it.";
 
 async function post(body: object) {
   const res = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -62,7 +62,7 @@ export function AiQprInsight({ reportId }: { reportId: string }) {
           <List title="Trends" items={state.r.trends} />
           <List title="Follow up" items={state.r.flags} />
           <List title="Support CIMP-BIIF could give" items={state.r.suggestedSupport} />
-          <p className="mt-2 text-[10px] font-body text-muted">AI suggestion from Claude. It can be wrong; check it against the report.</p>
+          <p className="mt-2 text-[10px] font-body text-muted">AI suggestion. It can be wrong; check it against the report.</p>
         </div>
       )}
     </div>

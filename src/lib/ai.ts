@@ -1,5 +1,5 @@
 // AI assistant for office users (BIIF 2.0: "custom GPT / AI tools"). Server-only.
-// Claude via the official Anthropic SDK. Advisory only: reviewers decide.
+// AI assistant through the provider's official SDK. Advisory only: reviewers decide.
 // Privacy: contact details (phone numbers, emails) are removed before anything is sent.
 import Anthropic from "@anthropic-ai/sdk";
 import type { Prisma } from "@prisma/client";
@@ -46,7 +46,7 @@ let client: Anthropic | null = null;
 const anthropic = () => (client ??= new Anthropic());
 
 /**
- * One Claude call that must return JSON matching `validate`. The reply is parsed and checked
+ * One model call that must return JSON matching `validate`. The reply is parsed and checked
  * here; one retry asks the model to fix invalid JSON. Every call is recorded in AiRun.
  */
 export async function runJson<T>(opts: {

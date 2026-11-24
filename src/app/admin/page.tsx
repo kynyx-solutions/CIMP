@@ -19,7 +19,7 @@ const TABS = [
   { key: "content", label: "Website content", roles: ["admin_it", "ceo"], desc: "Numbers, open calls, eligibility, contacts, FAQ and the ID card template." },
   { key: "idcards", label: "ID cards", roles: ["admin_it", "ceo"], desc: "Virtual ID cards for incubatees and mentors." },
   { key: "jobs", label: "Scheduled jobs", roles: ["admin_it", "ceo"], desc: "Reminders and ID card renewals that run on a schedule." },
-  { key: "ai", label: "AI assistant", roles: ["admin_it", "ceo"], desc: "Claude-powered briefings, report insights and drafts for the office." },
+  { key: "ai", label: "AI assistant", roles: ["admin_it", "ceo"], desc: "AI-powered briefings, report insights and drafts for the office." },
   { key: "integrations", label: "Integrations", roles: ["admin_it", "ceo"], desc: "Partner API keys and webhooks." },
   { key: "email", label: "Email", roles: ["admin_it", "ceo"], desc: "How the portal sends email, and a test email to yourself." },
 ] as const;
