@@ -12,13 +12,27 @@ function generateOTP(): string {
   return randomInt(100000, 1000000).toString(); // cryptographically random
 }
 
+// One plain address: no lists, display names or angle brackets (the code email goes to exactly this)
+const EMAIL_RE = /^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$/;
+
 export async function POST(req: NextRequest) {
-  const { name, email, password, role, consent } = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object") return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  const { role, consent } = body;
   const limited = limitRequest(req, [{ key: "register-ip:{ip}", limit: 10, windowMs: 3600000 }], "sign-ups from this network");
   if (limited) return limited;
 
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const password = typeof body.password === "string" ? body.password : "";
   if (!name || !email || !password)
     return NextResponse.json({ error: "All fields required" }, { status: 400 });
+  if (name.length < 2 || name.length > 80)
+    return NextResponse.json({ error: "Name must be 2 to 80 characters" }, { status: 400 });
+  if (email.length > 254 || !EMAIL_RE.test(email))
+    return NextResponse.json({ error: "Enter a valid email address" }, { status: 400 });
+  if (password.length < 8 || password.length > 128)
+    return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
 
   // Explicit consent to the Terms and Privacy Policy is required (DPDP Act, PRD WEB-10).
   if (consent !== true)
@@ -44,7 +58,7 @@ export async function POST(req: NextRequest) {
     );
 
 
-  const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  const existing = await prisma.user.findUnique({ where: { email } });
   if (existing)
     return NextResponse.json(
       { error: "Email already registered" },
@@ -58,8 +72,8 @@ export async function POST(req: NextRequest) {
   // Create user — unverified
   const created = await prisma.user.create({
     data: {
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
+      name,
+      email,
       password: hashed,
       role: isPublicRole(role) ? role : "incubatee",
       isVerified: false,

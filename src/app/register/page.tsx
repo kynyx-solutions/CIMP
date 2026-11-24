@@ -44,7 +44,7 @@ export default function RegisterPage() {
   const fields = [
     { key: "name", label: "Full name", type: "text", ph: "Your name", auto: "name" },
     { key: "email", label: "Email", type: "email", ph: "you@example.com", auto: "email" },
-    { key: "password", label: "Password", type: "password", ph: "At least 6 characters", auto: "new-password" },
+    { key: "password", label: "Password", type: "password", ph: "At least 8 characters", auto: "new-password" },
   ] as const;
 
   return (
@@ -77,7 +77,7 @@ export default function RegisterPage() {
           <div key={f.key}>
             <label htmlFor={f.key} className="block text-sm font-body font-medium text-navy mb-1.5">{f.label}</label>
             <input id={f.key} type={f.type} required autoComplete={f.auto}
-              minLength={f.key === "password" ? 6 : undefined}
+              minLength={f.key === "password" ? 8 : undefined}
               value={form[f.key]} onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
               className={inputCls} placeholder={f.ph} />
           </div>

@@ -45,6 +45,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: STAFF_BLOCKED }, { status: 403 });
     }
 
+    // An unverified account with this email was registered by someone who never proved they own it.
+    // Google has now verified the owner: take the account over and drop the unproven password and code.
+    if (user && !user.isVerified) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { isVerified: true, password: null, otp: null, otpExpiresAt: null, sessionVersion: { increment: 1 } },
+      });
+    }
+
     if (!user) {
       user = await prisma.user.create({
         data: {

@@ -15,9 +15,21 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const office = isOfficeRole(user.role);
+  if (office) {
+    const profiles = await prisma.mentorProfile.findMany({
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { updatedAt: "desc" },
+    });
+    return NextResponse.json({ profiles: withId(profiles) });
+  }
+  // Founders and mentors see the directory card only: no review notes, reviewer or custom answers
   const profiles = await prisma.mentorProfile.findMany({
-    where: office ? {} : { status: "approved" },
-    include: { user: { select: { id: true, name: true, email: office } } },
+    where: { status: "approved" },
+    select: {
+      id: true, userId: true, headline: true, organisation: true, expertise: true, sectors: true, bio: true,
+      linkedin: true, yearsExperience: true, status: true, investorStatus: true, investorThesis: true, ticketSize: true,
+      createdAt: true, updatedAt: true, user: { select: { id: true, name: true } },
+    },
     orderBy: { updatedAt: "desc" },
   });
   return NextResponse.json({ profiles: withId(profiles) });
@@ -47,7 +59,7 @@ export async function POST(req: NextRequest) {
       where: { id: profile.id },
       data: { status: approved ? "approved" : "rejected", reviewNote: cleanNote || null, reviewedBy: user.name },
     });
-    if (approved && profile.isPublic) emitEvent("mentor.approved", { id: profile.id, headline: profile.headline, sectors: profile.sectors });
+    if (approved && profile.isPublic) await emitEvent("mentor.approved", { id: profile.id, headline: profile.headline, sectors: profile.sectors });
     await notify(profile.userId,
       approved ? "Mentor profile approved 🎉" : "Mentor profile not approved",
       approved ? "Your mentor profile is approved and listed in the CIMP-BIIF network." : `Your mentor profile was not approved. Reason: ${cleanNote}`,

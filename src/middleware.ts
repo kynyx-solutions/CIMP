@@ -16,7 +16,31 @@ function expiresSoon(jwt: string | undefined) {
   }
 }
 
+// CSRF: state-changing API calls must come from the portal's own pages. Browsers always send
+// Origin (and Sec-Fetch-Site) on these requests; a request without either is not from a browser.
+// /api/cron and /api/v1 authenticate with a secret or key instead of the session cookie.
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+const TOKEN_ROUTES = /^\/api\/(cron|v1)\//;
+
+function crossSite(req: NextRequest) {
+  const origin = req.headers.get("origin");
+  if (origin) {
+    let host: string;
+    try { host = new URL(origin).host; } catch { return true; }
+    const allowed = new Set([req.headers.get("host"), req.nextUrl.host]);
+    try { if (process.env.NEXT_PUBLIC_APP_URL) allowed.add(new URL(process.env.NEXT_PUBLIC_APP_URL).host); } catch {}
+    return !allowed.has(host);
+  }
+  const site = req.headers.get("sec-fetch-site");
+  return site === "cross-site" || site === "same-site";
+}
+
 export function middleware(req: NextRequest) {
+  if (req.nextUrl.pathname.startsWith("/api/")) {
+    if (!SAFE_METHODS.has(req.method) && !TOKEN_ROUTES.test(req.nextUrl.pathname) && crossSite(req))
+      return NextResponse.json({ error: "Cross-site request blocked" }, { status: 403 });
+    return NextResponse.next();
+  }
   if (req.method !== "GET") return NextResponse.next();
   if (!req.cookies.get("incubator_refresh")?.value || req.cookies.get("incubator_refresh_wait")) return NextResponse.next();
   // Prefetches are speculative; the real navigation refreshes if needed.
@@ -29,6 +53,6 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Pages only: not API routes, build assets or files with an extension.
-  matcher: ["/((?!api/|_next/|favicon\\.ico|.*\\.[a-zA-Z0-9]+$).*)"],
+  // Pages (session refresh) and API routes (CSRF check); not build assets or files with an extension.
+  matcher: ["/api/:path*", "/((?!api/|_next/|favicon\\.ico|.*\\.[a-zA-Z0-9]+$).*)"],
 };

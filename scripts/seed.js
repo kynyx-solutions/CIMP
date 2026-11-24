@@ -21,6 +21,14 @@ if (process.env.NODE_ENV === 'production') {
   process.exit(1);
 }
 
+// A hosted database is usually a live portal: demo users there (with known passwords) are a risk.
+// Seeding one on purpose (a demo or staging site) needs ALLOW_DEMO_SEED=yes.
+const dbHost = (() => { try { return new URL(process.env.DATABASE_URL || '').hostname; } catch { return ''; } })();
+if (!['localhost', '127.0.0.1', '::1', 'postgres', 'db'].includes(dbHost) && process.env.ALLOW_DEMO_SEED !== 'yes') {
+  console.error(`❌ DATABASE_URL points to ${dbHost || 'an unknown host'}, not a local database. Set ALLOW_DEMO_SEED=yes to seed it anyway.`);
+  process.exit(1);
+}
+
 const domain = (process.env.COMPANY_EMAIL_DOMAINS || 'cimp.local').split(',')[0].trim().replace(/^@/, '');
 const STAFF_PASSWORD = 'Demo@1234';
 const INCUBATEE_PASSWORD = 'demo123';

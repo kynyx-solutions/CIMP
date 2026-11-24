@@ -69,7 +69,7 @@ export async function sendOTPEmail(to: string, name: string, otp: string) {
         </div>
         <div style="background:#fff;border-radius:12px;padding:32px;text-align:center;">
           <h2 style="color:#1C3510;margin:0 0 8px;">Verify your email</h2>
-          <p style="color:#6A7860;font-size:14px;margin:0 0 24px;">Hi ${name}, enter this code to activate your account</p>
+          <p style="color:#6A7860;font-size:14px;margin:0 0 24px;">Hi ${esc(name)}, enter this code to activate your account</p>
           <div style="font-size:44px;font-weight:800;letter-spacing:16px;color:#3F7A16;
                       background:#F2F8EA;padding:20px;border-radius:12px;margin-bottom:24px;">${otp}</div>
           <p style="color:#A3B096;font-size:12px;margin:0;">Expires in 10 minutes. Do not share this code.</p>
@@ -336,7 +336,7 @@ export async function sendWelcomeEmail(
       <tr>
         <td style="background:#3F7A16;padding:16px 48px;">
           <p style="margin:0;font-size:14px;color:#C8E2A6;">
-            Welcome aboard, <strong style="color:#fff;">${name}</strong> —
+            Welcome aboard, <strong style="color:#fff;">${esc(name)}</strong> —
             your account is verified and fully active.
           </p>
         </td>
