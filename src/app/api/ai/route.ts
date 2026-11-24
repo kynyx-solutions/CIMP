@@ -13,7 +13,7 @@ import { displayValue, valueOf, type AnswerValue } from "@/lib/forms";
 import { getForm } from "@/lib/forms-server";
 import { periodLabel } from "@/lib/qpr";
 import { BLOG_WRITERS } from "@/lib/blog";
-import { AI_LIMIT_PER_HOUR, AI_MODEL, aiConfigured, aiSettings, aiUnavailable, costUsd, isStr, redact, runJson, setAiEnabled, strList } from "@/lib/ai";
+import { AI_LIMIT_PER_HOUR, aiConfigured, aiSettings, aiUnavailable, costUsd, isStr, redact, runJson, setAiEnabled, strList } from "@/lib/ai";
 import { audit } from "@/lib/audit";
 
 // Up to two model calls of a few thousand tokens each
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   ]);
   const inTok = byFeature.reduce((n, r) => n + (r._sum.inputTokens ?? 0), 0), outTok = byFeature.reduce((n, r) => n + (r._sum.outputTokens ?? 0), 0);
   return NextResponse.json({
-    ...base, configured: aiConfigured(), enabled: (await aiSettings()).enabled, model: AI_MODEL, limitPerHour: AI_LIMIT_PER_HOUR, canEdit: user.role === "admin_it",
+    ...base, configured: aiConfigured(), enabled: (await aiSettings()).enabled, limitPerHour: AI_LIMIT_PER_HOUR, canEdit: user.role === "admin_it",
     month: { runs: byFeature.reduce((n, r) => n + r._count._all, 0), failed: byFeature.filter((r) => r.status === "failed").reduce((n, r) => n + r._count._all, 0), inputTokens: inTok, outputTokens: outTok, estimatedUsd: Math.round(costUsd(inTok, outTok) * 100) / 100,
       byFeature: Object.fromEntries(["application_review", "qpr_insight", "draft"].map((f) => [f, byFeature.filter((r) => r.feature === f).reduce((n, r) => n + r._count._all, 0)])) },
     recent: recent.map((r) => ({ id: r.id, userName: r.userName, feature: r.feature, status: r.status, error: r.error, tokens: r.inputTokens + r.outputTokens, at: r.createdAt })),
@@ -94,7 +94,7 @@ Return JSON:
       },
     });
     await audit(req, user, "ai.application_review", "ai", app.id, `AI briefing for "${app.startupName}": ${r.ok ? "ok" : r.error}`);
-    return r.ok ? NextResponse.json({ success: true, result: r.data, model: AI_MODEL }) : NextResponse.json({ error: r.error }, { status: 502 });
+    return r.ok ? NextResponse.json({ success: true, result: r.data }) : NextResponse.json({ error: r.error }, { status: 502 });
   }
 
   // ── Progress-report insight ──
@@ -124,7 +124,7 @@ Return JSON:
       validate: (v: any) => (v && isStr(v.summary, 1500) && strList(v.trends) && strList(v.flags) && strList(v.suggestedSupport) ? { summary: v.summary, trends: v.trends, flags: v.flags, suggestedSupport: v.suggestedSupport } : null),
     });
     await audit(req, user, "ai.qpr_insight", "ai", rep.id, `AI insight for ${periodLabel(rep.period)} report of "${rep.application.startupName}": ${r.ok ? "ok" : r.error}`);
-    return r.ok ? NextResponse.json({ success: true, result: r.data, model: AI_MODEL }) : NextResponse.json({ error: r.error }, { status: 502 });
+    return r.ok ? NextResponse.json({ success: true, result: r.data }) : NextResponse.json({ error: r.error }, { status: 502 });
   }
 
   // ── Draft writer ──
@@ -157,7 +157,7 @@ Return JSON: ${shape}`;
       },
     });
     await audit(req, user, "ai.draft", "ai", null, `AI ${kind} draft: ${r.ok ? "ok" : r.error}`);
-    return r.ok ? NextResponse.json({ success: true, result: r.data, model: AI_MODEL }) : NextResponse.json({ error: r.error }, { status: 502 });
+    return r.ok ? NextResponse.json({ success: true, result: r.data }) : NextResponse.json({ error: r.error }, { status: 502 });
   }
   return NextResponse.json({ error: "Unknown feature" }, { status: 400 });
 }
