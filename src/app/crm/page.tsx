@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { ACTIVITY_KINDS, PARTNER_STAGES, PARTNER_TYPES, canUseCrm, stageLabel, typeLabel } from "@/lib/crm";
 import { inr } from "@/lib/finance";
+import Toast, { useFlash } from "@/components/Toast";
 
 type Activity = { _id: string; kind: string; summary: string; dueAt: string | null; done: boolean; byName: string; createdAt: string };
 type Partner = { _id: string; name: string; type: string; stage: string; ownerName: string | null; contactName: string | null; contactEmail: string | null; contactPhone: string | null;
@@ -24,12 +25,11 @@ export default function CrmPage() {
   const [form, setForm] = useState<(typeof EMPTY & { id?: string }) | null>(null);
   const [act, setAct] = useState({ activity: "note", summary: "", dueAt: "" });
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const { msg, flash } = useFlash(4000);
 
   useEffect(() => { fetch("/api/auth/me").then((r) => r.json()).then((x) => { if (!x.user || !canUseCrm(x.user.role)) { router.push("/dashboard"); return; } setUser(x.user); }); }, [router]);
   const load = useCallback(async () => { setD(await fetch("/api/partners").then((r) => r.json())); }, []);
   useEffect(() => { if (user) load(); }, [user, load]);
-  const flash = (text: string, ok = true) => { setMsg({ text, ok }); setTimeout(() => setMsg(null), 4000); };
   async function call(method: string, body: object, ok: string) {
     setBusy(true);
     const res = await fetch("/api/partners", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -45,7 +45,7 @@ export default function CrmPage() {
   return (
     <div className="min-h-screen bg-bg">
       <Navbar user={user} />
-      {msg && <div role="status" className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl border text-sm font-body shadow-card-lg ${msg.ok ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-red-50 border-red-200 text-red-700"}`}>{msg.text}</div>}
+      <Toast msg={msg} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-3xl font-bold text-navy">Partners</h1>

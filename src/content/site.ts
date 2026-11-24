@@ -203,7 +203,7 @@ export const APPLY_GUIDE = {
     "Founder details: names, roles, background and LinkedIn links",
     "Company registration (CIN) and DPIIT number, if any",
     "One-line pitch, problem, solution and traction",
-    "Pitch deck (PDF or PowerPoint, up to 4 MB)",
+    "Pitch deck (PDF or PowerPoint, up to 10 MB)",
   ],
   tips: [
     "Lead with the problem and who has it. Numbers beat adjectives.",

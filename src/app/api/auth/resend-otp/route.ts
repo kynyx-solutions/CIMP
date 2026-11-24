@@ -9,7 +9,8 @@ function generateOTP(): string {
 }
 
 export async function POST(req: NextRequest) {
-  const { email } = await req.json();
+  const body = await req.json().catch(() => ({}));
+  const email = typeof body.email === "string" ? body.email.trim() : "";
   if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 });
   // Each resend sends an email: 3 per address and 10 per IP address in 15 minutes.
   const limited = limitRequest(req, [{ key: `resend:${String(email).toLowerCase()}`, limit: 3, windowMs: 900000 }, { key: "resend-ip:{ip}", limit: 10, windowMs: 900000 }], "code requests");
@@ -17,8 +18,8 @@ export async function POST(req: NextRequest) {
 
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
 
-  if (!user)        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-  if (user.isVerified) return NextResponse.json({ error: 'Already verified' }, { status: 400 });
+  // Same answer for unknown and already-verified addresses (no account discovery)
+  if (!user || user.isVerified) return NextResponse.json({ success: true });
 
   const otp = generateOTP();
   await prisma.user.update({
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
   });
 
   try {
-    await sendOTPEmail(email, user.name, otp);
+    await sendOTPEmail(user.email, user.name, otp);
   } catch (err) {
     console.error("OTP email failed:", err);
     return NextResponse.json({ error: "We could not send the verification code. Please use “Resend code” in a minute." }, { status: 503 });

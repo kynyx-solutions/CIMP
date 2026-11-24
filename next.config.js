@@ -5,13 +5,17 @@ const isProd = process.env.NODE_ENV === 'production';
 // firebaseapp.com frame and the googleapis.com token endpoints. Next.js still emits inline
 // scripts, so 'unsafe-inline' stays until nonces are added; dev mode also needs 'unsafe-eval'.
 // Set CSP_REPORT_ONLY=true to watch for violations in the browser console without blocking.
+// With S3 storage the browser uploads files straight to the bucket (src/lib/upload-client.ts)
+const storageOrigin = process.env.STORAGE_DRIVER !== 's3' ? ''
+  : process.env.S3_ENDPOINT ? ` ${new URL(process.env.S3_ENDPOINT).origin}` : ' https://*.amazonaws.com';
+
 const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isProd ? '' : " 'unsafe-eval'"} https://apis.google.com https://www.gstatic.com`,
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
-  "connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com",
+  `connect-src 'self' https://*.googleapis.com https://apis.google.com https://*.firebaseapp.com${storageOrigin}`,
   "frame-src https://*.firebaseapp.com https://accounts.google.com https://apis.google.com",
   "object-src 'none'",
   "base-uri 'self'",

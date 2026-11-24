@@ -15,3 +15,8 @@ export function withId<T>(value: T): any {
 export function isId(value: unknown): value is string {
   return typeof value === "string" && /^[a-z0-9]{20,40}$/i.test(value);
 }
+
+/** A trimmed string from untrusted input, cut to `max` characters ("" for anything else). */
+export function str(v: unknown, max: number): string {
+  return typeof v === "string" ? v.trim().slice(0, max) : "";
+}

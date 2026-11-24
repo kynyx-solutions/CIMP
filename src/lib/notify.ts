@@ -20,14 +20,28 @@ async function recentDuplicates(userIds: string[], title: string, message: strin
   return new Set(rows.map((r) => r.userId));
 }
 
+// Mail providers cap the send rate (Resend: 2 per second by default), so a broadcast to many
+// people goes out at MAIL_RATE_PER_SEC instead of all at once. Raise it on a paid plan.
+const MAIL_RATE = Math.max(1, Number(process.env.MAIL_RATE_PER_SEC) || 2);
+/** Most people one request can email within the 5-minute function limit. */
+export const MAX_EMAIL_RECIPIENTS = MAIL_RATE * 250;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 // Mail failures must never break the action that triggered them.
 async function emailUsers(users: { email: string; name: string }[], title: string, message: string, type: NotifyType, email: EmailOpt) {
   // Strip emoji from the subject line (symbols block and surrogate pairs)
   const plainTitle = title.replace(/[☀-➿️]|[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "").replace(/\s+/g, " ").trim();
-  const results = await Promise.allSettled(
-    users.map((u) => sendEventEmail({ to: u.email, name: u.name, title: plainTitle, message, type, ...email })),
-  );
-  results.forEach((r) => { if (r.status === "rejected") console.error("[email] event email failed:", r.reason); });
+  const send = (u: { email: string; name: string }) =>
+    sendEventEmail({ to: u.email, name: u.name, title: plainTitle, message, type, ...email })
+      .catch((err) => console.error("[email] event email failed:", err));
+  // MAIL_RATE workers, each sending at most one email per second
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(MAIL_RATE, users.length) }, async () => {
+    while (next < users.length) {
+      const u = users[next++];
+      await Promise.all([send(u), next < users.length ? sleep(1000) : null]);
+    }
+  }));
 }
 
 /**

@@ -118,7 +118,7 @@ export default async function MentorsPage({ searchParams }: { searchParams: { ty
         <section className="mt-12 grid md:grid-cols-2 gap-6">
           <div className="bg-white border border-border rounded-2xl p-6 sm:p-8 shadow-card">
             <h2 className="font-display text-2xl font-bold text-navy">For incubatees</h2>
-            <p className="text-secondary font-body mt-2">Once you are incubated, request a mentor or investor connection from the portal's “Find a mentor” page. The incubation team reviews each request and the mentor accepts it before you are connected.</p>
+            <p className="text-secondary font-body mt-2">Once you are incubated, request a mentor or investor connection from the portal’s “Find a mentor” page. The incubation team reviews each request and the mentor accepts it before you are connected.</p>
             <Link href="/how-to-apply" className="mt-4 inline-block text-brand font-body font-semibold text-sm">How to apply →</Link>
           </div>
           <div className="rounded-2xl p-6 sm:p-8 bg-navy text-white">

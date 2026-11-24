@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { UPLOAD_RULES, acceptFor } from "@/lib/documents";
+import { uploadFile } from "@/lib/upload-client";
 import { isOfficeRole, ROLE_LABELS } from "@/lib/workflow";
 import { FINANCE_KINDS, FIN_STATUS, canActFinance, inr, kindLabel, type FinAction } from "@/lib/finance";
+import Toast, { useFlash } from "@/components/Toast";
 
 type Step = { id: string; action: string; actorName: string; actorRole: string; remark: string | null; at: string };
 type Req = { _id: string; kind: string; title: string; description: string; amountInr: number; payee: string; status: string; requestedBy: string; mine: boolean;
@@ -31,14 +34,13 @@ export default function FinancePage() {
   const [tab, setTab] = useState<"queue" | "requests" | "seed">("queue");
   const [fund, setFund] = useState({ applicationId: "", scheme: "Bihar Startup Policy seed fund", sanctionedInr: "", sanctionedOn: new Date().toISOString().slice(0, 10) });
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const { msg, flash } = useFlash(5000);
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadFor = useRef<string | null>(null);
 
   useEffect(() => { fetch("/api/auth/me").then((r) => r.json()).then((x) => { if (!x.user || !isOfficeRole(x.user.role)) { router.push("/dashboard"); return; } setUser(x.user); }); }, [router]);
   const load = useCallback(async () => { const x = await fetch("/api/finance").then((r) => r.json()); setD(x); }, []);
   useEffect(() => { if (user) load(); }, [user, load]);
-  const flash = (text: string, ok = true) => { setMsg({ text, ok }); setTimeout(() => setMsg(null), 5000); };
 
   async function call(method: string, url: string, body: object, okText: string) {
     setBusy(true);
@@ -57,10 +59,9 @@ export default function FinancePage() {
   async function upload(file: File) {
     if (!uploadFor.current) return;
     setBusy(true);
-    const fd = new FormData(); fd.append("file", file);
-    const res = await fetch(`/api/finance/${uploadFor.current}/invoice`, { method: "POST", body: fd });
-    const x = await res.json(); setBusy(false);
-    if (!res.ok) flash(x.error, false); else { flash("Invoice attached."); load(); }
+    const { ok, data } = await uploadFile(`/api/finance/${uploadFor.current}/invoice`, "invoice", file);
+    setBusy(false);
+    if (!ok) flash(data.error ?? "Upload failed. Please try again.", false); else { flash("Invoice attached."); load(); }
   }
 
   if (!user || !d) return <div className="min-h-screen bg-bg flex items-center justify-center"><div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" /></div>;
@@ -101,8 +102,8 @@ export default function FinancePage() {
   return (
     <div className="min-h-screen bg-bg">
       <Navbar user={user} />
-      {msg && <div role="status" className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl border text-sm font-body shadow-card-lg ${msg.ok ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-red-50 border-red-200 text-red-700"}`}>{msg.text}</div>}
-      <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" aria-label="Attach invoice" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
+      <Toast msg={msg} />
+      <input ref={fileRef} type="file" accept={acceptFor(UPLOAD_RULES.invoice)} className="hidden" aria-label="Attach invoice" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-3xl font-bold text-navy">Finance</h1>

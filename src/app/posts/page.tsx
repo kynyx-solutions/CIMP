@@ -6,6 +6,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { AiDraft } from "@/components/AiTools";
 import { BLOG_STATUS, BLOG_WRITERS, parseBody } from "@/lib/blog";
+import Toast, { useFlash } from "@/components/Toast";
 
 type Post = { _id: string; slug: string; title: string; excerpt: string; body: string; status: string; authorId: string; authorName: string; reviewNote: string | null; updatedAt: string; publishedAt: string | null };
 const TONE = { muted: "bg-slate-50 text-slate-600 border-slate-200", warn: "bg-amber-50 text-amber-800 border-amber-200", good: "bg-leaf-50 text-leaf-800 border-leaf-200", bad: "bg-red-50 text-red-700 border-red-200" };
@@ -20,7 +21,7 @@ export default function PostsPage() {
   const [edit, setEdit] = useState<{ id: string | null; f: typeof EMPTY } | null>(null);
   const [preview, setPreview] = useState<Post | null>(null);
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const { msg, flash } = useFlash(5000);
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((d) => {
@@ -31,7 +32,6 @@ export default function PostsPage() {
   const load = useCallback(async () => { const d = await fetch("/api/posts").then((r) => r.json()); setPosts(d.posts ?? []); setCanPublish(!!d.canPublish); }, []);
   useEffect(() => { if (user) load(); }, [user, load]);
 
-  const flash = (text: string, ok = true) => { setMsg({ text, ok }); setTimeout(() => setMsg(null), 5000); };
   async function save(submit: boolean) {
     if (!edit) return;
     setBusy(true);
@@ -56,7 +56,7 @@ export default function PostsPage() {
   return (
     <div className="min-h-screen bg-bg">
       <Navbar user={user} />
-      {msg && <div role="status" className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl border text-sm font-body shadow-card-lg ${msg.ok ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-red-50 border-red-200 text-red-700"}`}>{msg.text}</div>}
+      <Toast msg={msg} />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-3xl font-bold text-navy">Blog posts</h1>

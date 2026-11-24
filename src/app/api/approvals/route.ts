@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { verifySession } from '@/lib/auth';
+import { getSessionUser } from '@/lib/session';
 import { withId, isId } from '@/lib/serialize';
 import {
   STAGES, PIPELINE, ROLE_LABELS,
@@ -13,21 +14,15 @@ import { emitEvent } from '@/lib/integrations';
 // Applicants get an email for every decision on their application (PRD NOT-1).
 const APPLICANT_EMAIL = { ctaPath: '/dashboard', ctaLabel: 'Open your dashboard' };
 
-async function getUser(req: NextRequest) {
-  const token = req.cookies.get('incubator_token')?.value;
-  if (!token) return null;
-  return verifySession(token);
-}
-
 
 const ACTIONS: WorkflowAction[] = ['advance', 'reject', 'send_back', 'fasttrack', 'toggle_public'];
 
 export async function POST(req: NextRequest) {
-  const user = await getUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!canViewApplicants(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { applicationId, action, remark, signature, signatureImage } = await req.json();
+  const { applicationId, action, remark, signature, signatureImage } = await req.json().catch(() => ({}));
   if (!isId(applicationId) || !ACTIONS.includes(action))
     return NextResponse.json({ error: 'Valid applicationId and action required' }, { status: 400 });
 
@@ -51,13 +46,22 @@ export async function POST(req: NextRequest) {
     cleanImage = signatureImage;
   }
 
-  const step = (toStage: string, stepAction: string) => ({
-    create: {
-      fromStage, toStage, action: stepAction,
-      actorId: user.userId, actorName: user.name, actorRole: user.role,
-      remark: cleanRemark || null, signature: cleanSignature || null, signatureImage: cleanImage,
-    },
-  });
+  // Apply a decision only if the application is still where this reviewer saw it, so two
+  // reviewers acting at the same moment cannot both move it (the second one gets a 409).
+  const move = (data: Prisma.ApplicationUpdateManyMutationInput, toStage: string, stepAction: string | null) =>
+    prisma.$transaction(async (tx) => {
+      const { count } = await tx.application.updateMany({ where: { id: app.id, stage: fromStage, status: app.status, isPublic: app.isPublic }, data });
+      if (count !== 1) return false;
+      if (stepAction) await tx.approvalStep.create({
+        data: {
+          applicationId: app.id, fromStage, toStage, action: stepAction,
+          actorId: user.userId, actorName: user.name, actorRole: user.role,
+          remark: cleanRemark || null, signature: cleanSignature || null, signatureImage: cleanImage,
+        },
+      });
+      return true;
+    });
+  const conflict = () => NextResponse.json({ error: 'Someone else acted on this application just now. Reload to see where it is.' }, { status: 409 });
   const log = (actionText: string, detail?: string) =>
     prisma.activity.create({ data: { applicationId: app.id, actorName: user.name, actorRole: user.role, action: actionText, detail: detail || null } });
 
@@ -67,15 +71,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Draw your signature and type your name to sign at this stage' }, { status: 400 });
 
     const toStage = def.next!;
-    await prisma.application.update({
-      where: { id: app.id },
-      data: {
-        stage: toStage,
-        isEditable: false, // locked once review starts (PRD WF-3)
-        ...(toStage === 'ceo_approved' ? { status: 'approved' } : {}),
-        steps: step(toStage, def.actionLabel ?? 'advanced'),
-      },
-    });
+    const moved = await move({
+      stage: toStage,
+      isEditable: false, // locked once review starts (PRD WF-3)
+      ...(toStage === 'ceo_approved' ? { status: 'approved' } : {}),
+    }, toStage, def.actionLabel ?? 'advanced');
+    if (!moved) return conflict();
     await log(`${def.actionLabel} (${roleLabel})`, cleanRemark);
 
     if (toStage === 'ceo_approved') {
@@ -88,13 +89,8 @@ export async function POST(req: NextRequest) {
 
   else if (action === 'reject') {
     if (!cleanRemark) return NextResponse.json({ error: 'A reason is required to reject' }, { status: 400 });
-    await prisma.application.update({
-      where: { id: app.id },
-      data: {
-        stage: 'rejected', status: 'rejected', rejectedBy: user.role, rejectionReason: cleanRemark,
-        isEditable: false, steps: step('rejected', 'rejected'),
-      },
-    });
+    const moved = await move({ stage: 'rejected', status: 'rejected', rejectedBy: user.role, rejectionReason: cleanRemark, isEditable: false }, 'rejected', 'rejected');
+    if (!moved) return conflict();
     await log(`rejected at ${STAGES[fromStage].label} (${roleLabel})`, cleanRemark);
     await notify(app.userId, 'Application Rejected', `"${app.startupName}" was not approved at ${STAGES[fromStage].label}. Reason: ${cleanRemark}`, 'error', app.id, APPLICANT_EMAIL);
   }
@@ -102,32 +98,22 @@ export async function POST(req: NextRequest) {
   else if (action === 'send_back') {
     // Return to the applicant for edits instead of rejecting (PRD WF-3).
     if (!cleanRemark) return NextResponse.json({ error: 'Tell the applicant what to change' }, { status: 400 });
-    await prisma.application.update({
-      where: { id: app.id },
-      data: {
-        stage: 'returned', returnedFrom: fromStage, changeRequest: cleanRemark,
-        isEditable: true, steps: step('returned', 'sent back for changes'),
-      },
-    });
+    const moved = await move({ stage: 'returned', returnedFrom: fromStage, changeRequest: cleanRemark, isEditable: true }, 'returned', 'sent back for changes');
+    if (!moved) return conflict();
     await log(`sent back for changes at ${STAGES[fromStage].label} (${roleLabel})`, cleanRemark);
     await notify(app.userId, 'Changes requested ✏️', `The reviewer asked for changes to "${app.startupName}": ${cleanRemark}`, 'warning', app.id, APPLICANT_EMAIL);
   }
 
   else if (action === 'fasttrack') {
-    await prisma.application.update({
-      where: { id: app.id },
-      data: {
-        stage: 'ceo_approved', status: 'approved', isFastTracked: true, isEditable: false,
-        steps: step('ceo_approved', 'fast-tracked'),
-      },
-    });
+    const moved = await move({ stage: 'ceo_approved', status: 'approved', isFastTracked: true, isEditable: false }, 'ceo_approved', 'fast-tracked');
+    if (!moved) return conflict();
     await log('⚡ fast-tracked application', `Skipped from ${STAGES[fromStage].label}`);
     await notify(app.userId, '⚡ Fast-Tracked by CEO!', `"${app.startupName}" was personally fast-tracked and approved by the CEO.`, 'success', app.id, APPLICANT_EMAIL);
   }
 
   else if (action === 'toggle_public') {
     const isPublic = !app.isPublic;
-    await prisma.application.update({ where: { id: app.id }, data: { isPublic } });
+    if (!(await move({ isPublic }, fromStage, null))) return conflict();
     await log(isPublic ? 'published to public directory' : 'removed from public directory');
     await notify(app.userId,
       isPublic ? '🌐 Now Live in the Directory!' : 'Removed from Directory',
@@ -153,7 +139,7 @@ export async function POST(req: NextRequest) {
 
 // GET — pipeline stats (count per stage)
 export async function GET(req: NextRequest) {
-  const user = await getUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!canViewApplicants(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 

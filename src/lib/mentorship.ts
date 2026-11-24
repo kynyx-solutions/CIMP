@@ -28,6 +28,3 @@ export const SESSION_MODES = [
   { value: "virtual", label: "Video call" },
   { value: "physical", label: "In person" },
 ] as const;
-
-export const DOC_REQUEST_TYPES = ["pdf", "jpg", "png", "pptx", "ppt"] as const;
-export const DOC_REQUEST_MAX = 4 * 1024 * 1024; // hosting limit: request bodies over 4.5 MB are rejected before the app

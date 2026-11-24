@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser(req);
   if (!user || !canViewApplicants(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { profileId, kind, decision, note } = await req.json();
+  const { profileId, kind, decision, note } = await req.json().catch(() => ({}));
   if (!isId(profileId) || !["mentor", "investor"].includes(kind) || !["approve", "reject"].includes(decision))
     return NextResponse.json({ error: "profileId, kind and decision are required" }, { status: 400 });
   const cleanNote = typeof note === "string" ? note.trim().slice(0, 1000) : "";
@@ -55,10 +55,11 @@ export async function POST(req: NextRequest) {
   const approved = decision === "approve";
   if (kind === "mentor") {
     if (profile.status !== "submitted") return NextResponse.json({ error: "This profile is not waiting for review" }, { status: 400 });
-    await prisma.mentorProfile.update({
-      where: { id: profile.id },
+    const { count } = await prisma.mentorProfile.updateMany({
+      where: { id: profile.id, status: "submitted" }, // one of two parallel reviews wins
       data: { status: approved ? "approved" : "rejected", reviewNote: cleanNote || null, reviewedBy: user.name },
     });
+    if (!count) return NextResponse.json({ error: "This profile was reviewed just now. Reload to see the decision." }, { status: 409 });
     if (approved && profile.isPublic) await emitEvent("mentor.approved", { id: profile.id, headline: profile.headline, sectors: profile.sectors });
     await notify(profile.userId,
       approved ? "Mentor profile approved 🎉" : "Mentor profile not approved",
@@ -66,10 +67,11 @@ export async function POST(req: NextRequest) {
       approved ? "success" : "error", undefined, { ctaPath: "/mentor", ctaLabel: "Open your Mentor hub" });
   } else {
     if (profile.investorStatus !== "submitted") return NextResponse.json({ error: "No investor application waiting for review" }, { status: 400 });
-    await prisma.mentorProfile.update({
-      where: { id: profile.id },
+    const { count } = await prisma.mentorProfile.updateMany({
+      where: { id: profile.id, investorStatus: "submitted" },
       data: { investorStatus: approved ? "approved" : "rejected", investorNote: cleanNote || null },
     });
+    if (!count) return NextResponse.json({ error: "This application was reviewed just now. Reload to see the decision." }, { status: 409 });
     await notify(profile.userId,
       approved ? "Investor listing approved 🎉" : "Investor application not approved",
       approved ? "You are now also listed as an investor." : `Your investor application was not approved. Reason: ${cleanNote}`,

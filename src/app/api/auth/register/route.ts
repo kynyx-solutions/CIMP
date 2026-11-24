@@ -4,10 +4,9 @@ import { randomInt } from "crypto";
 import { limitRequest } from "@/lib/ratelimit";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { sendOTPEmail } from "@/lib/email";
+import { sendOTPEmail, sendAccountExistsEmail } from "@/lib/email";
 import { isCompanyEmail, isPublicRole } from "@/lib/roles";
 
-// Helper — generate 6-digit OTP
 function generateOTP(): string {
   return randomInt(100000, 1000000).toString(); // cryptographically random
 }
@@ -58,31 +57,26 @@ export async function POST(req: NextRequest) {
     );
 
 
+  // The answer is the same whether or not the address is registered (no account discovery).
+  const ok = NextResponse.json({ success: true, requiresVerification: true, email });
+  const hashed = await bcrypt.hash(password, 12); // before the lookup, so both paths take as long
   const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing)
-    return NextResponse.json(
-      { error: "Email already registered" },
-      { status: 409 },
-    );
+  if (existing?.isVerified) {
+    try { await sendAccountExistsEmail(email, existing.name); } catch (err) { console.error("Account-exists email failed:", err); }
+    return ok;
+  }
 
-  const hashed = await bcrypt.hash(password, 12);
   const otp = generateOTP();
   const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  const fields = { name, password: hashed, isVerified: false, otp, otpExpiresAt, consentAt: new Date() };
 
-  // Create user — unverified
-  const created = await prisma.user.create({
-    data: {
-      name,
-      email,
-      password: hashed,
-      role: isPublicRole(role) ? role : "incubatee",
-      isVerified: false,
-      otp,
-      otpExpiresAt,
-      consentAt: new Date(),
-    },
-  });
-  await audit(req, { userId: created.id, name: created.name, role: created.role }, "auth.signup", "user", created.id, `Registered as ${created.role} with email (consent recorded, awaiting OTP)`);
+  // An unverified account belongs to nobody yet: whoever proves the inbox with the code gets it,
+  // so signing up again simply replaces the details and sends a fresh code.
+  const created = existing
+    ? await prisma.user.update({ where: { id: existing.id }, data: { ...fields, role: isPublicRole(role) ? role : existing.role } })
+    : await prisma.user.create({ data: { ...fields, email, role: isPublicRole(role) ? role : "incubatee" } });
+  await audit(req, { userId: created.id, name: created.name, role: created.role }, "auth.signup", "user", created.id,
+    `${existing ? "Signed up again before verifying" : "Registered"} as ${created.role} with email (consent recorded, awaiting OTP)`);
 
   // Send OTP email (the account exists; the founder can ask for a new code if this fails)
   try {
@@ -92,10 +86,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "We could not send the verification code. Your account is created: open Verify email and use “Resend code” in a minute." }, { status: 503 });
   }
 
-  // Don't set auth cookie yet — send them to verify page instead
-  return NextResponse.json({
-    success: true,
-    requiresVerification: true,
-    email,
-  });
+  // No session yet: the browser goes to the verify page
+  return ok;
 }

@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
-import { withId } from "@/lib/serialize";
+import { withId, str } from "@/lib/serialize";
 import { INDUSTRIES } from "@/lib/application-fields";
 import { notifyRank } from "@/lib/notify";
 import { audit, diffOf } from "@/lib/audit";
@@ -16,7 +16,6 @@ async function requireMentor(req: NextRequest) {
   return user?.role === "mentor" ? user : null;
 }
 
-const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 function parseProfile(body: Record<string, unknown>) {
   const headline = str(body.headline, 120);

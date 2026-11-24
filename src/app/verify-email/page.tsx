@@ -127,6 +127,9 @@ export default function VerifyEmailPage() {
       <p className="mt-8 text-sm font-body text-muted">
         Wrong email? <Link href="/register" className="text-brand font-semibold">Register again</Link>
       </p>
+      <p className="mt-2 text-xs font-body text-muted">
+        No code? If this address already has an account, we emailed a sign-in link instead. <Link href="/login" className="text-brand font-semibold">Sign in</Link>
+      </p>
     </AuthShell>
   );
 }

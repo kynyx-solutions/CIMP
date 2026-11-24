@@ -78,7 +78,8 @@ export async function PATCH(req: NextRequest) {
   if (action === "cancel") {
     if (l.userId !== user.userId) return NextResponse.json({ error: "Only the applicant can cancel" }, { status: 403 });
     if (!["pending", "approved"].includes(l.status) || l.fromDate <= istToday()) return NextResponse.json({ error: "Only future leave can be cancelled" }, { status: 400 });
-    await prisma.leaveRequest.update({ where: { id: l.id }, data: { status: "cancelled" } });
+    const { count } = await prisma.leaveRequest.updateMany({ where: { id: l.id, status: l.status }, data: { status: "cancelled" } });
+    if (!count) return NextResponse.json({ error: "This leave changed just now. Reload to see it." }, { status: 409 });
     await audit(req, user, "leave.cancel", "leave", l.id, `Cancelled leave ${l.fromDate} to ${l.toDate}`, { status: { from: l.status, to: "cancelled" } });
     return NextResponse.json({ success: true });
   }
@@ -88,7 +89,8 @@ export async function PATCH(req: NextRequest) {
   if (l.status !== "pending") return NextResponse.json({ error: "This request is already decided" }, { status: 400 });
   if (action === "reject" && !cleanNote) return NextResponse.json({ error: "Give a reason" }, { status: 400 });
   const status = action === "approve" ? "approved" : "rejected";
-  await prisma.leaveRequest.update({ where: { id: l.id }, data: { status, approverId: user.userId, approverName: user.name, decisionNote: cleanNote || null, decidedAt: new Date() } });
+  const { count } = await prisma.leaveRequest.updateMany({ where: { id: l.id, status: "pending" }, data: { status, approverId: user.userId, approverName: user.name, decisionNote: cleanNote || null, decidedAt: new Date() } });
+  if (!count) return NextResponse.json({ error: "This request was decided just now. Reload to see the decision." }, { status: 409 });
   await audit(req, user, `leave.${action}`, "leave", l.id, `${status === "approved" ? "Approved" : "Rejected"} ${l.userName}'s ${leaveLabel(l.type).toLowerCase()} (${l.fromDate} to ${l.toDate})${cleanNote ? ` — ${cleanNote}` : ""}`, { status: { from: "pending", to: status } });
   await notify(l.userId, status === "approved" ? "Leave approved" : "Leave not approved", `${leaveLabel(l.type)} ${l.fromDate} to ${l.toDate}${cleanNote ? `: ${cleanNote}` : "."}`, status === "approved" ? "success" : "warning", undefined, { ctaPath: "/hr", ctaLabel: "Open HR" });
   return NextResponse.json({ success: true, status });

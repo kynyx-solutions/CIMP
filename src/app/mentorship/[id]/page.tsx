@@ -5,7 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { SESSION_MODES } from "@/lib/mentorship";
-import { formatBytes } from "@/lib/documents";
+import { UPLOAD_RULES, acceptFor, formatBytes } from "@/lib/documents";
+import { uploadFile } from "@/lib/upload-client";
+import Toast, { useFlash } from "@/components/Toast";
 
 type Feedback = { _id: string; authorId: string; authorRole: string; rating: number; comment: string | null };
 type Session = { _id: string; scheduledAt: string; durationMin: number; mode: string; location: string | null; agenda: string; status: string; cancelReason: string | null; feedback: Feedback[]; myFeedback: Feedback | null };
@@ -25,7 +27,7 @@ export default function MentorshipPage() {
   const [user, setUser] = useState<any>(null);
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState("");
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const { msg, flash } = useFlash(5000);
   const [busy, setBusy] = useState(false);
   const tomorrow = new Date(Date.now() + 864e5); tomorrow.setHours(11, 0, 0, 0);
   const [sf, setSf] = useState({ scheduledAt: localInputValue(tomorrow), durationMin: "60", mode: "virtual", location: "", agenda: "" });
@@ -45,7 +47,6 @@ export default function MentorshipPage() {
   }, [id]);
   useEffect(() => { if (user) load(); }, [user, load]);
 
-  const flash = (text: string, ok = true) => { setMsg({ text, ok }); setTimeout(() => setMsg(null), 5000); };
   async function call(method: string, body: object, okText: string) {
     setBusy(true);
     const res = await fetch("/api/mentorship", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -55,10 +56,9 @@ export default function MentorshipPage() {
   }
   async function upload(reqId: string, file: File) {
     setBusy(true);
-    const fd = new FormData(); fd.append("file", file);
-    const res = await fetch(`/api/mentorship/doc/${reqId}`, { method: "POST", body: fd });
-    const d = await res.json(); setBusy(false);
-    if (!res.ok) flash(d.error, false); else { flash("Uploaded. Your mentor has been notified."); load(); }
+    const { ok, data: d } = await uploadFile(`/api/mentorship/doc/${reqId}`, "doc_request", file);
+    setBusy(false);
+    if (!ok) flash(d.error ?? "Upload failed. Please try again.", false); else { flash("Uploaded. Your mentor has been notified."); load(); }
   }
 
   if (!user || (!data && !error)) return <div className="min-h-screen bg-bg flex items-center justify-center"><div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" /></div>;
@@ -78,7 +78,7 @@ export default function MentorshipPage() {
   return (
     <div className="min-h-screen bg-bg">
       <Navbar user={user} />
-      {msg && <div role="status" className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl border text-sm font-body shadow-card-lg ${msg.ok ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-red-50 border-red-200 text-red-700"}`}>{msg.text}</div>}
+      <Toast msg={msg} />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <p className="text-xs font-mono text-muted"><Link href={role === "mentor" ? "/mentor" : role === "mentee" ? "/connect" : "/network"} className="hover:text-brand">← Back</Link></p>
         <h1 className="font-display text-3xl font-bold text-navy mt-2">Mentorship: {c.startupName ?? c.menteeName}</h1>
@@ -137,7 +137,7 @@ export default function MentorshipPage() {
                           {s.feedback.map((f) => (
                             <p key={f._id} className="text-xs font-body text-secondary mt-2"><Stars n={f.rating} /> <span className="text-muted">{f.authorRole === "mentor" ? "Mentor" : "Founder"}</span>{f.comment ? `: ${f.comment}` : ""}</p>
                           ))}
-                          {canAct && s.status === "completed" && s.myFeedback && s.feedback.length < 2 && <p className="text-[11px] text-muted font-body mt-1">The other side's rating shows once they give theirs.</p>}
+                          {canAct && s.status === "completed" && s.myFeedback && s.feedback.length < 2 && <p className="text-[11px] text-muted font-body mt-1">The other side’s rating shows once they give theirs.</p>}
                           {canAct && s.status === "completed" && !s.myFeedback && (
                             <div className="mt-3 pt-3 border-t border-border">
                               <p className="text-xs font-body font-semibold text-navy">How useful was this session?</p>
@@ -179,7 +179,7 @@ export default function MentorshipPage() {
                         {canAct && role === "mentee" && d.status !== "closed" && (
                           <>
                             <button disabled={busy} onClick={() => fileRefs.current[d._id]?.click()} className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold font-body text-navy hover:border-brand">{d.fileName ? "Replace file" : "Upload"}</button>
-                            <input ref={(el) => { fileRefs.current[d._id] = el; }} type="file" accept=".pdf,.jpg,.jpeg,.png,.ppt,.pptx" className="hidden" aria-label={`Upload ${d.title}`}
+                            <input ref={(el) => { fileRefs.current[d._id] = el; }} type="file" accept={acceptFor(UPLOAD_RULES.doc_request)} className="hidden" aria-label={`Upload ${d.title}`}
                               onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(d._id, f); e.target.value = ""; }} />
                           </>
                         )}

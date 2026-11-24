@@ -2,13 +2,14 @@
 // Shows only what is printed on the card itself; never contact details.
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { CARD_NUMBER } from "@/lib/idcard-number";
 import { PublicHeader, PublicFooter } from "@/components/public/Site";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Verify an ID card", robots: { index: false } };
 
 export default async function VerifyPage({ params }: { params: { number: string } }) {
-  const number = /^CB-\d{4}-\d{4,6}$/.test(params.number) ? params.number : null;
+  const number = CARD_NUMBER.test(params.number) ? params.number : null;
   const card = number ? await prisma.idCard.findUnique({ where: { number }, select: { number: true, holderName: true, role: true, organisation: true, issuedAt: true, expiresAt: true, status: true } }) : null;
   const valid = !!card && card.status === "active" && card.expiresAt > new Date();
   const state = !card ? "unknown" : valid ? "valid" : card.status === "revoked" ? "revoked" : "expired";

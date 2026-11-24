@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSessionUser } from '@/lib/session';
 import { withId, isId } from '@/lib/serialize';
-import { threadAccess, notifyNewMessage } from '@/lib/chat';
+import { threadAccess, notifyNewMessage, fromOthers } from '@/lib/chat';
 import { audit } from '@/lib/audit';
 
 // GET /api/messages?applicationId=xxx
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
   const messages = await prisma.message.findMany({ where: { applicationId }, orderBy: { createdAt: 'asc' } });
   await prisma.message.updateMany({
-    where: { applicationId, senderId: { not: user.userId }, read: false },
+    where: { applicationId, ...fromOthers(user.userId), read: false },
     data: { read: true },
   });
   return NextResponse.json({ messages: withId(messages) });

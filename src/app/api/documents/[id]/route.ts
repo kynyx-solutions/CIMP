@@ -6,7 +6,7 @@ import { getSessionUser } from "@/lib/session";
 import { isId } from "@/lib/serialize";
 import { canViewApplicants } from "@/lib/workflow";
 import { DOC_KIND_MAP, type DocKind } from "@/lib/documents";
-import { readStored, deleteStored } from "@/lib/storage";
+import { sendStored, deleteStored } from "@/lib/storage";
 import { audit } from "@/lib/audit";
 
 async function load(id: string) {
@@ -28,22 +28,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     if (!allowed) return NextResponse.json({ error: user ? "Forbidden" : "Unauthorized" }, { status: user ? 403 : 401 });
   }
 
-  let body: Buffer;
-  try { body = await readStored(doc.storedName); } catch { return NextResponse.json({ error: "File missing" }, { status: 404 }); }
-
   const inline = doc.mimeType === "application/pdf" || doc.mimeType.startsWith("image/");
-  const safeName = doc.fileName.replace(/["\\\r\n]/g, "_");
-  return new NextResponse(new Uint8Array(body), {
-    headers: {
-      "Content-Type": doc.mimeType,
-      "Content-Length": String(body.length),
-      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${safeName}"`,
-      "X-Content-Type-Options": "nosniff",
-      // Treat the file as untrusted content: no scripts, no same-origin access
-      "Content-Security-Policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox",
-      "Cache-Control": publicLogo ? "public, max-age=300" : "private, no-store",
-    },
-  });
+  return sendStored(doc.storedName, { fileName: doc.fileName, contentType: doc.mimeType, inline, publicCache: publicLogo });
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {

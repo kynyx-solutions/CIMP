@@ -452,7 +452,7 @@ export default function ApprovalsPage() {
                             <div className="pb-3 flex-1">
                               <p className="text-xs font-body text-navy font-semibold">{act.actorName}</p>
                               <p className="text-xs text-secondary font-body">{act.action}</p>
-                              {act.detail && <p className="text-[11px] text-muted mt-0.5">"{act.detail}"</p>}
+                              {act.detail && <p className="text-[11px] text-muted mt-0.5">“{act.detail}”</p>}
                               <p className="text-[10px] text-faint font-mono mt-0.5">{new Date(act.createdAt).toLocaleString('en-IN')}</p>
                             </div>
                           </div>

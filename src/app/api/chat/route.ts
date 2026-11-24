@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { withId, isId } from "@/lib/serialize";
-import { threadAccess, notifyNewMessage, THREAD_TYPES, type ThreadType } from "@/lib/chat";
+import { threadAccess, notifyNewMessage, fromOthers, THREAD_TYPES, type ThreadType } from "@/lib/chat";
 import { audit } from "@/lib/audit";
 
 const MAX_LEN = 2000;
@@ -28,13 +28,13 @@ export async function GET(req: NextRequest) {
   if (t.type === "application") {
     messages = await prisma.message.findMany({ where: { applicationId: t.id }, orderBy: { createdAt: "asc" } });
     if (access.canPost)
-      await prisma.message.updateMany({ where: { applicationId: t.id, senderId: { not: user.userId }, read: false }, data: { read: true } });
+      await prisma.message.updateMany({ where: { applicationId: t.id, ...fromOthers(user.userId), read: false }, data: { read: true } });
   } else {
     const where = { threadType: t.type, threadId: t.id };
     messages = await prisma.chatMessage.findMany({ where, orderBy: { createdAt: "asc" } });
     // Office oversight reads must not mark a mentor conversation as read for its participants
     if (access.canPost || access.recipients.length)
-      await prisma.chatMessage.updateMany({ where: { ...where, senderId: { not: user.userId }, read: false }, data: { read: true } });
+      await prisma.chatMessage.updateMany({ where: { ...where, ...fromOthers(user.userId), read: false }, data: { read: true } });
   }
   return NextResponse.json({
     messages: withId(messages).map((m: any) => ({ ...m, mine: m.senderId === user.userId })),

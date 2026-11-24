@@ -8,12 +8,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
-import { withId, isId } from "@/lib/serialize";
+import { withId, isId, str } from "@/lib/serialize";
 import { mentorshipAccess, SESSION_MODES } from "@/lib/mentorship";
 import { notify } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 
-const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const when = (d: Date) => d.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) + " IST";
 
 export async function GET(req: NextRequest) {

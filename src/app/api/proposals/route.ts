@@ -4,21 +4,28 @@
 //   PATCH  { proposalId, action: withdraw }                  the investor
 //          { proposalId, action: schedule_pitch, pitchAt, note } | { action: invested|decline, note }   the office
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
-import { withId, isId } from "@/lib/serialize";
+import { withId, isId, str } from "@/lib/serialize";
 import { canViewApplicants, ROLE_LABELS } from "@/lib/workflow";
 import { INSTRUMENTS, OPEN_PROPOSAL, PROPOSAL_STATUS, canHandleProposals } from "@/lib/invest";
 import { notify, notifyRank } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 
-const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const when = (d: Date) => d.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " IST";
 
 async function isInvestor(userId: string) {
   const p = await prisma.mentorProfile.findUnique({ where: { userId }, select: { investorStatus: true } });
   return p?.investorStatus === "approved";
 }
+
+/** Update a proposal only if its status has not changed since it was read (one of two parallel actions wins). */
+async function moveProposal(id: string, from: string, data: Prisma.InvestmentProposalUpdateManyMutationInput) {
+  const { count } = await prisma.investmentProposal.updateMany({ where: { id, status: from }, data });
+  return count === 1;
+}
+const conflict = () => NextResponse.json({ error: "This proposal changed just now. Reload to see where it is." }, { status: 409 });
 
 const PROPOSAL_INCLUDE = {
   investor: { select: { id: true, name: true, mentorProfile: { select: { headline: true, ticketSize: true } } } },
@@ -102,7 +109,7 @@ export async function PATCH(req: NextRequest) {
   if (body.action === "withdraw") {
     if (user.userId !== p.investorId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     if (!OPEN_PROPOSAL.includes(p.status)) return NextResponse.json({ error: "This proposal is closed" }, { status: 400 });
-    await prisma.investmentProposal.update({ where: { id: p.id }, data: { status: "withdrawn" } });
+    if (!(await moveProposal(p.id, p.status, { status: "withdrawn" }))) return conflict();
     await audit(req, user, "proposal.withdraw", "proposal", p.id, `Withdrew the proposal for ${name}`, { status: { from: p.status, to: "withdrawn" } });
     if (p.status === "pitch_scheduled") await notify(p.application.userId, "Pitch cancelled", `${p.investor.name} withdrew before the pitch.`, "warning", p.applicationId);
     await notifyRank(2, "Investment proposal withdrawn", `${p.investor.name} withdrew the proposal for ${name}.`, p.applicationId);
@@ -116,7 +123,7 @@ export async function PATCH(req: NextRequest) {
     if (!OPEN_PROPOSAL.includes(p.status)) return NextResponse.json({ error: "This proposal is closed" }, { status: 400 });
     const at = new Date(String(body.pitchAt ?? ""));
     if (Number.isNaN(at.getTime()) || at.getTime() < Date.now()) return NextResponse.json({ error: "Choose a future date and time for the pitch" }, { status: 400 });
-    await prisma.investmentProposal.update({ where: { id: p.id }, data: { status: "pitch_scheduled", pitchAt: at, officeNote: note || p.officeNote, handledBy: user.name } });
+    if (!(await moveProposal(p.id, p.status, { status: "pitch_scheduled", pitchAt: at, officeNote: note || p.officeNote, handledBy: user.name }))) return conflict();
     await audit(req, user, "proposal.schedule_pitch", "proposal", p.id, `Scheduled the pitch of ${name} to ${p.investor.name} on ${when(at)}`, { status: { from: p.status, to: "pitch_scheduled" } });
     const detail = `${when(at)}${note ? `. ${note}` : ""}`;
     await notify(p.investorId, "Pitch scheduled", `${name} will pitch to you on ${detail}`, "info", p.applicationId, { ctaPath: "/invest", ctaLabel: "View proposal" });
@@ -128,7 +135,7 @@ export async function PATCH(req: NextRequest) {
     if (!OPEN_PROPOSAL.includes(p.status)) return NextResponse.json({ error: "This proposal is closed" }, { status: 400 });
     if (body.action === "decline" && !note) return NextResponse.json({ error: "Give a reason" }, { status: 400 });
     const status = body.action === "invested" ? "invested" : "declined";
-    await prisma.investmentProposal.update({ where: { id: p.id }, data: { status, officeNote: note || p.officeNote, handledBy: user.name } });
+    if (!(await moveProposal(p.id, p.status, { status, officeNote: note || p.officeNote, handledBy: user.name }))) return conflict();
 
     if (status === "invested") {
       // Investors message their portfolio startups through a standing investment connection

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { ROLE_LABELS, isOfficeRole } from "@/lib/workflow";
 import { ATTENDANCE_MODES, LEAVE_TYPES, leaveLabel, workingDays } from "@/lib/hr";
+import Toast, { useFlash } from "@/components/Toast";
 
 type Rec = { _id: string; date: string; checkIn: string; checkOut: string | null; mode: string; late: boolean };
 type Leave = { _id: string; userName: string; userRole: string; type: string; fromDate: string; toDate: string; days: number; reason: string; status: string; approverName: string | null; decisionNote: string | null };
@@ -22,7 +23,7 @@ export default function HrPage() {
   const [mode, setMode] = useState("office");
   const [lf, setLf] = useState({ type: "casual", fromDate: "", toDate: "", halfDay: false, reason: "" });
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const { msg, flash } = useFlash(4000);
 
   useEffect(() => { fetch("/api/auth/me").then((r) => r.json()).then((x) => { if (!x.user || !isOfficeRole(x.user.role)) { router.push("/dashboard"); return; } setUser(x.user); }); }, [router]);
   const load = useCallback(async () => {
@@ -31,7 +32,6 @@ export default function HrPage() {
     if (a.canSeeTeam) setTeam(await fetch(`/api/hr/attendance?team=1${teamDate ? `&date=${teamDate}` : ""}`).then((r) => r.json()));
   }, [teamDate]);
   useEffect(() => { if (user) load(); }, [user, load]);
-  const flash = (text: string, ok = true) => { setMsg({ text, ok }); setTimeout(() => setMsg(null), 4000); };
   async function call(url: string, method: string, body: object, ok: string) {
     setBusy(true);
     const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -47,7 +47,7 @@ export default function HrPage() {
   return (
     <div className="min-h-screen bg-bg">
       <Navbar user={user} />
-      {msg && <div role="status" className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl border text-sm font-body shadow-card-lg ${msg.ok ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-red-50 border-red-200 text-red-700"}`}>{msg.text}</div>}
+      <Toast msg={msg} />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <h1 className="font-display text-3xl font-bold text-navy">HR</h1>
         <p className="text-secondary font-body text-sm mt-1">Attendance and leave for the office team. Demo policy: Monday to Saturday, check-in after 10:15 is marked late.</p>

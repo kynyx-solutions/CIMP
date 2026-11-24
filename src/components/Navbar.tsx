@@ -293,6 +293,8 @@ export default function Navbar({ user }: NavbarProps) {
                 </p>
               </div>
               <div className="relative">
+                {/* Google profile photo or generated avatar: external URLs, not worth the image optimiser */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={user.image || avatarUrl}
                   alt={user.name}

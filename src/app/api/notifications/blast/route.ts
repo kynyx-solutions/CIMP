@@ -6,8 +6,11 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { OFFICE_ROLES, ROLE_LABELS } from "@/lib/workflow";
-import { notifyUsers } from "@/lib/notify";
+import { notifyUsers, MAX_EMAIL_RECIPIENTS } from "@/lib/notify";
 import { audit } from "@/lib/audit";
+
+// Emails go out at the provider's rate (src/lib/notify.ts), so a large group takes minutes
+export const maxDuration = 300;
 
 const SENDERS = ["executive", "manager", "ceo", "admin_it"];
 
@@ -40,7 +43,9 @@ export async function POST(req: NextRequest) {
 
   const users = await prisma.user.findMany({ where: { ...a.where, id: { not: user.userId } }, select: { id: true } });
   if (!users.length) return NextResponse.json({ error: "Nobody is in this group yet" }, { status: 400 });
-  if (users.length > 2000) return NextResponse.json({ error: "Groups above 2,000 people are sent from the Phase 1 job queue" }, { status: 400 });
+  if (users.length > 2000) return NextResponse.json({ error: "Groups above 2,000 people cannot be notified in one go" }, { status: 400 });
+  if (email === true && users.length > MAX_EMAIL_RECIPIENTS)
+    return NextResponse.json({ error: `Email goes to at most ${MAX_EMAIL_RECIPIENTS} people at a time. Untick email to notify everyone in the portal, or choose a smaller group.` }, { status: 400 });
 
   const from = `${user.name} (${ROLE_LABELS[user.role] ?? user.role})`;
   const sent = await notifyUsers(users.map((u) => u.id), t, `${m}\n\n— ${from}`, "info", undefined, email === true ? { ctaPath: "/dashboard", ctaLabel: "Open the portal" } : undefined);

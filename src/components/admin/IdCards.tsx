@@ -32,7 +32,7 @@ export default function IdCards() {
     : { t: "Active", cls: "bg-leaf-50 text-leaf-800 border-leaf-200" };
   return (
     <div>
-      <p className="text-sm text-secondary font-body mb-4">Approved incubatees and mentors can hold a card. Cards are emailed as PDF, downloadable from each member's profile, and checkable at /verify. The card text and validity come from <strong>Website content → ID card template</strong>.</p>
+      <p className="text-sm text-secondary font-body mb-4">Approved incubatees and mentors can hold a card. Cards are emailed as PDF, downloadable from each member’s profile, and checkable at /verify. The card text and validity come from <strong>Website content → ID card template</strong>.</p>
       {msg && <p role="status" className={`mb-4 text-sm font-body px-4 py-2.5 rounded-xl border ${msg.ok ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-red-50 border-red-200 text-red-700"}`}>{msg.text}</p>}
       <div className="bg-white border border-border rounded-2xl shadow-card overflow-x-auto">
         <table className="w-full text-sm font-body">

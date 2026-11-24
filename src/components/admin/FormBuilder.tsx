@@ -3,6 +3,7 @@
 // fields are public, and publishes a new version. Built-in fields can be relabelled but not removed.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FIELD_TYPES, FORM_KEYS, FORM_LABELS, isLocked, type FieldDef, type FormDef, type FormKey, type SectionDef } from "@/lib/forms";
+import { useFlash } from "@/components/Toast";
 
 type Version = { version: number; note: string | null; createdBy: string; createdAt: string; fieldCount: number };
 
@@ -18,7 +19,7 @@ export default function FormBuilder({ canEdit }: { canEdit: boolean }) {
   const [versions, setVersions] = useState<Version[]>([]);
   const [open, setOpen] = useState<string | null>(null);
   const [note, setNote] = useState("");
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const { msg, flash } = useFlash(5000);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async (key: FormKey) => {
@@ -29,7 +30,6 @@ export default function FormBuilder({ canEdit }: { canEdit: boolean }) {
   useEffect(() => { load(formKey); }, [formKey, load]);
 
   const dirty = useMemo(() => !!live && JSON.stringify({ s: live.sections, f: live.fields }) !== JSON.stringify({ s: sections, f: fields }), [live, sections, fields]);
-  const flash = (text: string, ok = true) => { setMsg({ text, ok }); setTimeout(() => setMsg(null), 5000); };
 
   const update = (key: string, patch: Partial<FieldDef>) => setFields((p) => p.map((f) => (f.key === key ? { ...f, ...patch } : f)));
   const move = (key: string, dir: -1 | 1) => setFields((p) => {

@@ -2,7 +2,7 @@
 
 The incubation management portal for CIMP-BIIF (CIMP Business Incubation and Innovation Foundation, Patna). Founders apply and track their application, the office reviews it through four approval stages, and mentors and investors connect with approved startups. Around that sit progress reports, mentoring, investment, ID cards, a public website and, for the office itself, finance approvals, partner CRM, HR and an AI assistant.
 
-The requirements are in [prd.md](prd.md); the demo script is in [docs/demo-walkthrough.md](docs/demo-walkthrough.md); production setup is in [docs/deployment.md](docs/deployment.md).
+The requirements are in [docs/prd.md](docs/prd.md); the demo script is in [docs/demo-walkthrough.md](docs/demo-walkthrough.md); production setup is in [docs/deployment.md](docs/deployment.md).
 
 ## Stack
 

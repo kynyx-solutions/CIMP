@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifySession } from '@/lib/auth';
+import { getSessionUser } from '@/lib/session';
 import { withId, isId } from '@/lib/serialize';
 import { canViewApplicants } from '@/lib/workflow';
 
-async function getUser(req: NextRequest) {
-  const token = req.cookies.get('incubator_token')?.value;
-  if (!token) return null;
-  return verifySession(token);
-}
-
 // GET /api/activity?applicationId=xxx
 export async function GET(req: NextRequest) {
-  const user = await getUser(req);
+  const user = await getSessionUser(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const applicationId = req.nextUrl.searchParams.get('applicationId');

@@ -8,6 +8,7 @@ import Navbar from "@/components/Navbar";
 import { canViewApplicants, ROLE_LABELS } from "@/lib/workflow";
 import { customFields, displayValue, type FieldDef, type AnswerValue } from "@/lib/forms";
 import { CONN_STAGES, PROFILE_STATUS_LABELS, canReviewMentor, canReviewInvestor, canActOnConnection, type ConnStatus } from "@/lib/network";
+import Toast from "@/components/Toast";
 
 type Profile = {
   _id: string; userId: string; headline: string; organisation?: string | null; expertise: string; sectors: string[];
@@ -189,7 +190,7 @@ export default function NetworkPage() {
   return (
     <div className="min-h-screen bg-bg">
       <Navbar user={user} />
-      {msg && <div role="status" className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl border text-sm font-body shadow-card-lg ${msg.ok ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-red-50 border-red-200 text-red-700"}`}>{msg.text}</div>}
+      <Toast msg={msg} />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <h1 className="font-display text-3xl font-bold text-navy">Mentor & investor network</h1>
         <p className="text-secondary font-body text-sm mt-1">Approve mentors and investors, and route incubatee connection requests.</p>

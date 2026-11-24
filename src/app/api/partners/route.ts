@@ -7,11 +7,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
-import { withId, isId } from "@/lib/serialize";
+import { withId, isId, str } from "@/lib/serialize";
 import { ACTIVITY_KINDS, PARTNER_STAGES, PARTNER_TYPES, canUseCrm, stageLabel } from "@/lib/crm";
 import { audit } from "@/lib/audit";
 
-const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const date = (v: unknown) => { if (!v) return null; const d = new Date(String(v)); return Number.isNaN(d.getTime()) ? undefined : d; };
 
 function parsePartner(b: any) {

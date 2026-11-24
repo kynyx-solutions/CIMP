@@ -94,3 +94,6 @@ export async function notifyNewMessage(user: SessionUser, access: ThreadAccess, 
   await Promise.all(access.recipients.map((id) => notify(id, title, text, "info", access.applicationId)));
   for (const rank of access.officeRanks ?? []) await notifyRank(rank, title, `${from} sent a message${what}.`, access.applicationId);
 }
+
+/** Messages not sent by `userId`, including those whose sender's account was deleted (sender null). */
+export const fromOthers = (userId: string) => ({ OR: [{ senderId: null }, { senderId: { not: userId } }] });

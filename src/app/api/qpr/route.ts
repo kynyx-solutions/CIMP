@@ -90,7 +90,8 @@ export async function POST(req: NextRequest) {
   if (report.status !== "submitted") return NextResponse.json({ error: "Only submitted reports can be reviewed" }, { status: 400 });
 
   const status = decision === "accept" ? "accepted" : "returned";
-  await prisma.qprReport.update({ where: { id: report.id }, data: { status, reviewNote: cleanNote || null, reviewedBy: user.name, reviewedAt: new Date() } });
+  const { count } = await prisma.qprReport.updateMany({ where: { id: report.id, status: "submitted" }, data: { status, reviewNote: cleanNote || null, reviewedBy: user.name, reviewedAt: new Date() } });
+  if (!count) return NextResponse.json({ error: "This report was reviewed just now. Reload to see the decision." }, { status: 409 });
   const label = periodLabel(report.period);
   await audit(req, user, `qpr.${decision}`, "qpr", report.id,
     `${ROLE_LABELS[user.role] ?? user.role}: ${decision === "accept" ? "accepted" : "returned"} ${label} report of "${report.application.startupName}"${cleanNote ? ` (note: ${cleanNote})` : ""}`,

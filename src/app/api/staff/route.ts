@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { withId, isId } from "@/lib/serialize";
 import { prisma } from "@/lib/prisma";
-import { verifySession, forgetSession } from "@/lib/auth";
+import { forgetSession } from "@/lib/auth";
+import { getSessionUser } from "@/lib/session";
 import { getCompanyDomains, isCompanyEmail } from "@/lib/roles";
 import { OFFICE_ROLES, ROLE_LABELS } from "@/lib/workflow";
 import { sendWelcomeEmail } from "@/lib/email";
@@ -13,9 +14,7 @@ const ASSIGNABLE_ROLES = OFFICE_ROLES.filter((r) => r !== "ceo");
 
 // Only the CEO (owner) can manage office users (PRD ACC-3).
 async function getCEO(req: NextRequest) {
-  const token = req.cookies.get("incubator_token")?.value;
-  if (!token) return null;
-  const user = await verifySession(token);
+  const user = await getSessionUser(req);
   return user?.role === "ceo" ? user : null;
 }
 

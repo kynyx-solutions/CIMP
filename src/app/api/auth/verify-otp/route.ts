@@ -6,7 +6,9 @@ import { sendWelcomeEmail } from "@/lib/email";
 import { rateLimit, resetLimit, limitRequest } from "@/lib/ratelimit";
 
 export async function POST(req: NextRequest) {
-  const { email, otp } = await req.json();
+  const body = await req.json().catch(() => ({}));
+  const email = typeof body.email === "string" ? body.email.trim() : "";
+  const otp = body.otp;
 
   if (!email || !otp)
     return NextResponse.json(
@@ -14,16 +16,13 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
 
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-
-  if (!user)
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-  if (user.isVerified)
-    return NextResponse.json({ error: "Already verified" }, { status: 400 });
-
   const ipLimited = limitRequest(req, [{ key: "otp-ip:{ip}", limit: 30, windowMs: 900000 }], "attempts");
   if (ipLimited) return ipLimited;
+
+  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  // Unknown and already-verified addresses get the wrong-code answer (no account discovery)
+  if (!user || user.isVerified)
+    return NextResponse.json({ error: "Invalid OTP" }, { status: 400 });
 
   if (!user.otp || user.otp !== String(otp)) {
     // A 6-digit code allows only 5 wrong tries; then the code is cancelled and a new one is needed.

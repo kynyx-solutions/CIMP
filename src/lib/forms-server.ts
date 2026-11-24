@@ -1,6 +1,7 @@
 // Loading and publishing form versions (PRD FORM-1…3). Server-only.
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { str } from "@/lib/serialize";
 import { defaultForm, FIELD_TYPES, isLocked, type FieldDef, type FormDef, type FormKey, type SectionDef } from "@/lib/forms";
 
 /** The live version of a form: the newest published one, else the built-in default. */
@@ -27,7 +28,6 @@ export async function listVersions(form: FormKey) {
 
 const KEY_RE = /^[a-z][a-zA-Z0-9_]{1,40}$/;
 const TYPES = new Set(FIELD_TYPES.map((t) => t.value));
-const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 /**
  * Validate an edited form against the built-in definition and normalise it.

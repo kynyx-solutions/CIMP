@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
 import { canMessageApplicants } from "@/lib/workflow";
-import { isNetworkOffice, type ThreadType } from "@/lib/chat";
+import { fromOthers, isNetworkOffice, type ThreadType } from "@/lib/chat";
 
 type Thread = {
   type: ThreadType; id: string; title: string; subtitle: string; group: string;
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     const ids = apps.map((a) => a.id);
     const [last, unread] = await Promise.all([
       prisma.message.findMany({ where: { applicationId: { in: ids } }, orderBy: { createdAt: "desc" }, distinct: ["applicationId"], select: { applicationId: true, content: true, createdAt: true } }),
-      prisma.message.groupBy({ by: ["applicationId"], where: { applicationId: { in: ids }, read: false, senderId: { not: user.userId }, ...(office ? { senderRole: "incubatee" } : {}) }, _count: true }),
+      prisma.message.groupBy({ by: ["applicationId"], where: { applicationId: { in: ids }, read: false, ...fromOthers(user.userId), ...(office ? { senderRole: "incubatee" } : {}) }, _count: true }),
     ]);
     const lastBy = new Map(last.map((m) => [m.applicationId, m]));
     const unreadBy = new Map(unread.map((u) => [u.applicationId, u._count]));
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
     prisma.chatMessage.groupBy({
       by: ["threadType", "threadId"],
       where: {
-        threadId: { in: chatIds }, read: false, senderId: { not: user.userId },
+        threadId: { in: chatIds }, read: false, ...fromOthers(user.userId),
         // the office only counts mentor-sent messages in office threads; oversight threads never count
         ...(office ? { threadType: "mentor_office", senderRole: "mentor" } : {}),
       },

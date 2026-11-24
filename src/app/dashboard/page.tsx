@@ -308,7 +308,7 @@ export default async function DashboardPage() {
                         <div className="pb-4 flex-1 min-w-0">
                           <p className="text-sm font-body text-navy font-medium">{act.actorName}</p>
                           <p className="text-xs text-secondary font-body">{act.action}</p>
-                          {act.detail && <p className="text-xs text-muted font-body mt-0.5 truncate">"{act.detail}"</p>}
+                          {act.detail && <p className="text-xs text-muted font-body mt-0.5 truncate">“{act.detail}”</p>}
                           <p className="text-[10px] text-faint font-mono mt-1">{new Date(act.createdAt).toLocaleString('en-IN')}</p>
                         </div>
                       </div>

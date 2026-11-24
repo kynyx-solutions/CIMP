@@ -2,6 +2,7 @@
 // Application documents (PRD DOC-1): upload slots for the applicant, a read-only list for the office.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DOC_KINDS, acceptFor, formatBytes, type DocKind } from "@/lib/documents";
+import { uploadFile } from "@/lib/upload-client";
 
 type Doc = { _id: string; kind: DocKind; fileName: string; mimeType: string; size: number; createdAt: string };
 
@@ -37,13 +38,9 @@ export default function DocumentsPanel({
   async function upload(kind: DocKind, file: File) {
     setBusy(kind); setError("");
     try {
-      const fd = new FormData();
-      fd.append("file", file); fd.append("applicationId", applicationId); fd.append("kind", kind);
-      const res = await fetch("/api/documents", { method: "POST", body: fd });
-      const d = await res.json();
-      if (!res.ok) setError(d.error); else await load();
-    } catch { setError("Upload failed. Please try again."); }
-    finally { setBusy(null); const el = inputs.current[kind]; if (el) el.value = ""; }
+      const { ok, data } = await uploadFile("/api/documents", kind, file, { applicationId, kind });
+      if (!ok) setError(data.error ?? "Upload failed. Please try again."); else await load();
+    } finally { setBusy(null); const el = inputs.current[kind]; if (el) el.value = ""; }
   }
 
   async function remove(doc: Doc) {

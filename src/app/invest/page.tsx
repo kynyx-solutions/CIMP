@@ -6,6 +6,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { INSTRUMENTS, PROPOSAL_STATUS } from "@/lib/invest";
 import { periodLabel } from "@/lib/qpr";
+import Toast, { useFlash } from "@/components/Toast";
 
 const TONE = { warn: "bg-amber-50 text-amber-800 border-amber-200", good: "bg-leaf-50 text-leaf-800 border-leaf-200", bad: "bg-red-50 text-red-700 border-red-200", muted: "bg-slate-50 text-slate-600 border-slate-200" };
 const Chip = ({ s }: { s: string }) => { const d = PROPOSAL_STATUS[s]; return <span className={`text-[11px] font-mono px-2 py-0.5 rounded-full border ${TONE[d?.tone ?? "muted"]}`}>{d?.label ?? s}</span>; };
@@ -18,7 +19,7 @@ export default function InvestPage() {
   const [user, setUser] = useState<any>(null);
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState("");
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const { msg, flash } = useFlash(5000);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { fetch("/api/auth/me").then((r) => r.json()).then((d) => { if (!d.user) { router.push("/login"); return; } setUser(d.user); }); }, [router]);
@@ -28,7 +29,6 @@ export default function InvestPage() {
   }, []);
   useEffect(() => { if (user) load(); }, [user, load]);
 
-  const flash = (text: string, ok = true) => { setMsg({ text, ok }); setTimeout(() => setMsg(null), 5000); };
   async function call(method: string, body: object, okText: string) {
     setBusy(true);
     const res = await fetch("/api/proposals", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -41,7 +41,7 @@ export default function InvestPage() {
   return (
     <div className="min-h-screen bg-bg">
       <Navbar user={user} />
-      {msg && <div role="status" className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl border text-sm font-body shadow-card-lg ${msg.ok ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-red-50 border-red-200 text-red-700"}`}>{msg.text}</div>}
+      <Toast msg={msg} />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <h1 className="font-display text-3xl font-bold text-navy">{data?.role === "investor" ? "Invest" : "Investment proposals"}</h1>
         {error && <p className="mt-6 bg-white border border-border rounded-2xl p-8 text-center text-secondary font-body">{error}. <Link href="/mentor" className="text-brand underline">Mentor hub</Link></p>}

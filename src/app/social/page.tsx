@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { AiDraft } from "@/components/AiTools";
 import { PLATFORMS, SOCIAL_ROLES } from "@/lib/hr";
+import Toast, { useFlash } from "@/components/Toast";
 
 type Post = { _id: string; platforms: string[]; content: string; scheduledFor: string | null; status: string; publishedLinks: Record<string, string> | null; createdBy: string; updatedAt: string };
 const input = "w-full bg-bg border border-border rounded-xl px-3 py-2.5 text-sm font-body text-navy focus:outline-none focus:border-brand-2 focus:ring-2 focus:ring-leaf-100";
@@ -18,11 +19,10 @@ export default function SocialPage() {
   const [d, setD] = useState<{ posts: Post[]; canEdit: boolean; stats: Record<string, number> } | null>(null);
   const [f, setF] = useState<typeof EMPTY & { id?: string }>(EMPTY);
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const { msg, flash } = useFlash(4000);
   useEffect(() => { fetch("/api/auth/me").then((r) => r.json()).then((x) => { if (!x.user || !SOCIAL_ROLES.includes(x.user.role)) { router.push("/dashboard"); return; } setUser(x.user); }); }, [router]);
   const load = useCallback(async () => setD(await fetch("/api/social").then((r) => r.json())), []);
   useEffect(() => { if (user) load(); }, [user, load]);
-  const flash = (text: string, ok = true) => { setMsg({ text, ok }); setTimeout(() => setMsg(null), 4000); };
   async function call(method: string, body: object, ok: string) {
     setBusy(true);
     const res = await fetch("/api/social", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -58,7 +58,7 @@ export default function SocialPage() {
   return (
     <div className="min-h-screen bg-bg">
       <Navbar user={user} />
-      {msg && <div role="status" className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl border text-sm font-body shadow-card-lg ${msg.ok ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-red-50 border-red-200 text-red-700"}`}>{msg.text}</div>}
+      <Toast msg={msg} />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <h1 className="font-display text-3xl font-bold text-navy">Social media</h1>
         <p className="text-secondary font-body text-sm mt-1">Plan CIMP-BIIF&apos;s posts across platforms. Posting happens on each platform; record the link here to keep the history.</p>

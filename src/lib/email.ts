@@ -479,3 +479,21 @@ export async function sendPasswordResetEmail(to: string, name: string, link: str
     ctaPath: link.startsWith(appUrl) ? link.slice(appUrl.length) : link,
   });
 }
+
+// ─── Sign-up with an address that already has an account ─────────────────────
+// Sign-up answers the same either way (so it cannot be used to test which addresses are
+// registered); the owner of the address learns what happened from this email.
+
+export async function sendAccountExistsEmail(to: string, name: string) {
+  if (mailMode() === "log" && process.env.NODE_ENV !== "production") {
+    console.log(`[email:dev] Sign-up attempted for existing account ${to}`);
+    return;
+  }
+  await sendEventEmail({
+    to, name, type: "info",
+    title: "You already have an account",
+    message: "Someone (we hope you) tried to create a CIMP-BIIF account with this email address, but it already has one.\n\nSign in instead. If you forgot your password, use “Forgot password” on the sign-in page. If this was not you, you can ignore this email.",
+    ctaLabel: "Sign in",
+    ctaPath: "/login",
+  });
+}

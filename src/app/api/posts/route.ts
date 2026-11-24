@@ -5,14 +5,14 @@
 //   PATCH { postId, action: publish|reject|unpublish, note }   Admin IT
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
-import { withId, isId } from "@/lib/serialize";
+import { withId, isId, str } from "@/lib/serialize";
 import { BLOG_WRITERS, slugify } from "@/lib/blog";
 import { notify, notifyUsers } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 
-const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 function parse(body: any) {
   const title = str(body.title, 140), excerpt = str(body.excerpt, 300), text = typeof body.body === "string" ? body.body.trim().slice(0, 20000) : "";
@@ -32,6 +32,11 @@ async function uniqueSlug(title: string, exceptId?: string) {
 async function notifyAdmins(title: string) {
   const admins = await prisma.user.findMany({ where: { role: "admin_it" }, select: { id: true } });
   await notifyUsers(admins.map((a) => a.id), "Blog post to approve", `"${title}" is waiting for approval.`, "info", undefined, { ctaPath: "/posts", ctaLabel: "Review the post" });
+}
+
+/** Change a post only if its status is still `from` (one of two parallel reviews wins). */
+async function movePost(id: string, from: string, data: Prisma.BlogPostUpdateManyMutationInput) {
+  return (await prisma.blogPost.updateMany({ where: { id, status: from }, data })).count === 1;
 }
 
 export async function GET(req: NextRequest) {
@@ -83,17 +88,19 @@ export async function PATCH(req: NextRequest) {
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const cleanNote = str(note, 1000);
 
+  let changed = false;
   if (action === "publish") {
     if (post.status !== "submitted" && !(post.status === "draft" && post.authorId === user.userId)) return NextResponse.json({ error: "Only submitted posts can be published" }, { status: 400 });
-    await prisma.blogPost.update({ where: { id: post.id }, data: { status: "published", publishedAt: new Date(), reviewedBy: user.name, reviewNote: null } });
+    changed = await movePost(post.id, post.status, { status: "published", publishedAt: new Date(), reviewedBy: user.name, reviewNote: null });
   } else if (action === "reject") {
     if (post.status !== "submitted") return NextResponse.json({ error: "Only submitted posts can be sent back" }, { status: 400 });
     if (!cleanNote) return NextResponse.json({ error: "Tell the author what to change" }, { status: 400 });
-    await prisma.blogPost.update({ where: { id: post.id }, data: { status: "rejected", reviewedBy: user.name, reviewNote: cleanNote } });
+    changed = await movePost(post.id, post.status, { status: "rejected", reviewedBy: user.name, reviewNote: cleanNote });
   } else {
     if (post.status !== "published") return NextResponse.json({ error: "Not published" }, { status: 400 });
-    await prisma.blogPost.update({ where: { id: post.id }, data: { status: "draft", publishedAt: null, reviewedBy: user.name, reviewNote: cleanNote || "Unpublished by Admin IT" } });
+    changed = await movePost(post.id, post.status, { status: "draft", publishedAt: null, reviewedBy: user.name, reviewNote: cleanNote || "Unpublished by Admin IT" });
   }
+  if (!changed) return NextResponse.json({ error: "This post changed just now. Reload to see it." }, { status: 409 });
   revalidatePath("/blog"); revalidatePath(`/blog/${post.slug}`);
   await audit(req, user, `blog.${action}`, "blog", post.id, `${action === "publish" ? "Published" : action === "reject" ? "Sent back" : "Unpublished"} blog post "${post.title}"${cleanNote ? ` (note: ${cleanNote})` : ""}`);
   if (post.authorId !== user.userId)

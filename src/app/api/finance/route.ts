@@ -4,15 +4,15 @@
 //   PUT   { requestId, ...same fields }        requester edits a returned request and resubmits
 //   PATCH { requestId, action, remark, paymentRef }   review steps (see src/lib/finance.ts)
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/session";
-import { withId, isId } from "@/lib/serialize";
+import { withId, isId, str } from "@/lib/serialize";
 import { ROLE_LABELS } from "@/lib/workflow";
 import { CEO_LIMIT_INR, FINANCE_KINDS, FINANCE_VIEWERS, canActFinance, canRequestFinance, inr, kindLabel, nextStatus, type FinAction } from "@/lib/finance";
 import { notify, notifyUsers } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 
-const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const INCLUDE = { steps: { orderBy: { at: "asc" as const } }, application: { select: { startupName: true } } };
 
 async function usersWithRoles(roles: string[]) {
@@ -73,6 +73,18 @@ export async function GET(req: NextRequest) {
   });
 }
 
+type StepBy = { action: string; actorId: string; actorName: string; actorRole: string; remark?: string | null };
+
+/** Move a request from `from` to `to` only if it is still at `from` (two people acting at once: one wins). */
+function moveRequest(id: string, from: string, to: string, data: Prisma.FinanceRequestUpdateManyMutationInput, step: StepBy) {
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.financeRequest.updateMany({ where: { id, status: from }, data: { ...data, status: to } });
+    if (count !== 1) return false;
+    await tx.financeStep.create({ data: { requestId: id, fromStatus: from, toStatus: to, ...step } });
+    return true;
+  });
+}
+
 export async function POST(req: NextRequest) {
   const user = await getSessionUser(req);
   if (!user || !canRequestFinance(user.role)) return NextResponse.json({ error: "Only office users raise finance requests" }, { status: 403 });
@@ -97,10 +109,9 @@ export async function PUT(req: NextRequest) {
   if (r.status !== "returned") return NextResponse.json({ error: "Only a request sent back to you can be edited" }, { status: 400 });
   const p = await parse(body, r.id);
   if (p.error) return NextResponse.json({ error: p.error }, { status: 400 });
-  await prisma.financeRequest.update({
-    where: { id: r.id },
-    data: { ...p.data!, status: "submitted", steps: { create: { fromStatus: "returned", toStatus: "submitted", action: "resubmitted with changes", actorId: user.userId, actorName: user.name, actorRole: user.role } } },
-  });
+  const moved = await moveRequest(r.id, "returned", "submitted", p.data!,
+    { action: "resubmitted with changes", actorId: user.userId, actorName: user.name, actorRole: user.role });
+  if (!moved) return NextResponse.json({ error: "This request has already been resubmitted" }, { status: 409 });
   await audit(req, user, "finance.resubmit", "finance", r.id, `Resubmitted "${p.data!.title}" for ${inr(p.data!.amountInr)}`, { amountInr: { from: r.amountInr, to: p.data!.amountInr } });
   await notifyUsers(await usersWithRoles(["accounts"]), "Finance request resubmitted", `"${p.data!.title}" (${inr(p.data!.amountInr)}) is back for verification.`, "info", undefined, { ctaPath: "/finance", ctaLabel: "Open finance" });
   return NextResponse.json({ success: true });
@@ -123,11 +134,9 @@ export async function PATCH(req: NextRequest) {
 
   const to = nextStatus(r.status, action, r.amountInr)!;
   const label = { verify: "verified the request", approve: "approved", final_approve: "gave CEO approval", pay: `recorded payment ${paymentRef}`, send_back: "sent back for changes", reject: "rejected" }[action];
-  await prisma.financeRequest.update({
-    where: { id: r.id },
-    data: { status: to, ...(action === "pay" ? { paymentRef, paidAt: new Date() } : {}),
-      steps: { create: { fromStatus: r.status, toStatus: to, action: label, actorId: user.userId, actorName: user.name, actorRole: user.role, remark: remark || null } } },
-  });
+  const moved = await moveRequest(r.id, r.status, to, { ...(action === "pay" ? { paymentRef, paidAt: new Date() } : {}) },
+    { action: label, actorId: user.userId, actorName: user.name, actorRole: user.role, remark: remark || null });
+  if (!moved) return NextResponse.json({ error: "Someone else acted on this request just now. Reload to see where it is." }, { status: 409 });
   const by = `${user.name} (${ROLE_LABELS[user.role] ?? user.role})`;
   await audit(req, user, `finance.${action}`, "finance", r.id, `${by} ${label}: "${r.title}" (${inr(r.amountInr)})${remark ? ` — ${remark}` : ""}`, { status: { from: r.status, to } });
 

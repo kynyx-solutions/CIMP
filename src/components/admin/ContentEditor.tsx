@@ -2,6 +2,7 @@
 // Website content editor (PRD WEB-6). Each block is edited as a form generated from the shape
 // of its default value: text, yes/no, lists of items, nested groups.
 import { useCallback, useEffect, useState } from "react";
+import { useFlash } from "@/components/Toast";
 
 type Item = {
   key: string; label: string; desc: string; where: string;
@@ -105,7 +106,7 @@ export default function ContentEditor() {
   const [choices, setChoices] = useState<Record<string, string[]>>({});
   const [active, setActive] = useState<string>("sampleMode");
   const [draft, setDraft] = useState<unknown>(null);
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const { msg, flash } = useFlash(5000);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async (keep?: string) => {
@@ -118,7 +119,6 @@ export default function ContentEditor() {
 
   const item = items?.find((i) => i.key === active);
   const dirty = !!item && JSON.stringify(item.value) !== JSON.stringify(draft);
-  const flash = (text: string, ok = true) => { setMsg({ text, ok }); setTimeout(() => setMsg(null), 5000); };
 
   async function save() {
     setBusy(true);

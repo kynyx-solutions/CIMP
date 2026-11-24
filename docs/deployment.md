@@ -96,7 +96,14 @@ Test a restore on a spare machine once a quarter. A backup that has never been r
 | `local` (default) | The `uploads` Docker volume (`/data/uploads`) | `scripts/backup.sh` |
 | `s3` | An S3-compatible bucket: AWS S3 (Mumbai `ap-south-1`), Cloudflare R2, MinIO, DigitalOcean Spaces | Bucket versioning and a lifecycle rule |
 
-For S3, create a private bucket (block all public access) and an access key that can only `s3:PutObject`, `s3:GetObject` and `s3:DeleteObject` on that bucket. For a non-AWS store also set `S3_ENDPOINT`, and `S3_FORCE_PATH_STYLE=true` for MinIO. Files are never public: every download goes through the portal, which checks who is asking and records it.
+For S3, create a private bucket (block all public access) and an access key that can only `s3:PutObject`, `s3:GetObject` and `s3:DeleteObject` on that bucket. For a non-AWS store also set `S3_ENDPOINT`, and `S3_FORCE_PATH_STYLE=true` for MinIO and Supabase. Files are never public: every download goes through the portal, which checks who is asking and records it.
+
+With S3, files do not pass through the app:
+
+- **Upload:** the browser asks `/api/uploads` for a signed URL (valid 10 minutes, for that exact size and type), PUTs the file to the bucket, then hands the upload ticket to the usual route. That route checks access, the size and the file's first bytes in the bucket, and deletes the file if anything is wrong.
+- **Download:** after the access check the portal redirects to a signed URL valid for 10 minutes.
+- The bucket must allow the portal's origin to `PUT` (CORS). Supabase Storage allows it already. On AWS, add a CORS rule for `PUT` and `GET` from `https://<your portal>` with the `Content-Type` header.
+- Limits: pitch deck 10 MB, ID proof and registration certificate 5 MB, logo 1 MB, mentor document requests and invoices 10 MB (`src/lib/documents.ts`). With local storage the web server's request limit also applies.
 
 Switching an existing installation from `local` to `s3` needs the existing files copied into the bucket under the `uploads/` prefix (for example `aws s3 sync`), keeping their names.
 
@@ -133,6 +140,7 @@ The app also runs on Vercel (serverless) with a hosted PostgreSQL such as Supaba
 - **Database:** `DATABASE_URL` is the pooled address (Supabase: transaction pooler, port 6543, ending `?pgbouncer=true&connection_limit=1`). Run `prisma migrate deploy` from your machine against the session pooler (port 5432).
 - **Files:** `STORAGE_DRIVER=s3` is required; the function file system is read-only. Supabase Storage works with `S3_ENDPOINT=https://<project>.storage.supabase.co/storage/v1/s3` and `S3_FORCE_PATH_STYLE=true`.
 - **Scheduler:** set `SCHEDULER_ENABLED=false` and `CRON_SECRET` (24+ characters). Vercel Cron calls `GET /api/cron/<job>` with `Authorization: Bearer $CRON_SECRET`; each job runs at most once per IST day. Schedules in `vercel.json` are UTC (IST − 5:30).
+- **Email rate:** broadcasts send at `MAIL_RATE_PER_SEC` emails per second (default 2, Resend's default limit), so one broadcast emails at most 500 people within the 5-minute function limit. Raise it on a paid mail plan.
 - **Excel exports** run inside the request on Vercel (the function is frozen after it replies); exports stuck for 10 minutes are marked failed when the export list is loaded.
 - Environment variables take effect only after a redeploy.
 

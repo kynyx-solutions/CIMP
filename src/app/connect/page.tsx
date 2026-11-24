@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { CONN_STAGES, CONN_PIPELINE, CONN_TYPES, type ConnStatus } from "@/lib/network";
+import Toast from "@/components/Toast";
 
 type MentorRow = {
   _id: string; userId: string; headline: string; organisation?: string | null; expertise: string; sectors: string[];
@@ -69,7 +70,7 @@ export default function ConnectPage() {
   return (
     <div className="min-h-screen bg-bg">
       <Navbar user={user} />
-      {msg && <div role="status" className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl border text-sm font-body shadow-card-lg ${msg.ok ? "bg-leaf-50 border-leaf-200 text-leaf-800" : "bg-red-50 border-red-200 text-red-700"}`}>{msg.text}</div>}
+      <Toast msg={msg} />
 
       {modal && (
         <div className="fixed inset-0 z-50 bg-navy/30 backdrop-blur-sm flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-labelledby="req-title">

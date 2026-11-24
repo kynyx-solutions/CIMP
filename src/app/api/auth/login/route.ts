@@ -6,6 +6,9 @@ import { startSession } from "@/lib/auth";
 import { isCompanyEmail, isStaffRole } from "@/lib/roles";
 import { limitRequest, resetLimit } from "@/lib/ratelimit";
 
+// bcrypt hash of a random string, compared against when the address has no password
+const DUMMY_HASH = "$2a$12$eAtN4matXXKMR0UYuJIx5ulANJ7hW0UJywjqmKR5WZ3/mHfNxeuye";
+
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
@@ -23,27 +26,18 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
 
-    if (!user) {
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 },
-      );
+    // Unknown address, Google-only account and wrong password all get the same answer, and an
+    // unknown address still costs one bcrypt comparison (no account discovery by timing).
+    const invalid = () => NextResponse.json({ error: "Invalid email or password. If you signed up with Google, use Continue with Google." }, { status: 401 });
+    if (!user?.password) {
+      await bcrypt.compare(String(password), DUMMY_HASH);
+      return invalid();
     }
 
-    if (!user.password) {
-      return NextResponse.json(
-        { error: "This account uses Google sign-in. Continue with Google." },
-        { status: 400 },
-      );
-    }
-
-    const valid = await bcrypt.compare(password, user.password);
+    const valid = await bcrypt.compare(String(password), user.password);
     if (!valid) {
       await audit(req, { userId: user.id, name: user.name, role: user.role }, "auth.login_failed", "auth", user.id, "Failed sign-in (wrong password)");
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 },
-      );
+      return invalid();
     }
 
     // Staff may only sign in with a company-domain email.

@@ -7,6 +7,7 @@ import path from "path";
 import { prisma } from "@/lib/prisma";
 import { getContent } from "@/lib/content";
 import { notify } from "@/lib/notify";
+import { newCardNumber } from "@/lib/idcard-number";
 
 export type Holder = { userId: string; name: string; email: string; role: string; roleLabel: string; organisation: string | null };
 
@@ -26,14 +27,6 @@ export async function isEligible(userId: string) {
   return (await eligibleHolders()).find((h) => h.userId === userId) ?? null;
 }
 
-async function nextNumber(): Promise<string> {
-  const year = new Date().getFullYear();
-  const prefix = `CB-${year}-`;
-  const last = await prisma.idCard.findFirst({ where: { number: { startsWith: prefix } }, orderBy: { number: "desc" }, select: { number: true } });
-  const n = last ? Number(last.number.slice(prefix.length)) + 1 : 1;
-  return `${prefix}${String(n).padStart(4, "0")}`;
-}
-
 export function verifyUrl(number: string) {
   return `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/verify/${number}`;
 }
@@ -50,10 +43,10 @@ export async function issueCard(holder: Holder) {
     try {
       const card = existing
         ? await prisma.idCard.update({ where: { userId: holder.userId }, data })
-        : await prisma.idCard.create({ data: { ...data, userId: holder.userId, number: await nextNumber() } });
+        : await prisma.idCard.create({ data: { ...data, userId: holder.userId, number: newCardNumber() } });
       return { card, renewed: !!existing };
     } catch (e: any) {
-      if (e?.code !== "P2002" || existing) throw e; // number taken by a parallel issue: retry
+      if (e?.code !== "P2002" || existing) throw e; // number already taken (or a parallel issue): retry
     }
   }
   throw new Error("Could not allocate a card number");
